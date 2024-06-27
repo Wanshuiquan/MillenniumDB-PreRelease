@@ -151,6 +151,27 @@ To run the server use the following command, passing the `<db-directory>` where 
 build/Release/bin/mdb-server <db-directory>
 ```
 
+### Server parameters
+When using large data, it is advisable to adjust some parameters for the best performance of the server.
+Here we explain the parameters that `mdb-server` supports:
+
+- `--threads`: Set how many thread workers the server will have. The server can execute up to that amount of queries at the same time.
+
+- `--load-strings`: How many bytes of the string file (`strings.dat`) are preloaded into memory at startup, before the server is available.
+
+- `--versioned-buffer`: Size of the buffer for shared structures that need MVCC (for now, just B+trees).
+
+- `--private-buffer`: Size of the buffer that each worker have available for some temporal things (used in ORDER BY, GROUP BY, etc).
+
+- `--unversioned-buffer`: Size of the buffer for shared structures that don't need MVCC (for now, just `str_hash.dat`).
+
+- `--timeout`: How many seconds until the query might throw a timeout.
+
+- `--port`: Specify the port to use (default is 8080)
+
+- `--limit`: Specify a hard limit of how many results are returned in any query.
+
+
 ### Execute a Query
 The MillenniumDB SPARQL server supports all three query operations specified in the [SPARQL 1.1 Protocol](https://www.w3.org/TR/2013/REC-sparql11-protocol-20130321/#query-operation):
 - `query via GET`
