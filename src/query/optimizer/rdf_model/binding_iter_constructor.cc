@@ -22,7 +22,28 @@ using namespace SPARQL;
 using namespace misc;
 
 BindingIterConstructor::BindingIterConstructor() {
+    // all path variables must exist in the query context at this time
     begin_at_left.resize(get_query_ctx().get_var_size());
+}
+
+
+std::vector<std::pair<VarId, std::unique_ptr<BindingExpr>>>
+get_non_redundant_exprs(std::vector<std::pair<VarId, std::unique_ptr<BindingExpr>>>&& exprs) {
+    std::vector<std::pair<VarId, std::unique_ptr<BindingExpr>>> res;
+
+    for (auto&& [var, e] : exprs) {
+        auto casted_expr_var = dynamic_cast<BindingExprVar*>(e.get());
+        if (casted_expr_var) {
+            if (casted_expr_var->var == var) {
+                // avoid redundant assignation
+                continue;
+            }
+        }
+
+        res.push_back({var, std::move(e)});
+    }
+    exprs.clear(); // vectors are not guaranteed to be empty after the move, so we make sure of that
+    return res;
 }
 
 
@@ -46,40 +67,77 @@ bool BindingIterConstructor::is_aggregation_or_group_var(VarId var) const {
 
 
 void BindingIterConstructor::make_solution_modifier_operators(bool is_root_query, bool distinct, uint64_t offset, uint64_t limit) {
-    // If the query contains a HAVING clause and aggregations we have to reorder them so
-    // that newly created Aggregation is the child of the Filter created previously by HAVING.
+    // process order expressions if we have them
+    // ORDER BY expressions must come after SELECT expressions.
+    std::vector<VarId> order_vars;
+    if (op_order_by) {
+        for (auto& item : op_order_by->items) {
+            if (std::holds_alternative<VarId>(item)) {
+                auto var = std::get<VarId>(item);
+                order_vars.push_back(var);
+                order_saved_vars.insert(var);
+            } else {
+                auto& expr = std::get<std::unique_ptr<Expr>>(item);
+                auto var = get_query_ctx().get_internal_var();
 
-    // Create the Aggregation if necessary.
-    if (aggregations.size() > 0 || group_vars.size() > 0) {
-        auto agg = std::make_unique<Aggregation>(
-            nullptr, // child will be established later
-            std::move(aggregations),
-            std::move(group_vars)
-        );
+                order_vars.push_back(var);
+                order_saved_vars.insert(var);
 
-        // Check if we have an Aggregation.
-        // Check if the previously created BindingIter was a Filter.
-        auto filter = dynamic_cast<Filter*>(tmp.get());
-        if (filter && filter->is_having_filter) {
-            // We have to reorder because we have both HAVING and aggregations.
-            agg->child = std::move(filter->child_iter);
-            filter->child_iter = std::move(agg);
-        } else {
-            // We do not need to reorder, however we still do need to insert the Aggregation and set it's child.
-            agg->child = std::move(tmp);
-            tmp = std::move(agg);
+                ExprToBindingExpr expr_to_binding_expr(this, {});
+
+                expr->accept_visitor(expr_to_binding_expr);
+
+                projection_order_exprs.emplace_back(
+                    var,
+                    std::move(expr_to_binding_expr.tmp)
+                );
+            }
         }
     }
 
-    assert(tmp != nullptr);
-    if (projection_order_exprs.size() > 0) {
-        tmp = std::make_unique<ExprEvaluator>(
+    std::vector<std::unique_ptr<BindingExpr>> having_exprs;
+    if (op_having) {
+        having_exprs.reserve(op_having->exprs.size());
+
+        // need to do this for EXIST/NOT EXISTS expressions inside HAVING
+        safe_assigned_vars.clear();
+        possible_assigned_vars = group_vars;
+
+        for (auto& expr: op_having->exprs) {
+            ExprToBindingExpr expr_to_binding_expr(this, {});
+            expr->accept_visitor(expr_to_binding_expr);
+            having_exprs.push_back(std::move(expr_to_binding_expr.tmp));
+        }
+    }
+
+    // Create the Aggregation if necessary.
+    if (aggregations.size() > 0 || group_vars.size() > 0) {
+        tmp = std::make_unique<Aggregation>(
             std::move(tmp),
-            std::move(projection_order_exprs)
+            std::move(aggregations),
+            std::move(group_vars)
         );
     }
 
-    if (order_vars.size() > 0) {
+    if (having_exprs.size() > 0) {
+        tmp = std::make_unique<Filter>(
+            &SPARQL::Conversions::to_boolean,
+            std::move(tmp),
+            std::move(having_exprs)
+        );
+        op_having = nullptr; // important for subqueries
+    }
+
+    assert(tmp != nullptr);
+    auto non_redundant_expr_eval = get_non_redundant_exprs(std::move(projection_order_exprs));
+    if (non_redundant_expr_eval.size() > 0) {
+        tmp = std::make_unique<ExprEvaluator>(
+            std::move(tmp),
+            std::move(non_redundant_expr_eval)
+        );
+    }
+
+    if (op_order_by) {
         for (auto& var : projection_vars) {
             order_saved_vars.insert(var);
         }
@@ -88,9 +146,10 @@ void BindingIterConstructor::make_solution_modifier_operators(bool is_root_query
             std::move(tmp),
             std::move(order_saved_vars),
             std::move(order_vars),
-            std::move(order_ascending),
+            std::move(op_order_by->ascending_order),
             &SPARQL::Comparisons::compare
         );
+        op_order_by = nullptr; // important for subqueries
     }
 
     if (distinct) {
@@ -188,9 +247,6 @@ void BindingIterConstructor::handle_select(OpSelect& op_select) {
 
     op_select.op->accept_visitor(*this);
 
-    // Save any ORDER BY expressions, they must come after SELECT expressions.
-    auto order_exprs = std::move(projection_order_exprs);
-
     for (size_t i = 0; i < op_select.vars.size(); i++) {
         auto var   = op_select.vars[i];
         auto& expr = op_select.vars_exprs[i];
@@ -198,7 +254,6 @@ void BindingIterConstructor::handle_select(OpSelect& op_select) {
 
         if (expr) {
             ExprToBindingExpr expr_to_binding_expr(this, {var});
-
             expr->accept_visitor(expr_to_binding_expr);
 
             projection_order_exprs.emplace_back(
@@ -215,10 +270,6 @@ void BindingIterConstructor::handle_select(OpSelect& op_select) {
                 }
             }
         }
-    }
-
-    for (auto& o_expr : order_exprs) {
-        projection_order_exprs.push_back(std::move(o_expr));
     }
 
     make_solution_modifier_operators(!op_select.is_sub_select, // is_root_query
@@ -242,7 +293,7 @@ void BindingIterConstructor::visit(OpSelect& op_select) {
         );
         return;
     } else {
-        this->handle_select(op_select);
+        handle_select(op_select);
     }
 }
 
@@ -250,6 +301,7 @@ void BindingIterConstructor::visit(OpSelect& op_select) {
 void BindingIterConstructor::visit(OpGroupBy& op_group_by) {
     op_group_by.op->accept_visitor(*this);
 
+    // std::set<VarId> group_saved_vars;
     // TODO: no need to save all vars, detect only the ones required
     std::set<VarId> group_saved_vars = get_query_ctx().get_all_vars();
 
@@ -276,10 +328,11 @@ void BindingIterConstructor::visit(OpGroupBy& op_group_by) {
 
     std::vector<bool> ascending(group_vars.size(), true);
 
-    if (group_expressions.size() > 0) {
+    auto non_redundant_expr_eval = get_non_redundant_exprs(std::move(group_expressions));
+    if (non_redundant_expr_eval.size() > 0) {
         tmp = std::make_unique<ExprEvaluator>(
             std::move(tmp),
-            std::move(group_expressions)
+            std::move(non_redundant_expr_eval)
         );
     }
 
@@ -300,34 +353,13 @@ void BindingIterConstructor::visit(OpGroupBy& op_group_by) {
 
 void BindingIterConstructor::visit(OpHaving& op_having) {
     op_having.op->accept_visitor(*this);
-
-    std::vector<std::unique_ptr<BindingExpr>> having_exprs;
-    having_exprs.reserve(op_having.exprs.size());
-
-    // need to do this for EXIST/NOT EXISTS expressions inside HAVING
-    safe_assigned_vars.clear();
-    possible_assigned_vars = group_vars;
-
-    for (auto& expr: op_having.exprs) {
-        ExprToBindingExpr expr_to_binding_expr(this, {});
-        expr->accept_visitor(expr_to_binding_expr);
-        having_exprs.push_back(std::move(expr_to_binding_expr.tmp));
-    }
-
-    if (having_exprs.size() > 0) {
-        tmp = std::make_unique<Filter>(
-            &SPARQL::Conversions::to_boolean,
-            std::move(tmp),
-            std::move(having_exprs),
-            true /* is_having_filter */
-        );
-    }
+    this->op_having = &op_having;
 }
 
 
 void BindingIterConstructor::visit(OpOrderBy& op_order_by) {
-    for (auto& item : op_order_by.items) {
-        if (std::holds_alternative<std::unique_ptr<Expr>>(item)) {\
+    for (const auto& item : op_order_by.items) {
+        if (std::holds_alternative<std::unique_ptr<Expr>>(item)) {
             auto& expr = std::get<std::unique_ptr<Expr>>(item);
             if (expr->has_aggregation()) {
                 grouping = true;
@@ -338,30 +370,7 @@ void BindingIterConstructor::visit(OpOrderBy& op_order_by) {
 
     assert(op_order_by.items.size() > 0);
 
-    for (auto& item : op_order_by.items) {
-        if (std::holds_alternative<VarId>(item)) {
-            auto var = std::get<VarId>(item);
-            order_vars.push_back(var);
-            order_saved_vars.insert(var);
-        } else {
-            auto& expr = std::get<std::unique_ptr<Expr>>(item);
-            auto var = get_query_ctx().get_internal_var();
-
-            order_vars.push_back(var);
-            order_saved_vars.insert(var);
-
-            ExprToBindingExpr expr_to_binding_expr(this, {});
-
-            expr->accept_visitor(expr_to_binding_expr);
-
-            projection_order_exprs.emplace_back(
-                var,
-                std::move(expr_to_binding_expr.tmp)
-            );
-        }
-    }
-
-    order_ascending = std::move(op_order_by.ascending_order);
+    this->op_order_by = &op_order_by;
 }
 
 
@@ -436,8 +445,7 @@ void BindingIterConstructor::visit(OpFilter& op_filter) {
     tmp = std::make_unique<Filter>(
         &SPARQL::Conversions::to_boolean,
         std::move(tmp),
-        std::move(binding_exprs),
-        false/* is_having_filter */
+        std::move(binding_exprs)
     );
 }
 

@@ -61,10 +61,6 @@ public:
 
     virtual std::any visitObjectPath(SparqlUpdateParser::ObjectPathContext *context) = 0;
 
-    virtual std::any visitPathNegatedPropertySet(SparqlUpdateParser::PathNegatedPropertySetContext *context) = 0;
-
-    virtual std::any visitPathOneInPropertySet(SparqlUpdateParser::PathOneInPropertySetContext *context) = 0;
-
     virtual std::any visitInteger(SparqlUpdateParser::IntegerContext *context) = 0;
 
     virtual std::any visitTriplesNode(SparqlUpdateParser::TriplesNodeContext *context) = 0;

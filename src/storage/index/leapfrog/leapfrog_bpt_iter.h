@@ -36,6 +36,10 @@ public:
         return *directory_stack[0];
     }
 
+    std::string get_iter_name() const override { return "LeapfrogBptIter"; }
+
+    bool try_estimate(std::vector<double>& initial_estimations, std::vector<double>& after_estimations) const override;
+
 private:
     Record<N> current_tuple;
 

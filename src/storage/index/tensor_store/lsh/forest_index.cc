@@ -2,11 +2,9 @@
 
 #include <algorithm>
 #include <fstream>
-#include <unordered_set>
+#include <queue>
 
 #include "graph_models/object_id.h"
-#include "graph_models/quad_model/conversions.h"
-#include "query/exceptions.h"
 #include "storage/index/tensor_store/lsh/forest_index_query_iter.h"
 #include "storage/index/tensor_store/lsh/metric.h"
 #include "storage/index/tensor_store/lsh/tree.h"
@@ -75,67 +73,55 @@ std::vector<std::pair<uint64_t, float>> ForestIndex::query_top_k(
     assert(k > 0);
     assert(query_tensor.size() == tensor_store.tensors_dim);
 
-    // Initialize containers and variables
-    auto num_trees = trees.size();
-    auto search_k  = (num_trees < 3) ? 2 * k : num_trees * k;
+    const auto min_candidates = (num_trees < 3) ? 2 * k : num_trees * k;
 
-    std::vector<TreeNode*> nodes;
-    std::vector<uint64_t>  depths;
-    std::vector<uint64_t>  candidate_nearest_neighbors;
+    std::vector<TreeNode*>                   current_nodes;
+    std::vector<uint_fast32_t>               current_depths;
+    robin_hood::unordered_flat_set<uint64_t> candidate_nearest_neighbors;
 
-    nodes.reserve(num_trees);
-    depths.reserve(num_trees);
-    candidate_nearest_neighbors.reserve(search_k);
+    current_nodes.reserve(num_trees);
+    current_depths.reserve(num_trees);
+    candidate_nearest_neighbors.reserve(min_candidates);
 
-    for (auto it = trees.begin(); it < trees.end(); ++it) {
-        auto [leaf, depth] = (*it)->descend(query_tensor);
-        nodes.push_back(leaf);
-        depths.push_back(depth);
-        candidate_nearest_neighbors.insert(
-            candidate_nearest_neighbors.end(),
-            leaf->object_ids.begin(),
-            leaf->object_ids.end()
-        );
+    // Descend on each tree and collect the initial candidates
+    for (auto tree_idx = 0U; tree_idx < num_trees; ++tree_idx) {
+        auto [leaf, depth] = trees[tree_idx]->descend(query_tensor);
+        current_nodes.push_back(leaf);
+        current_depths.push_back(depth);
+        candidate_nearest_neighbors.insert(leaf->object_ids.begin(), leaf->object_ids.end());
     }
-    auto current_maximum_depth = *std::max_element(depths.begin(), depths.end());
 
-    // Get the candidate nearest neighbors
-    while (current_maximum_depth > 0 && candidate_nearest_neighbors.size() < search_k) {
-        for (uint_fast32_t i = 0; i < nodes.size(); ++i) {
-            if (depths[i] != current_maximum_depth)
+    auto current_maximum_depth = *std::max_element(current_depths.begin(), current_depths.end());
+
+    // Continue traversing the trees until we have enough candidates or we reach the root
+    while (current_maximum_depth > 0 && candidate_nearest_neighbors.size() < min_candidates) {
+        for (auto tree_idx = 0U; tree_idx < num_trees; ++tree_idx) {
+            if (current_depths[tree_idx] != current_maximum_depth) {
                 continue;
+            }
 
-            const auto sibling             = nodes[i]->sibling();
+            const auto sibling             = current_nodes[tree_idx]->sibling();
             const auto sibling_descendants = Tree::descendants(sibling);
-            nodes[i]                       = nodes[i]->parent;
-            --depths[i];
-            candidate_nearest_neighbors.insert(
-                candidate_nearest_neighbors.end(),
-                sibling_descendants.begin(),
-                sibling_descendants.end()
-            );
+            current_nodes[tree_idx]        = current_nodes[tree_idx]->parent;
+            --current_depths[tree_idx];
+
+            candidate_nearest_neighbors.insert(sibling_descendants.begin(), sibling_descendants.end());
         }
         --current_maximum_depth;
     }
 
-    // Sort by object_id to avoid duplicates
-    std::sort(candidate_nearest_neighbors.begin(), candidate_nearest_neighbors.end());
-
     // Compute similarities
     std::vector<std::pair<uint64_t, float>> nearest_neighbors;
-    nearest_neighbors.reserve(k);
-    uint64_t previous_object_id = ObjectId::NULL_ID;
+    nearest_neighbors.reserve(candidate_nearest_neighbors.size());
+
     std::vector<float> tensor_buffer(tensor_store.tensors_dim);
     for (const auto& object_id : candidate_nearest_neighbors) {
-        if (object_id == previous_object_id)
-            continue;
         tensor_store.get(object_id, tensor_buffer);
         nearest_neighbors.emplace_back(object_id, similarity_fn(query_tensor, tensor_buffer));
-        previous_object_id = object_id;
     }
 
     // Sort by similarity
-    auto result_size = std::min(k, static_cast<uint64_t>(nearest_neighbors.size()));
+    auto result_size = std::min(k, static_cast<uint64_t>(nearest_neighbors.size())); // in MAC .size() is u32, and min cannot infer
     std::partial_sort(nearest_neighbors.begin(),
                       nearest_neighbors.begin() + result_size,
                       nearest_neighbors.end(),

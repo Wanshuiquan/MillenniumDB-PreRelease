@@ -1,5 +1,6 @@
 #include "bfs_enum.h"
 
+#include "graph_models/common/conversions.h"
 #include "query/executor/binding_iter/paths/path_manager.h"
 
 using namespace std;
@@ -66,7 +67,8 @@ bool BFSEnum<MULTIPLE_FINAL>::_next() {
             if (MULTIPLE_FINAL) {
                 auto found_reached_final = reached_final.find(current_state->node_id.id);
                 if (found_reached_final != reached_final.end()) {
-                    parent_binding->add(path_var, ObjectId(ObjectId::MASK_POSITIVE_INT | found_reached_final->second.count));
+                    parent_binding->add(path_var, Common::Conversions::pack_int(found_reached_final->second.count));
+
                     parent_binding->add(end, current_state->node_id);
                     open.pop();
                     paths_found += found_reached_final->second.count;
@@ -74,7 +76,7 @@ bool BFSEnum<MULTIPLE_FINAL>::_next() {
                     return true;
                 }
             } else {
-                parent_binding->add(path_var, ObjectId(ObjectId::MASK_POSITIVE_INT | current_state->count));
+                parent_binding->add(path_var, Common::Conversions::pack_int(current_state->count));
                 parent_binding->add(end, current_state->node_id);
                 open.pop();
                 paths_found += current_state->count;

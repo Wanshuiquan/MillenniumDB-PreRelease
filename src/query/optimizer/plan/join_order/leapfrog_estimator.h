@@ -6,6 +6,7 @@
 #include "query/executor/binding_iter/scan_ranges/term.h"
 #include "storage/index/leapfrog/leapfrog_bpt_iter.h"
 #include "storage/index/leapfrog/leapfrog_iter.h"
+#include "storage/index/leapfrog/leapfrog_similarity_search_iter.h"
 
 class LeapfrogEstimator {
 private:
@@ -13,53 +14,6 @@ private:
     std::vector<std::unique_ptr<LeapfrogIter>> leapfrog_iters;
 
     size_t seeks = 0;
-
-    // returns false on error
-    template<size_t N>
-    bool try_estimate(std::vector<double>& initial_estimations, std::vector<double>& after_estimations, LeapfrogBptIter<N>* casted) {
-        if (casted == nullptr) {
-            return false;
-        }
-        Record<N> min;
-        Record<N> max;
-        Record<N> after;
-
-        // Will estimate ranges min-max, and min-after
-        for (size_t i = 0; i < casted->initial_ranges.size(); i++) {
-            auto term = dynamic_cast<Term*>(casted->initial_ranges[i].get());
-            if (term == nullptr) {
-                return false;
-            }
-
-            min[i] = term->get_oid().id;
-            max[i] = term->get_oid().id;
-            after[i] = term->get_oid().id;
-        }
-
-        min[casted->initial_ranges.size()] = 0;
-        max[casted->initial_ranges.size()] = UINT64_MAX;
-        after[casted->initial_ranges.size()] = casted->get_key();
-
-        for (size_t i = casted->initial_ranges.size() + 1; i < N; i++) {
-            min[i] = 0;
-            max[i] = UINT64_MAX;
-            after[i] = UINT64_MAX;
-        }
-
-        // std::cout << "Min: [" << min[0]   << ", " << min[1]   << ", " << min[2]   << "]\n";
-        // std::cout << "Max: [" << max[0]   << ", " << max[1]   << ", " << max[2]   << "]\n";
-        // std::cout << "Aft: [" << after[0] << ", " << after[1] << ", " << after[2] << "]\n";
-
-        auto& bpt_root = casted->get_root();
-        initial_estimations.push_back(
-            BPlusTree<N>::estimate_records(bpt_root, min, max)
-        );
-        after_estimations.push_back(
-            BPlusTree<N>::estimate_records(bpt_root, min, after)
-        );
-
-        return true;
-    }
 
 public:
     static constexpr size_t MAX_SEEKS = 1000;
@@ -91,27 +45,8 @@ public:
         std::vector<double> after_estimations;
 
         for (const auto& lf_iter : leapfrog_iters) {
-            auto var_size = lf_iter->get_relation_size();
-            // std::cout << "var size " << var_size << "\n";
-            switch (var_size) {
-            case 2: {
-                auto ok = try_estimate<2>(initial_estimations, after_estimations, dynamic_cast<LeapfrogBptIter<2>*>(lf_iter.get()));
-                if (!ok) return -1;
-                break;
-            }
-            case 3: {
-                auto ok = try_estimate<3>(initial_estimations, after_estimations, dynamic_cast<LeapfrogBptIter<3>*>(lf_iter.get()));
-                if (!ok) return -1;
-                break;
-            }
-            case 4: {
-                auto ok = try_estimate<4>(initial_estimations, after_estimations, dynamic_cast<LeapfrogBptIter<4>*>(lf_iter.get()));
-                if (!ok) return -1;
-                break;
-            }
-            default: {
+            if (!lf_iter->try_estimate(initial_estimations, after_estimations)) {
                 return -1;
-            }
             }
         }
 

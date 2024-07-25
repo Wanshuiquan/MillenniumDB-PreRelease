@@ -53,14 +53,13 @@ public:
     RuleTriplesSameSubject = 11, RulePropertyList = 12, RulePropertyListNotEmpty = 13, 
     RuleVerb = 14, RuleObjectList = 15, RuleObject = 16, RulePropertyListPathNotEmpty = 17, 
     RulePropertyListPathNotEmptyList = 18, RuleObjectListPath = 19, RuleObjectPath = 20, 
-    RulePathNegatedPropertySet = 21, RulePathOneInPropertySet = 22, RuleInteger = 23, 
-    RuleTriplesNode = 24, RuleBlankNodePropertyList = 25, RuleTriplesNodePath = 26, 
-    RuleBlankNodePropertyListPath = 27, RuleCollection = 28, RuleCollectionPath = 29, 
-    RuleGraphNode = 30, RuleGraphNodePath = 31, RuleGraphTerm = 32, RuleNil = 33, 
-    RuleRdfLiteral = 34, RuleNumericLiteral = 35, RuleNumericLiteralUnsigned = 36, 
-    RuleNumericLiteralPositive = 37, RuleNumericLiteralNegative = 38, RuleBooleanLiteral = 39, 
-    RuleString = 40, RuleIri = 41, RulePrefixedName = 42, RuleBlankNode = 43, 
-    RuleAnon = 44
+    RuleInteger = 21, RuleTriplesNode = 22, RuleBlankNodePropertyList = 23, 
+    RuleTriplesNodePath = 24, RuleBlankNodePropertyListPath = 25, RuleCollection = 26, 
+    RuleCollectionPath = 27, RuleGraphNode = 28, RuleGraphNodePath = 29, 
+    RuleGraphTerm = 30, RuleNil = 31, RuleRdfLiteral = 32, RuleNumericLiteral = 33, 
+    RuleNumericLiteralUnsigned = 34, RuleNumericLiteralPositive = 35, RuleNumericLiteralNegative = 36, 
+    RuleBooleanLiteral = 37, RuleString = 38, RuleIri = 39, RulePrefixedName = 40, 
+    RuleBlankNode = 41, RuleAnon = 42
   };
 
   explicit SparqlUpdateParser(antlr4::TokenStream *input);
@@ -101,8 +100,6 @@ public:
   class PropertyListPathNotEmptyListContext;
   class ObjectListPathContext;
   class ObjectPathContext;
-  class PathNegatedPropertySetContext;
-  class PathOneInPropertySetContext;
   class IntegerContext;
   class TriplesNodeContext;
   class BlankNodePropertyListContext;
@@ -447,39 +444,6 @@ public:
   };
 
   ObjectPathContext* objectPath();
-
-  class  PathNegatedPropertySetContext : public antlr4::ParserRuleContext {
-  public:
-    PathNegatedPropertySetContext(antlr4::ParserRuleContext *parent, size_t invokingState);
-    virtual size_t getRuleIndex() const override;
-    std::vector<PathOneInPropertySetContext *> pathOneInPropertySet();
-    PathOneInPropertySetContext* pathOneInPropertySet(size_t i);
-    antlr4::tree::TerminalNode *OPEN_BRACE();
-    antlr4::tree::TerminalNode *CLOSE_BRACE();
-    std::vector<antlr4::tree::TerminalNode *> PIPE();
-    antlr4::tree::TerminalNode* PIPE(size_t i);
-
-
-    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
-   
-  };
-
-  PathNegatedPropertySetContext* pathNegatedPropertySet();
-
-  class  PathOneInPropertySetContext : public antlr4::ParserRuleContext {
-  public:
-    PathOneInPropertySetContext(antlr4::ParserRuleContext *parent, size_t invokingState);
-    virtual size_t getRuleIndex() const override;
-    IriContext *iri();
-    antlr4::tree::TerminalNode *A();
-    antlr4::tree::TerminalNode *INVERSE();
-
-
-    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
-   
-  };
-
-  PathOneInPropertySetContext* pathOneInPropertySet();
 
   class  IntegerContext : public antlr4::ParserRuleContext {
   public:

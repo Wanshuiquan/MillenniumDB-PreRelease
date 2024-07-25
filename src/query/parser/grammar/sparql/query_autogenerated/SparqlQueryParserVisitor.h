@@ -161,6 +161,16 @@ public:
 
     virtual std::any visitPathMod(SparqlQueryParser::PathModContext *context) = 0;
 
+    virtual std::any visitPathQuantity(SparqlQueryParser::PathQuantityContext *context) = 0;
+
+    virtual std::any visitPathQuantityExact(SparqlQueryParser::PathQuantityExactContext *context) = 0;
+
+    virtual std::any visitPathQuantityRange(SparqlQueryParser::PathQuantityRangeContext *context) = 0;
+
+    virtual std::any visitPathQuantityMin(SparqlQueryParser::PathQuantityMinContext *context) = 0;
+
+    virtual std::any visitPathQuantityMax(SparqlQueryParser::PathQuantityMaxContext *context) = 0;
+
     virtual std::any visitPathPrimary(SparqlQueryParser::PathPrimaryContext *context) = 0;
 
     virtual std::any visitPathNegatedPropertySet(SparqlQueryParser::PathNegatedPropertySetContext *context) = 0;

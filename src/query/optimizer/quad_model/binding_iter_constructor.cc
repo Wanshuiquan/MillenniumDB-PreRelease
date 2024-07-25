@@ -376,8 +376,7 @@ void BindingIterConstructor::visit(OpWhere& op_where) {
         tmp = std::make_unique<Filter>(
             &MQL::Conversions::to_boolean,
             std::move(tmp),
-            std::move(exprs),
-            false
+            std::move(exprs)
         );
     }
 }

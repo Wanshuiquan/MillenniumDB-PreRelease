@@ -2,7 +2,7 @@
 
 #include <cassert>
 
-#include "graph_models/rdf_model/datatypes/datetime.h" // TODO: make datetime common?
+#include "graph_models/common/datatypes/datetime.h"
 #include "graph_models/quad_model/quad_object_id.h"
 #include "storage/index/tensor_store/tensor_store.h"
 #include "storage/index/tensor_store/lsh/metric.h"

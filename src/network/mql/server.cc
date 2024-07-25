@@ -1,8 +1,6 @@
 #include "server.h"
 
-#include <array>
 #include <csignal>
-#include <cstddef>
 #include <iostream>
 #include <thread>
 
@@ -42,7 +40,7 @@ void Server::run(
     asio::io_context io_context(number_of_workers);
 
     // Create and launch a listening port
-    auto listener = std::make_shared<MQL::Listener>(
+    MQL::Listener listener(
         *this,
         io_context,
         asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port),
@@ -69,7 +67,7 @@ void Server::run(
         });
     }
 
-    listener->run();
+    listener.run();
     work_guard.reset();
 
     std::cout << "MillenniumDB Server running on port " << port << std::endl;

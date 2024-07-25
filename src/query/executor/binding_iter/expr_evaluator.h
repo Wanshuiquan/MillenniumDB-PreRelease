@@ -28,7 +28,7 @@ public:
     std::unique_ptr<BindingIter> child_iter;
 
     // We use vector because the order of evaluation of the expressions matters.
-    const std::vector<std::pair<VarId, std::unique_ptr<BindingExpr>>> exprs;
+    std::vector<std::pair<VarId, std::unique_ptr<BindingExpr>>> exprs;
 
 private:
     Binding* parent_binding;

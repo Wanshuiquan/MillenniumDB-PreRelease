@@ -38,6 +38,11 @@ public:
         return initial_ranges.size() + intersection_vars.size() + enumeration_vars.size();
     }
 
+    virtual std::string get_iter_name() const = 0; // TODO: Edge, Similarity, etc
+
+    // returns false if estimation cannot be done
+    virtual bool try_estimate(std::vector<double>& initial_estimations, std::vector<double>& after_estimations) const = 0; // TODO: Edge returns false
+
 protected:
     const std::vector<VarId> intersection_vars;
     const std::vector<VarId> enumeration_vars;

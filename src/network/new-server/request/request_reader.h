@@ -9,7 +9,7 @@ namespace NewServer {
 
 class RequestReader {
 public:
-    RequestReader() : request_bytes { nullptr }, request_size { 0 }, current_pos { 0 } { }
+    RequestReader() : request_bytes(nullptr), request_size(0), current_pos(0) { }
 
     // Set a new request for reading
     void set_request(const uint8_t* request_bytes, const size_t request_size);

@@ -604,6 +604,27 @@ int64_t DateTime::get_second(bool* error) const noexcept {
 }
 
 
+int64_t DateTime::get_tz_min_offset(bool* error) const noexcept {
+    if (id & LOW_PRES) {
+        *error = true;
+        return 0;
+    }
+
+    const uint64_t has_tz = (id & HAS_TZ) >> 13;
+    if (!has_tz) {
+        *error = true;
+        return 0;
+    }
+
+    *error = false;
+    const uint64_t tz_sign      = (id & TZ_SIGN)   >> 12;
+    const uint64_t tz_hour      = (id & TZ_HOUR)   >>  7;
+    const uint64_t tz_minute    = (id & TZ_MINUTE) >>  1;
+    const int64_t  tz_sign_mult = 1 - 2 * static_cast<int64_t>(tz_sign);
+    return tz_sign_mult * static_cast<int64_t>(tz_hour * 60 + tz_minute);
+}
+
+
 std::string DateTime::get_tz() const noexcept {
     if (id & LOW_PRES) {
         // No timezone stored for low precision

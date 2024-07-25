@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include <boost/unordered_set.hpp>
+#include "third_party/robin_hood/robin_hood.h"
 
 namespace LSH {
 class ForestIndex;
@@ -36,7 +36,7 @@ private:
     std::vector<uint_fast32_t> depths;
 
     // Buckets of object ids for each tree
-    std::vector<boost::unordered_set<uint64_t>> buckets;
+    std::vector<robin_hood::unordered_flat_set<uint64_t>> buckets;
 
     // Stack of object ids and similarities obtained from the intersection
     std::vector<std::pair<uint64_t, float>> stack;

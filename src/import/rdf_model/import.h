@@ -18,6 +18,8 @@
 #include "third_party/serd/serd.h"
 
 namespace Import { namespace Rdf {
+using namespace SPARQL;
+
 class OnDiskImport {
 public:
     // Maximum number of lines of .ttl to scan for base and prefix definitions
@@ -249,10 +251,10 @@ private:
 
     void save_object_id_literal(const SerdNode* object) {
         auto object_str = reinterpret_cast<const char*>(object->buf);
-        auto size  = object->n_bytes;
+        auto size = object->n_bytes;
 
         if (size <= RDF_OID::MAX_INLINE_LEN_STRING) {
-            object_id = SPARQL::Conversions::pack_string_simple_inline(object_str);
+            object_id = Conversions::pack_string_simple_inline(object_str);
         } else {
             object_id.id = get_or_create_external_id(object_str, size) | ObjectId::MASK_STRING_SIMPLE;
         }
@@ -260,7 +262,7 @@ private:
 
     void save_object_id_literal_datatype(const SerdNode* object, const SerdNode* datatype) {
         auto object_str = reinterpret_cast<const char*>(object->buf);
-        auto object_size  = object->n_bytes;
+        auto object_size = object->n_bytes;
 
         auto datatype_str = reinterpret_cast<const char*>(datatype->buf);
 
@@ -275,11 +277,11 @@ private:
         if (!is_xml_schema) {
             uint64_t datatype_id = get_datatype_id(datatype_str);
             if (object_size <= ObjectId::STR_DT_INLINE_BYTES) {
-                object_id = SPARQL::Conversions::pack_string_datatype_inline(datatype_id, object_str);
+                object_id = Conversions::pack_string_datatype_inline(datatype_id, object_str);
             } else {
                 object_id.id = get_or_create_external_id(object_str, object_size)
                                                         | ObjectId::MASK_STRING_DATATYPE
-                                                        | (datatype_id << SPARQL::Conversions::TMP_SHIFT);
+                                                        | (datatype_id << Conversions::TMP_SHIFT);
             }
             return;
         }
@@ -318,7 +320,7 @@ private:
         // String: xsd:string
         else if (strcmp(xsd_suffix, "string") == 0) {
             if (object_size <= RDF_OID::MAX_INLINE_LEN_STRING) {
-                object_id = SPARQL::Conversions::pack_string_xsd_inline(object_str);
+                object_id = Conversions::pack_string_xsd_inline(object_str);
             } else {
                 object_id.id = get_or_create_external_id(object_str, object_size) | ObjectId::MASK_STRING_XSD;
             }
@@ -342,7 +344,7 @@ private:
         else if (strcmp(xsd_suffix, "float") == 0) {
             try {
                 float f = std::stof(object_str);
-                object_id = SPARQL::Conversions::pack_float(f);
+                object_id = Conversions::pack_float(f);
             } catch (const std::out_of_range& e) {
                 object_id = save_ill_typed(reader->source.cur.line, object_str, datatype_str);
             } catch (const std::invalid_argument& e) {
@@ -387,9 +389,9 @@ private:
         // xsd:boolean
         else if (strcmp(xsd_suffix, "boolean") == 0) {
             if (strcmp(object_str, "true") == 0 || strcmp(object_str, "1") == 0) {
-                object_id = SPARQL::Conversions::pack_bool(true);
+                object_id = Conversions::pack_bool(true);
             } else if (strcmp(object_str, "false") == 0 || strcmp(object_str, "0") == 0) {
-                object_id = SPARQL::Conversions::pack_bool(false);
+                object_id = Conversions::pack_bool(false);
             } else {
                 object_id = save_ill_typed(reader->source.cur.line, object_str, datatype_str);
             }
@@ -398,11 +400,11 @@ private:
         else {
             uint64_t datatype_id = get_datatype_id(datatype_str);
             if (object_size <= ObjectId::STR_DT_INLINE_BYTES) {
-                object_id = SPARQL::Conversions::pack_string_datatype_inline(datatype_id, object_str);
+                object_id = Conversions::pack_string_datatype_inline(datatype_id, object_str);
             } else {
                 object_id.id = get_or_create_external_id(object_str, object_size)
                                                         | ObjectId::MASK_STRING_DATATYPE
-                                                        | (datatype_id << SPARQL::Conversions::TMP_SHIFT);
+                                                        | (datatype_id << Conversions::TMP_SHIFT);
             }
         }
     }
@@ -417,23 +419,23 @@ private:
         auto lang_id = get_lang_id(lang_str);
 
         if (object_size <= RDF_OID::MAX_INLINE_LEN_STRING_LANG) {
-            object_id = SPARQL::Conversions::pack_string_lang_inline(lang_id, object_str);
+            object_id = Conversions::pack_string_lang_inline(lang_id, object_str);
         } else {
             object_id.id = get_or_create_external_id(object_str, object_size)
                                                     | ObjectId::MASK_STRING_LANG
-                                                    | (lang_id << SPARQL::Conversions::TMP_SHIFT);
+                                                    | (lang_id << Conversions::TMP_SHIFT);
         }
     }
 
     ObjectId get_iri_id(const char* str, size_t str_len) {
         // If a prefix matches the IRI, store just the suffix and a pointer to the prefix
-        auto [prefix_id, prefix_size] =  prefixes.get_prefix_id(str, str_len);
+        auto [prefix_id, prefix_size] = prefixes.get_prefix_id(str, str_len);
 
         str += prefix_size;
         str_len -= prefix_size;
 
         if (str_len <= RDF_OID::MAX_INLINE_LEN_IRI) {
-            return SPARQL::Conversions::pack_iri_inline(str, prefix_id);
+            return Conversions::pack_iri_inline(str, prefix_id);
         } else {
             uint64_t prefix_id_shifted = static_cast<uint64_t>(prefix_id) << 48;
             return ObjectId(get_or_create_external_id(str, str_len) | ObjectId::MASK_IRI | prefix_id_shifted);
@@ -448,10 +450,10 @@ private:
             blank_ids_map.insert({ str, new_blank_id });
             blank_node_count++;
             catalog.set_blank_node_count(blank_node_count);
-            return SPARQL::Conversions::pack_blank_inline(new_blank_id);
+            return Conversions::pack_blank_inline(new_blank_id);
         } else {
             // Blank node found
-            return SPARQL::Conversions::pack_blank_inline(it->second);
+            return Conversions::pack_blank_inline(it->second);
         }
     }
 
@@ -488,11 +490,11 @@ private:
 
         uint64_t datatype_id = get_datatype_id(datatype);
         if (size <= ObjectId::STR_DT_INLINE_BYTES) {
-            return SPARQL::Conversions::pack_string_datatype_inline(datatype_id, value);
+            return Conversions::pack_string_datatype_inline(datatype_id, value);
         } else {
             return ObjectId(get_or_create_external_id(value, size)
                             | ObjectId::MASK_STRING_DATATYPE
-                            | (datatype_id << SPARQL::Conversions::TMP_SHIFT));
+                            | (datatype_id << Conversions::TMP_SHIFT));
         }
     }
 
@@ -515,20 +517,14 @@ private:
                 return ObjectId::get_null();
             }
             // If the integer uses more than 56 bits, it must be converted into Decimal Extern (overflow)
-            else if (i > SPARQL::Conversions::INTEGER_MAX || i < -SPARQL::Conversions::INTEGER_MAX) {
+            else if (i > Conversions::INTEGER_MAX || i < -Conversions::INTEGER_MAX) {
                 std::string normalized = Decimal(str, error).to_external();
                 if (*error) {
                     return ObjectId::get_null();
                 }
                 return ObjectId(get_or_create_external_id(normalized.c_str(), normalized.size()) | ObjectId::MASK_DECIMAL);
-            }
-            else if (i < 0) {
-                i *= -1;
-                i = (~i) & ObjectId::VALUE_MASK;
-                return ObjectId(i | ObjectId::MASK_NEGATIVE_INT);
-            }
-            else {
-                return ObjectId(i | ObjectId::MASK_POSITIVE_INT);
+            } else {
+                return Conversions::pack_int(i);
             }
         } catch (const std::out_of_range& e) {
             std::string normalized = Decimal(str, error).to_external();

@@ -29,9 +29,10 @@ void ForestIndexTopK::_begin(Binding& parent_binding) {
 
 
 bool ForestIndexTopK::_next() {
+    if (MDB_unlikely(get_query_ctx().thread_info.interruption_requested))
+        throw InterruptedException();
+
     if (current_index < top_k.size()) {
-        if (MDB_unlikely(get_query_ctx().thread_info.interruption_requested))
-            throw InterruptedException();
         parent_binding->add(object_var, ObjectId(top_k[current_index].first));
         parent_binding->add(similarity_var, MQL::Conversions::pack_float(top_k[current_index].second));
         ++current_index;

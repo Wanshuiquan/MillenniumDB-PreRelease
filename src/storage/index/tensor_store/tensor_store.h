@@ -44,10 +44,10 @@ public:
     std::unique_ptr<LSH::ForestIndex> forest_index;
 
     // Initialize a new tensor store
-    TensorStore(const std::string& name, uint64_t tensors_dim);
+    TensorStore(const std::string& name, uint64_t tensors_dim, uint64_t tensor_page_buffer_size_in_bytes);
 
     // Load an existing tensor store with a given name
-    TensorStore(const std::string& name);
+    TensorStore(const std::string& name, uint64_t tensor_page_buffer_size_in_bytes, bool preload);
 
     // Trigger the serialization before being destroyed
     ~TensorStore();
@@ -89,5 +89,5 @@ private:
     // Deserialize the tensor store
     void deserialize();
 
-    void set_tensor_buffer_manager();
+    void set_tensor_buffer_manager(uint64_t tensor_buffer_page_size_in_bytes, bool preload);
 };

@@ -77,10 +77,10 @@ public:
     // indicates the end of a group
     ObjectId get() override {
         if (count == 0) {
-            return ObjectId(ObjectId::MASK_POSITIVE_INT);
+            return Conversions::pack_int(0);
         }
 
-         if (type == Conversions::OPTYPE_INTEGER) {
+        if (type == Conversions::OPTYPE_INTEGER) {
             Decimal avg;
             if (sum_integer % count == 0) {
                 // Optimization to avoid expensive Decimal divide

@@ -8,3 +8,10 @@ inline void FATAL_ERROR(const std::string& error) {
     std::cerr << "\n\x1B[0m";
     std::exit(EXIT_FAILURE);
 }
+
+// prints an error
+inline void NON_FATAL_ERROR(const std::string& error) {
+    std::cerr << "\x1b[0;33m";
+    std::cerr << error;
+    std::cerr << "\n\x1B[0m";
+}

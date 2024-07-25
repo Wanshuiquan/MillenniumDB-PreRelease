@@ -190,7 +190,7 @@ void OnDiskImport::start_import(const std::string& input_filename, const std::st
                 auto& cursor = reader->source.cur;
                 std::string error = "INTERNAL ERROR on line " + std::to_string(cursor.line) + ":"
                     + std::to_string(cursor.col) + ". " + std::string((char*) serd_strerror(status));
-                FATAL_ERROR(error);
+                NON_FATAL_ERROR(error);
             }
             }
         }

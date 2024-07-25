@@ -8,11 +8,16 @@
 
 class LeapfrogSimilaritySearchIter : public LeapfrogIter {
 public:
+    // Pairs { object_id, similarity } sorted by the first element
+    std::vector<std::pair<uint64_t, uint64_t>> sorted_top_k;
+
+    std::vector<std::pair<uint64_t, uint64_t>>::iterator current;
+
     LeapfrogSimilaritySearchIter(bool*                                   interruption_requested,
                                  std::vector<std::unique_ptr<ScanRange>> initial_ranges,
                                  std::vector<VarId>                      intersection_vars,
                                  std::vector<VarId>                      enumeration_vars,
-                                 std::vector<std::pair<uint64_t, float>> top_k);
+                                 const std::vector<std::pair<uint64_t, float>>& top_k);
 
     inline uint64_t get_key() const override { return (level == 0) ? current->first : current->second; }
 
@@ -30,11 +35,11 @@ public:
 
     bool next_enumeration(Binding& binding) override;
 
-private:
-    // Pairs { object_id, similarity } sorted by the first element
-    std::vector<std::pair<uint64_t, uint64_t>> sorted_top_k;
+    std::string get_iter_name() const override { return "LeapfrogSimilaritySearchIter"; }
 
-    std::vector<std::pair<uint64_t, uint64_t>>::iterator current;
+    bool try_estimate(std::vector<double>& initial_estimations, std::vector<double>& after_estimations) const override;
+
+private:
 
     // Whether the enumeration of the similarity was done
     bool similarity_was_enum;

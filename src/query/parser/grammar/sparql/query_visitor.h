@@ -71,6 +71,8 @@ private:
     // to avoid repeating paths in patterns like `?s :P1+ :o1, :o2`
     bool current_path_var_is_fresh = false;
 
+    bool group_by_present = false;
+
     // Parsing helpers
     std::string iriCtxToString(SparqlParser::IriContext*);
 

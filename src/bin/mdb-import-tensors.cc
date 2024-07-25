@@ -8,6 +8,7 @@
 #include "graph_models/quad_model/quad_model.h"
 #include "graph_models/quad_model/quad_object_id.h"
 #include "storage/buffer_manager.h"
+#include "storage/index/tensor_store/tensor_buffer_manager.h"
 #include "storage/index/tensor_store/tensor_store.h"
 #include "storage/string_manager.h"
 #include "third_party/cli11/CLI11.hpp"
@@ -16,9 +17,10 @@ using namespace LSH;
 
 void build_tensor_store(const std::string& tensors_file_path,
                         const std::string& tensor_store_name,
-                        uint64_t           tensors_dim) {
+                        uint64_t           tensors_dim,
+                        uint64_t           tensor_buffer) {
     // Initialize a new tensor store
-    TensorStore tensor_store(tensor_store_name, tensors_dim);
+    TensorStore tensor_store(tensor_store_name, tensors_dim, tensor_buffer);
 
     std::fstream tensors_fs(tensors_file_path, std::ios::in | std::ios::binary);
     std::string  line;
@@ -60,7 +62,8 @@ int main(int argc, char* argv[]) {
     std::string db_directory;
     std::string tensors_file;
     std::string tensor_store_name;
-    uint64_t    tensors_dim = 1;
+    uint64_t    tensors_dim   = 1;
+    uint64_t    tensor_buffer = TensorBufferManager::DEFAULT_TENSOR_PAGES_BUFFER_SIZE;
 
     CLI::App app("MillenniumDB Import Tensors");
     app.get_formatter()->column_width(35);
@@ -89,6 +92,12 @@ int main(int argc, char* argv[]) {
       ->check(CLI::Range(1, 8162))
       ->required();
 
+    app.add_option("--tensor-buffer", tensor_buffer)
+      ->description("size of buffer for tensor pages shared between threads\nAllows units such as MB and GB")
+      ->option_text("<bytes> [2GB]")
+      ->transform(CLI::AsSizeValue(false))
+      ->check(CLI::Range(1024ULL * 1024, 1024ULL * 1024 * 1024 * 1024));
+
     CLI11_PARSE(app, argc, argv);
 
     if (tensor_store_name.empty()) {
@@ -101,6 +110,7 @@ int main(int argc, char* argv[]) {
     std::cout << "  tensors file      : " << tensors_file << "\n";
     std::cout << "  tensor store name : " << tensor_store_name << "\n";
     std::cout << "  tensors dim       : " << tensors_dim << "\n";
+    std::cout << "  tensor_buffer     : " << tensor_buffer << "bytes \n";
 
     std::cout << "Initializing a QuadModel...\n";
     auto model_destroyer = QuadModel::init(db_directory,
@@ -116,7 +126,7 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    build_tensor_store(tensors_file, tensor_store_name, tensors_dim);
+    build_tensor_store(tensors_file, tensor_store_name, tensors_dim, tensor_buffer);
 
     return EXIT_SUCCESS;
 }

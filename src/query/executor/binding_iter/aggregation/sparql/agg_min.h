@@ -10,7 +10,7 @@ class AggMin : public Agg {
 public:
     using Agg::Agg;
     void begin() override {
-        min = ObjectId(ObjectId::MASK_MAX);
+        min = Conversions::pack_int(Conversions::INTEGER_MAX);
     }
 
     void process() override {
@@ -25,7 +25,7 @@ public:
 
     // indicates the end of a group
     ObjectId get() override {
-        if (min == ObjectId(ObjectId::MASK_MAX)) {
+        if (min == Conversions::pack_int(Conversions::INTEGER_MAX)) {
             return ObjectId::get_null();
         }
         return min;

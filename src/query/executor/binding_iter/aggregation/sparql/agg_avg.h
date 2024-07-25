@@ -69,7 +69,7 @@ public:
     // indicates the end of a group
     ObjectId get() override {
         if (count == 0) {
-            return ObjectId(ObjectId::MASK_POSITIVE_INT);
+            return Conversions::pack_int(0);
         }
 
          if (type == Conversions::OPTYPE_INTEGER) {

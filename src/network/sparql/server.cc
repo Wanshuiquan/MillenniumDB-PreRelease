@@ -42,7 +42,7 @@ void Server::run(
     asio::io_context io_context(number_of_workers);
 
     // Create and launch a listening port
-    auto listener = std::make_shared<SPARQL::Listener>(
+    SPARQL::Listener listener(
         *this,
         io_context,
         asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port),
@@ -69,7 +69,7 @@ void Server::run(
         });
     }
 
-    listener->run();
+    listener.run();
     work_guard.reset();
 
     std::cout << "SPARQL Server running on port " << port << std::endl;

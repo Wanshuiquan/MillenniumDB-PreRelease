@@ -1,7 +1,7 @@
 #include "ttl_writer.h"
 
+#include "graph_models/common/datatypes/datetime.h"
 #include "graph_models/rdf_model/conversions.h"
-#include "graph_models/rdf_model/datatypes/datetime.h"
 #include "third_party/dragonbox/dragonbox_to_chars.h"
 
 using namespace SPARQL;

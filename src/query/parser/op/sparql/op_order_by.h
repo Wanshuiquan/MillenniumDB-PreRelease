@@ -5,6 +5,7 @@
 #include <variant>
 
 #include "query/parser/expr/expr.h"
+#include "query/parser/expr/sparql/atom/expr_var.h"
 #include "query/parser/op/op.h"
 
 
@@ -19,13 +20,24 @@ public:
     std::vector<bool> ascending_order;
 
     OpOrderBy(
-        std::unique_ptr<Op>                                        op,
-        std::vector<std::variant<VarId, std::unique_ptr<Expr>>>&&  items,
-        std::vector<bool>&&                                        ascending_order
+        std::unique_ptr<Op>                                       op,
+        std::vector<std::variant<VarId, std::unique_ptr<Expr>>>&& _items,
+        std::vector<bool>&&                                       ascending_order
     ) :
         op              (std::move(op)),
-        items           (std::move(items)),
-        ascending_order (std::move(ascending_order)) { }
+        ascending_order (std::move(ascending_order))
+    {
+        for (auto& item : _items) {
+            if (std::holds_alternative<std::unique_ptr<Expr>>(item)) {
+                auto casted_expr_var = dynamic_cast<ExprVar*>(std::get<std::unique_ptr<Expr>>(item).get());
+                if (casted_expr_var) {
+                    items.push_back(casted_expr_var->var);
+                    continue;
+                }
+            }
+            items.push_back(std::move(item));
+        }
+    }
 
     std::unique_ptr<Op> clone() const  override {
         std::vector<std::variant<VarId, std::unique_ptr<Expr>>> new_items;

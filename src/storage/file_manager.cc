@@ -73,13 +73,14 @@ void FileManager::flush(UPage& page) const {
 }
 
 
-void FileManager::flush_big_page(FileId& file_id, uint64_t page_number, char* bytes, uint64_t page_size) const {
-    auto fd = file_id.id;
-    lseek(fd, page_number*page_size, SEEK_SET);
-    auto write_res = write(fd, bytes, page_size);
+void FileManager::flush(TensorPage& page) const {
+    auto fd = page.page_id.file_id.id;
+    lseek(fd, page.page_id.page_number*TensorPage::SIZE, SEEK_SET);
+    auto write_res = write(fd, page.get_bytes(), TensorPage::SIZE);
     if (write_res == -1) {
-        throw std::runtime_error("Could not write into file when flushing page");
+        throw std::runtime_error("Could not write into str hash file when flushing page");
     }
+    page.dirty = false;
 }
 
 
@@ -111,8 +112,8 @@ void FileManager::read_tmp_page(PageId page_id, char* bytes) const {
 
 
 void FileManager::read_existing_page(PageId page_id, char* bytes) const {
-    static_assert(VPage::SIZE == UPage::SIZE,
-        "read_existing_page used for both VPage and UPage");
+    static_assert((VPage::SIZE == UPage::SIZE) && (VPage::SIZE == TensorPage::SIZE),
+                  "read_existing_page used for VPage, UPage and TensorPage");
 
     auto fd = page_id.file_id.id;
 
@@ -133,8 +134,8 @@ void FileManager::read_existing_page(PageId page_id, char* bytes) const {
 
 
 uint32_t FileManager::append_page(FileId file_id, char* bytes) const {
-    static_assert(VPage::SIZE == UPage::SIZE,
-        "append_page used for both VPage and UPage");
+    static_assert((VPage::SIZE == UPage::SIZE) && (VPage::SIZE == TensorPage::SIZE),
+                "append_page used for both VPage, UPage and TensorPage");
 
     auto fd = file_id.id;
     auto page_number = lseek(fd, 0, SEEK_END) / VPage::SIZE;
@@ -149,34 +150,6 @@ uint32_t FileManager::append_page(FileId file_id, char* bytes) const {
 
     return page_number;
 }
-
-
-void FileManager::read_big_page(PageId page_id, char* bytes, uint64_t page_size) const {
-    auto fd = page_id.file_id.id;
-    lseek(fd, 0, SEEK_END);
-
-    struct stat buf;
-    fstat(fd, &buf);
-    uint64_t file_size = buf.st_size;
-
-    lseek(fd, page_id.page_number*page_size, SEEK_SET);
-    if (file_size/page_size <= page_id.page_number) {
-        // new file page, write zeros
-        memset(bytes, 0, page_size);
-        auto write_res = ftruncate(fd, (page_size + 1) * page_id.page_number);
-
-        if (write_res == -1) {
-            throw std::runtime_error("Could not write into file");
-        }
-    } else {
-        // reading existing file page
-        auto read_res = read(fd, bytes, page_size);
-        if (read_res == -1) {
-            throw std::runtime_error("Could not read file page");
-        }
-    }
-}
-
 
 
 FileId FileManager::get_file_id(const string& filename) {

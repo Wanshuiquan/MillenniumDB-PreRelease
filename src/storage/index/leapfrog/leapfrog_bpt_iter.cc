@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "query/exceptions.h"
+#include "query/executor/binding_iter/scan_ranges/term.h"
 #include "storage/buffer_manager.h"
 
 using std::array;
@@ -236,6 +237,46 @@ bool LeapfrogBptIter<N>::open_terms(Binding& input_binding) {
     level = initial_ranges.size() - 1;
     return internal_search(min, max);
 }
+
+template <size_t N>
+bool LeapfrogBptIter<N>::try_estimate(std::vector<double>& initial_estimations, std::vector<double>& after_estimations) const {
+    Record<N> min;
+    Record<N> max;
+    Record<N> after;
+
+    // Will estimate ranges min-max, and min-after
+    for (size_t i = 0; i < initial_ranges.size(); i++) {
+        auto term = dynamic_cast<Term*>(initial_ranges[i].get());
+        if (term == nullptr) {
+            return false;
+        }
+
+        min[i]   = term->get_oid().id;
+        max[i]   = term->get_oid().id;
+        after[i] = term->get_oid().id;
+    }
+
+    min[initial_ranges.size()]   = 0;
+    max[initial_ranges.size()]   = UINT64_MAX;
+    after[initial_ranges.size()] = get_key();
+
+    for (size_t i = initial_ranges.size() + 1; i < N; i++) {
+        min[i] = 0;
+        max[i] = UINT64_MAX;
+        after[i] = UINT64_MAX;
+    }
+
+    auto& bpt_root = get_root();
+    initial_estimations.push_back(
+        BPlusTree<N>::estimate_records(bpt_root, min, max)
+    );
+    after_estimations.push_back(
+        BPlusTree<N>::estimate_records(bpt_root, min, after)
+    );
+
+    return true;
+}
+
 
 template class LeapfrogBptIter<1>;
 template class LeapfrogBptIter<2>;

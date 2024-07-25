@@ -8,21 +8,25 @@
 
 namespace NewServer {
 
+template <uint64_t ModelId>
 class Server;
 
 /**
  * Handle the initial connection and chooses the type of client that has connected
  */
-class SessionDispatcher : public std::enable_shared_from_this<SessionDispatcher> {
+template<uint64_t ModelId>
+class SessionDispatcher : public std::enable_shared_from_this<SessionDispatcher<ModelId>> {
 public:
-    Server& server;
+    Server<ModelId>& server;
 
     boost::asio::ip::tcp::socket socket;
 
     std::chrono::seconds timeout;
 
-    SessionDispatcher(Server& server, boost::asio::ip::tcp::socket socket, std::chrono::seconds timeout) :
-        server { server }, socket { std::move(socket) }, timeout { timeout } { }
+    SessionDispatcher(Server<ModelId>& server, boost::asio::ip::tcp::socket socket, std::chrono::seconds timeout) :
+        server  (server),
+        socket  (std::move(socket)),
+        timeout (timeout) { }
 
     void run();
 

@@ -7,7 +7,7 @@
 #include <boost/beast/websocket.hpp>
 
 #include "network/new-server/protocol.h"
-#include "network/new-server/session/abstract_streaming_session.h"
+#include "network/new-server/session/streaming_session.h"
 
 namespace NewServer {
 
@@ -21,7 +21,7 @@ namespace NewServer {
 
 class ResponseBuffer : public std::streambuf {
 public:
-    explicit ResponseBuffer(AbstractStreamingSession& session_) :
+    explicit ResponseBuffer(StreamingSession& session_) :
         session(session_), chunk_open(false), current_pos(0), current_chunk_start_pos(0) { }
 
     // Write down the chunk seal [0x00 0x00]. It cannot be sent in two separate messages
@@ -39,7 +39,7 @@ public:
     }
 
 protected:
-    AbstractStreamingSession& session;
+    StreamingSession& session;
 
     uint8_t buffer[Protocol::BUFFER_SIZE];
 
@@ -79,12 +79,13 @@ protected:
     }
 
 private:
-    bool          chunk_open;
+    bool chunk_open;
+
     uint_fast32_t current_pos;
     uint_fast32_t current_chunk_start_pos;
 
     // Write the current buffer to the stream from the beginning to the current_pos
-    virtual void write(std::size_t num_bytes) {
+    void write(std::size_t num_bytes) {
         session.write(buffer, num_bytes);
     }
 
@@ -105,10 +106,12 @@ private:
 
     // Write down the chunk header and close the chunk
     inline void close_chunk() {
-        const auto chunk_size               = current_pos - current_chunk_start_pos - Protocol::CHUNK_HEADER_SIZE;
+        auto chunk_size = current_pos - current_chunk_start_pos - Protocol::CHUNK_HEADER_SIZE;
+
         buffer[current_chunk_start_pos]     = static_cast<uint8_t>((chunk_size >> 8) & 0xFF);
         buffer[current_chunk_start_pos + 1] = static_cast<uint8_t>(chunk_size & 0xFF);
-        chunk_open                          = false;
+
+        chunk_open = false;
     }
 
     // Ensure that the chunk has enough space to write something, opening it if necessary

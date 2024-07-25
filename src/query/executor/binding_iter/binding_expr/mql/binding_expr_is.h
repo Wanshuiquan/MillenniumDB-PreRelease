@@ -3,6 +3,7 @@
 #include <memory>
 #include <stdexcept>
 
+#include "graph_models/quad_model/conversions.h"
 #include "query/executor/binding_iter/binding_expr/binding_expr.h"
 #include "query/parser/expr/mql/bool_expr/expr_comaprision/expr_is.h"
 
@@ -42,11 +43,8 @@ public:
         default:
             throw std::logic_error("ExprIs::TypeName case not implemented in BindingExprIs");
         }
-        if (res ^ negation) {
-            return ObjectId(ObjectId::BOOL_TRUE);
-        } else {
-            return ObjectId(ObjectId::BOOL_FALSE);
-        }
+
+        return Conversions::pack_bool(res ^= negation);
     }
 
     void accept_visitor(BindingExprVisitor& visitor) override {

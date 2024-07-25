@@ -5,21 +5,21 @@
 #include <memory>
 #include <vector>
 
-#include "graph_models/quad_model/conversions.h"
+#include "graph_models/common/conversions.h"
 
 
 LeapfrogSimilaritySearchIter::LeapfrogSimilaritySearchIter(bool* interruption_requested,
                                                            std::vector<std::unique_ptr<ScanRange>> initial_ranges,
                                                            std::vector<VarId>                      intersection_vars,
                                                            std::vector<VarId>                      enumeration_vars,
-                                                           std::vector<std::pair<uint64_t, float>> top_k) :
+                                                           const std::vector<std::pair<uint64_t, float>>& top_k) :
     LeapfrogIter(interruption_requested,
                  std::move(initial_ranges),
                  std::move(intersection_vars),
                  std::move(enumeration_vars)) {
     assert(!top_k.empty() && "top_k must not be empty");
     std::transform(top_k.begin(), top_k.end(), std::back_inserter(sorted_top_k), [](auto& pair) {
-        return std::make_pair(pair.first, MQL::Conversions::pack_float(pair.second).id);
+        return std::make_pair(pair.first, Common::Conversions::pack_float(pair.second).id);
     });
     std::sort(sorted_top_k.begin(), sorted_top_k.end(), [](auto& pair1, auto& pair2) {
         return pair1.first < pair2.first;
@@ -80,4 +80,12 @@ bool LeapfrogSimilaritySearchIter::next_enumeration(Binding& binding) {
         binding.add(enumeration_vars[0], ObjectId(saved_similarity));
         return true;
     }
+}
+
+
+bool LeapfrogSimilaritySearchIter::try_estimate(std::vector<double>& initial_estimations, std::vector<double>& after_estimations) const {
+    initial_estimations.push_back(sorted_top_k.size());
+    after_estimations.push_back(current - sorted_top_k.begin());
+
+    return true;
 }

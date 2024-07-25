@@ -63,8 +63,8 @@ private:
 public:
     uint64_t id;
 
-    DateTime(uint64_t id) noexcept : id(id) { }
-    DateTime(ObjectId oid) noexcept : id(oid.id) { }
+    constexpr DateTime(uint64_t id) noexcept : id(id) { }
+    constexpr DateTime(ObjectId oid) noexcept : id(oid.id) { }
 
     static uint8_t days_in_month(int64_t year, uint8_t month);
 
@@ -92,6 +92,9 @@ public:
     int64_t get_hour(bool* error) const noexcept;
     int64_t get_minute(bool* error) const noexcept;
     int64_t get_second(bool* error) const noexcept;
+
+    bool has_tz() const noexcept;
+    int64_t get_tz_min_offset(bool* error) const noexcept;
 
     std::string get_tz() const noexcept;
     std::string get_timezone(bool* error) const noexcept;

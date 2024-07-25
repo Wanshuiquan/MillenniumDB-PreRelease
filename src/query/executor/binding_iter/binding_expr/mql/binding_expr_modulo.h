@@ -3,7 +3,7 @@
 #include <memory>
 
 #include "graph_models/object_id.h"
-#include "graph_models/inliner.h"
+#include "graph_models/quad_model/conversions.h"
 #include "query/executor/binding_iter/binding_expr/binding_expr.h"
 
 namespace MQL {
@@ -59,7 +59,7 @@ public:
             return ObjectId::get_null();
         }
 
-        return ObjectId(Inliner::inline_int(lhs_value%rhs_value));
+        return ObjectId(Conversions::pack_int(lhs_value%rhs_value));
     }
 
     void accept_visitor(BindingExprVisitor& visitor) override {

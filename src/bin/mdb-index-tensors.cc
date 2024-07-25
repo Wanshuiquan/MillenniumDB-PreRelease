@@ -8,6 +8,7 @@
 #include "storage/file_manager.h"
 #include "storage/filesystem.h"
 #include "storage/index/tensor_store/lsh/metric.h"
+#include "storage/index/tensor_store/tensor_buffer_manager.h"
 #include "storage/index/tensor_store/tensor_store.h"
 #include "storage/string_manager.h"
 #include "third_party/cli11/CLI11.hpp"
@@ -37,10 +38,12 @@ void build_forest_index(TensorStore& tensor_store,
 int main(int argc, char* argv[]) {
     std::string db_directory;
     std::string tensor_store_name;
-    MetricType  metric_type = MetricType::ANGULAR;
-    uint64_t    num_trees = 1;
+    MetricType  metric_type     = MetricType::ANGULAR;
+    uint64_t    num_trees       = 1;
     uint64_t    max_bucket_size = 1024;
-    uint64_t    max_depth = 64;
+    uint64_t    max_depth       = 64;
+    uint64_t    tensor_buffer   = TensorBufferManager::DEFAULT_TENSOR_PAGES_BUFFER_SIZE;
+    bool        preload         = false;
 
     std::unordered_map<std::string, MetricType> name2metric_type = { { "angular", MetricType::ANGULAR },
                                                                      { "euclidean", MetricType::EUCLIDEAN },
@@ -82,6 +85,15 @@ int main(int argc, char* argv[]) {
       ->description("maximum depth of the trees in the LSH Forest Index")
       ->type_name("<num>")
       ->check(CLI::Range(2, 1024));
+
+    app.add_option("--tensor-buffer", tensor_buffer)
+      ->description("size of buffer for tensor pages shared between threads\nAllows units such as MB and GB")
+      ->option_text("<bytes> [2GB]")
+      ->transform(CLI::AsSizeValue(false))
+      ->check(CLI::Range(1024ULL * 1024, 1024ULL * 1024 * 1024 * 1024));
+
+    app.add_flag("--preload-tensors", preload)
+      ->description("Fill the tensor buffer before building the forest index");
 
     CLI11_PARSE(app, argc, argv);
 
@@ -130,7 +142,7 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    TensorStore tensor_store(tensor_store_name);
+    TensorStore tensor_store(tensor_store_name, tensor_buffer, preload);
 
     build_forest_index(tensor_store, metric_type, num_trees, max_bucket_size, max_depth);
 

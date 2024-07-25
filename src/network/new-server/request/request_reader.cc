@@ -66,8 +66,8 @@ void RequestReader::check_datatype(Protocol::DataType expected) {
     check_remaining_bytes(1);
     auto actual = static_cast<Protocol::DataType>(request_bytes[current_pos++]);
     if (expected != actual) {
-        const auto expected_str = Protocol::data_type_to_string(expected);
-        const auto actual_str   = Protocol::data_type_to_string(actual);
+        const auto expected_str = Protocol::datatype_to_string(expected);
+        const auto actual_str   = Protocol::datatype_to_string(actual);
         throw ProtocolException("Unexpected DataType: Expected " + expected_str + " but got " + actual_str);
     }
 }

@@ -4,8 +4,8 @@
 #include <variant>
 
 #include "graph_models/object_id.h"
+#include "graph_models/common/datatypes/datetime.h"
 #include "graph_models/rdf_model/conversions.h"
-#include "graph_models/rdf_model/datatypes/datetime.h"
 #include "graph_models/rdf_model/rdf_model.h"
 #include "graph_models/rdf_model/rdf_object_id.h"
 #include "query/exceptions.h"
@@ -168,11 +168,7 @@ Any QueryVisitor::visitPrefixDecl(SparqlParser::PrefixDeclContext* ctx) {
     std::string iri_prefix = ctx->IRIREF()->getText();
     iri_prefix = iri_prefix.substr(1, iri_prefix.size() - 2); // remove '<' ... '>'
 
-    if (global_info.iri_prefix_map.find(alias) != global_info.iri_prefix_map.end()) {
-        throw QuerySemanticException("Multiple prefix declarations for prefix: '" + alias + "'");
-    }
-
-    global_info.iri_prefix_map.insert({alias, iri_prefix});
+    global_info.iri_prefix_map[alias] = iri_prefix;
     return 0;
 }
 
@@ -194,20 +190,11 @@ Any QueryVisitor::visitSolutionModifier(SparqlParser::SolutionModifierContext* c
     // GROUP BY
     auto group_clause = ctx->groupClause();
     if (group_clause) {
+        group_by_present = true;
         visit(group_clause);
         current_op = std::make_unique<OpGroupBy>(
             std::move(current_op),
             std::move(group_by_items)
-        );
-    }
-    // ORDER BY
-    auto order_clause = ctx->orderClause();
-    if (order_clause) {
-        visit(order_clause);
-        current_op = std::make_unique<OpOrderBy>(
-            std::move(current_op),
-            std::move(order_by_items),
-            std::move(order_by_ascending)
         );
     }
 
@@ -218,6 +205,17 @@ Any QueryVisitor::visitSolutionModifier(SparqlParser::SolutionModifierContext* c
         current_op = std::make_unique<OpHaving>(
             std::move(current_op),
             std::move(having_expressions)
+        );
+    }
+
+    // ORDER BY
+    auto order_clause = ctx->orderClause();
+    if (order_clause) {
+        visit(order_clause);
+        current_op = std::make_unique<OpOrderBy>(
+            std::move(current_op),
+            std::move(order_by_items),
+            std::move(order_by_ascending)
         );
     }
     return 0;
@@ -238,6 +236,7 @@ Any QueryVisitor::visitOrderClause(SparqlParser::OrderClauseContext* ctx) {
             visit(oc->constraint());
             order_by_items.emplace_back(std::move(current_expr));
         } else {
+            // it should not enter here unless grammar is modified
             throw QuerySemanticException("Unsupported ORDER BY condition: '" + oc->getText() + "'");
         }
 
@@ -301,6 +300,10 @@ Any QueryVisitor::visitSelectClause(SparqlParser::SelectClauseContext* ctx) {
     LOG_VISITOR
     visitChildren(ctx);
     if (ctx->ASTERISK() != nullptr) {
+        if (group_by_present) {
+            throw QuerySemanticException("SELECT * not legal with GROUP BY");
+        }
+
         for (auto& var : current_op->get_scope_vars()) {
             // Prevent storing blank nodes and internal vars
             if (get_query_ctx().get_var_name(var).find("_:") != 0
@@ -618,6 +621,7 @@ Any QueryVisitor::visitMultiplicativeExpression(SparqlParser::MultiplicativeExpr
                 current_expr = std::make_unique<ExprDivision>(std::move(lhs), std::move(current_expr));
                 break;
             default:
+                // it should not enter here unless grammar is modified
                 throw QuerySemanticException("Unhandled multiplicative expression");
         }
     }
@@ -636,11 +640,6 @@ Any QueryVisitor::visitPrimaryExpression(SparqlParser::PrimaryExpressionContext*
         auto argList = ctx->iriOrFunction()->argList();
 
         if (argList) {
-            auto expressions = argList->expressionList()->expression();
-            if (expressions.size() != 1) {
-                throw QuerySemanticException("Cast function must have one argument");
-            }
-            visit(expressions[0]);
 
             const std::string xml_schema = "http://www.w3.org/2001/XMLSchema#";
             bool is_xml_schema = false;
@@ -650,8 +649,14 @@ Any QueryVisitor::visitPrimaryExpression(SparqlParser::PrimaryExpressionContext*
             if (!is_xml_schema) {
                 throw NotSupportedException("Unsupported IRI function");
             }
-            auto xsd_suffix = iri.substr(xml_schema.size());
 
+            auto expressions = argList->expressionList()->expression();
+            if (expressions.size() != 1) {
+                throw QuerySemanticException("Cast function must have one argument");
+            }
+            visit(expressions[0]);
+
+            auto xsd_suffix = iri.substr(xml_schema.size());
             if (xsd_suffix == "boolean") {
                 current_expr = std::make_unique<ExprCast>(CastType::xsd_boolean, std::move(current_expr));
             } else if (xsd_suffix == "double") {
@@ -688,6 +693,7 @@ Any QueryVisitor::visitPrimaryExpression(SparqlParser::PrimaryExpressionContext*
         current_expr = std::make_unique<ExprVar>(var);
     }
     else {
+        // it should not enter here unless grammar is modified
         throw QuerySemanticException("Unhandled primary expression");
     }
     return 0;
@@ -710,7 +716,8 @@ Any QueryVisitor::visitUnaryExpression(SparqlParser::UnaryExpressionContext* ctx
                 current_expr = std::make_unique<ExprNot>(std::move(current_expr));
                 break;
             default:
-                throw QuerySemanticException("Unhandled additive expression");
+                // it should not enter here unless grammar is modified
+                throw QuerySemanticException("Unhandled unary expression");
         }
     }
     return 0;
@@ -817,6 +824,7 @@ Any QueryVisitor::visitRelationalExpression(SparqlParser::RelationalExpressionCo
                 current_expr = std::make_unique<ExprGreaterOrEqual>(std::move(lhs), std::move(current_expr));
                 break;
             default:
+                // it should not enter here unless grammar is modified
                 throw QuerySemanticException("Unhandled relational expression");
         }
     }
@@ -1121,6 +1129,7 @@ Any QueryVisitor::visitBuiltInCall(SparqlParser::BuiltInCallContext* ctx) {
         visit(ctx->notExistsFunction());
     }
     else {
+        // it should not enter here unless grammar is modified
         throw QuerySemanticException("Unhandled built-in call: \"" + ctx->getText() + '"');
     }
     return 0;
@@ -1158,6 +1167,7 @@ Any QueryVisitor::visitAggregate(SparqlParser::AggregateContext* ctx) {
         }
         current_expr = std::make_unique<ExprAggGroupConcat>(std::move(current_expr), separator, distinct);
     } else {
+        // it should not enter here unless grammar is modified
         throw QuerySemanticException("Unhandled aggregate: \"" + ctx->getText() + '"');
     }
     return 0;
@@ -1256,12 +1266,6 @@ Any QueryVisitor::visitNotExistsFunction(SparqlParser::NotExistsFunctionContext*
 Any QueryVisitor::visitFunctionCall(SparqlParser::FunctionCallContext* ctx) {
     LOG_VISITOR
     auto iri = iriCtxToString(ctx->iri());
-    auto expressions = ctx->argList()->expressionList()->expression();
-
-    if (expressions.size() != 1) {
-        throw QuerySemanticException("Cast function must have one argument");
-    }
-    visit(expressions[0]);
 
     const std::string xml_schema = "http://www.w3.org/2001/XMLSchema#";
     bool is_xml_schema = false;
@@ -1271,8 +1275,14 @@ Any QueryVisitor::visitFunctionCall(SparqlParser::FunctionCallContext* ctx) {
     if (!is_xml_schema) {
         throw NotSupportedException("Unsupported IRI function");
     }
-    auto xsd_suffix = iri.substr(xml_schema.size());
 
+    auto expressions = ctx->argList()->expressionList()->expression();
+    if (expressions.size() != 1) {
+        throw QuerySemanticException("Cast function must have one argument");
+    }
+    visit(expressions[0]);
+
+    auto xsd_suffix = iri.substr(xml_schema.size());
     if (xsd_suffix == "boolean") {
         current_expr = std::make_unique<ExprCast>(CastType::xsd_boolean, std::move(current_expr));
     } else if (xsd_suffix == "double") {
@@ -1669,10 +1679,6 @@ Any QueryVisitor::visitCollection(SparqlParser::CollectionContext* ctx) {
 Any QueryVisitor::visitGroupCondition(SparqlParser::GroupConditionContext* ctx) {
     LOG_VISITOR
     visitChildren(ctx);
-    if (!ctx->var() && !ctx->expression()) {
-        // TODO: builtInCall can be supported the same way as expression
-        throw NotSupportedException("GROUP BY with functions or builtInCall");
-    }
 
     std::optional<VarId> var;
     std::unique_ptr<Expr> expr;
@@ -1682,6 +1688,12 @@ Any QueryVisitor::visitGroupCondition(SparqlParser::GroupConditionContext* ctx) 
         var = get_query_ctx().get_or_create_var(var_name);
     }
     if (ctx->expression()) {
+        expr = std::move(current_expr);
+    }
+    if (ctx->builtInCall()) {
+        expr = std::move(current_expr);
+    }
+    if (ctx->functionCall()) {
         expr = std::move(current_expr);
     }
 
@@ -1905,7 +1917,14 @@ Any QueryVisitor::visitVerbPath(SparqlParser::VerbPathContext* ctx) {
     }
     // Default SPARQL path
     else {
-        current_path_var = get_query_ctx().get_internal_var();
+        auto casted_atom = dynamic_cast<PathAtom*>(current_path.get());
+        // if current path is an atom we have a triple instead of a path
+        if (casted_atom && !casted_atom->inverse) {
+            current_sparql_element = Conversions::pack_iri(casted_atom->atom);
+            return 0;
+        } else {
+            current_path_var = get_query_ctx().get_internal_var();
+        }
     }
     current_path_var_is_fresh = true;
     current_sparql_element = std::move(current_path);
@@ -1986,7 +2005,41 @@ Any QueryVisitor::visitPathEltOrInverse(SparqlParser::PathEltOrInverseContext* c
     current_path_inverse = previous_current_path_inverse;
 
     if (mod) {
-        switch(mod->getText()[0]) {
+        if (mod->pathQuantity()) {
+            std::vector<std::unique_ptr<RegularPathExpr>> seq;
+            if (mod->pathQuantity()->pathQuantityExact()) {
+                unsigned exact = std::stoul(mod->pathQuantity()->pathQuantityExact()->INTEGER()->getText());
+                for (unsigned i = 0; i < exact; i++) {
+                    seq.push_back(current_path->clone());
+                }
+            }
+            else if (mod->pathQuantity()->pathQuantityRange()) {
+                unsigned min = std::stoul(mod->pathQuantity()->pathQuantityRange()->min->getText());
+                unsigned max = std::stoul(mod->pathQuantity()->pathQuantityRange()->max->getText());
+                unsigned i = 0;
+                for (; i < min; i++) {
+                    seq.push_back(current_path->clone());
+                }
+                for (; i < max; i++) {
+                    seq.push_back(std::make_unique<PathOptional>(current_path->clone()));
+                }
+            }
+            else if (mod->pathQuantity()->pathQuantityMax()) {
+                unsigned max = std::stoul(mod->pathQuantity()->pathQuantityMax()->max->getText());
+                for (unsigned i = 0; i < max; i++) {
+                    seq.push_back(std::make_unique<PathOptional>(current_path->clone()));
+                }
+            }
+            else if (mod->pathQuantity()->pathQuantityMin()) {
+                unsigned min = std::stoul(mod->pathQuantity()->pathQuantityMin()->min->getText());
+                for (unsigned i = 0; i < min; i++) {
+                    seq.push_back(current_path->clone());
+                }
+                seq.push_back(std::make_unique<PathKleeneStar>(current_path->clone()));
+            }
+            current_path = std::make_unique<PathSequence>(std::move(seq));
+        } else {
+            switch(mod->getText()[0]) {
             case '*':
                 current_path = std::make_unique<PathKleeneStar>(std::move(current_path));
                 break;
@@ -1999,6 +2052,7 @@ Any QueryVisitor::visitPathEltOrInverse(SparqlParser::PathEltOrInverseContext* c
             case '+':
                 current_path = std::make_unique<PathKleenePlus>(std::move(current_path));
                 break;
+            }
         }
     }
     return 0;

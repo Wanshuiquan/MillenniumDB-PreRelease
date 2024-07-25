@@ -4,69 +4,78 @@
 #include <string>
 #include <sstream>
 
-#include "graph_models/object_id.h"
+#include "graph_models/common/conversions.h"
 #include "query/executor/query_executor/mql/return_executor.h"
 #include "storage/string_manager.h"
 #include "storage/tmp_manager.h"
+#include "graph_models/inliner.h"
 
 namespace MQL { namespace Conversions {
-
-    constexpr int64_t INTEGER_MAX = 0x00FF'FFFF'FFFF'FFFFL;
+    using namespace Common::Conversions;
 
     // The order, int < flt < inv is important
     constexpr uint8_t OPTYPE_INTEGER = 0x01;
     constexpr uint8_t OPTYPE_FLOAT   = 0x02;
     constexpr uint8_t OPTYPE_INVALID = 0x03;
 
-    inline int64_t unpack_int(ObjectId oid) {
+    inline uint64_t unpack_blank(ObjectId oid) {
+        return oid.get_value();
+    }
+
+    inline uint64_t unpack_edge(ObjectId oid) {
+        return oid.get_value();
+    }
+
+    inline std::string unpack_string(ObjectId oid) {
         switch (oid.get_type()) {
-        case ObjectId::MASK_NEGATIVE_INT:
-            return static_cast<int64_t>(~oid.id & ObjectId::VALUE_MASK) * -1;
-        case ObjectId::MASK_POSITIVE_INT:
-            return static_cast<int64_t>(oid.get_value());;
-        default:
-            throw LogicException("Called unpack_int with incorrect ObjectId type, this should never happen");
+        case ObjectId::MASK_STRING_SIMPLE_INLINED: {
+            return Inliner::get_string_inlined<ObjectId::STR_INLINE_BYTES>(oid.get_value());
+        }
+        case ObjectId::MASK_STRING_SIMPLE_EXTERN: {
+            std::stringstream ss;
+            const uint64_t external_id = oid.id & ObjectId::MASK_EXTERNAL_ID;
+            string_manager.print(ss, external_id);
+            return ss.str();
+        }
+        case ObjectId::MASK_STRING_SIMPLE_TMP: {
+            std::stringstream ss;
+            const uint64_t external_id = oid.id & ObjectId::MASK_EXTERNAL_ID;
+            tmp_manager.print_str(ss, external_id);
+            return ss.str();
+        }
+        default: {
+            throw LogicException("Called unpack_string with incorrect ObjectId type, this should never happen");
+        }
         }
     }
 
-    inline float unpack_float(ObjectId oid) {
-        assert(oid.get_type() == ObjectId::MASK_FLOAT);
-
-        auto  value = oid.id;
-        float flt;
-        auto  dst = reinterpret_cast<char*>(&flt);
-
-        dst[0] = value & 0xFF;
-        dst[1] = (value >> 8) & 0xFF;
-        dst[2] = (value >> 16) & 0xFF;
-        dst[3] = (value >> 24) & 0xFF;
-
-        return flt;
-    }
-
-    inline float unpack_double(ObjectId oid) {
-        assert(oid.get_sub_type() == ObjectId::MASK_DOUBLE);
-
-        std::stringstream ss;
-        uint64_t external_id = oid.id & ObjectId::MASK_EXTERNAL_ID;
-
-        switch (oid.get_mod()) {
-            case ObjectId::MOD_TMP: {
-                tmp_manager.print_str(ss, external_id);
-                break;
-            }
-            case ObjectId::MOD_EXTERNAL: {
-                string_manager.print(ss, external_id);
-                break;
-            }
+    inline std::string unpack_named_node(ObjectId oid) {
+        switch (oid.get_type()) {
+        case ObjectId::MASK_NAMED_NODE_INLINED: {
+            return Inliner::get_string_inlined<ObjectId::NAMED_NODE_INLINE_BYTES>(oid.get_value());
         }
-
-        double dbl;
-        auto dst = reinterpret_cast<char*>(&dbl);
-        ss.read(dst, 8);
-
-        return dbl;
+        case ObjectId::MASK_NAMED_NODE_EXTERN: {
+            std::stringstream ss;
+            const uint64_t external_id = oid.id & ObjectId::MASK_EXTERNAL_ID;
+            string_manager.print(ss, external_id);
+            return ss.str();
+        }
+        case ObjectId::MASK_NAMED_NODE_TMP: {
+            std::stringstream ss;
+            const uint64_t external_id = oid.id & ObjectId::MASK_EXTERNAL_ID;
+            tmp_manager.print_str(ss, external_id);
+            return ss.str();
+        }
+        default: {
+            throw LogicException("Called unpack_named_node with incorrect ObjectId type, this should never happen");
+        }
+        }
     }
+
+    inline DateTime unpack_datetime(ObjectId oid) {
+        return DateTime(oid);
+    }
+
 
     /**
     *  @brief Calculates the generic datatypes of the operand in an expression.
@@ -83,36 +92,6 @@ namespace MQL { namespace Conversions {
 
     inline uint8_t calculate_optype(ObjectId oid1, ObjectId oid2) {
         return std::max(calculate_optype(oid1), calculate_optype(oid2));
-    }
-
-    inline ObjectId pack_int(int64_t i) {
-        uint64_t mask = ObjectId::MASK_POSITIVE_INT;
-
-        if (i < 0) {
-            mask = ObjectId::MASK_NEGATIVE_INT;
-            i *= -1;
-            if (i > INTEGER_MAX) {
-                return ObjectId::get_null();
-            }
-            i = (~i) & ObjectId::VALUE_MASK;
-        } else {
-            if (i > INTEGER_MAX) {
-                return ObjectId::get_null();
-            }
-        }
-        return ObjectId(mask | i);
-    }
-
-    inline ObjectId pack_float(float flt) {
-        auto src = reinterpret_cast<unsigned char*>(&flt);
-
-        auto oid = ObjectId::MASK_FLOAT;
-        oid |= static_cast<uint64_t>(src[0]);
-        oid |= static_cast<uint64_t>(src[1]) << 8;
-        oid |= static_cast<uint64_t>(src[2]) << 16;
-        oid |= static_cast<uint64_t>(src[3]) << 24;
-
-        return ObjectId(oid);
     }
 
     inline float to_float(ObjectId oid) {

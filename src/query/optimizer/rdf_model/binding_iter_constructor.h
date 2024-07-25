@@ -8,6 +8,8 @@
 #include "query/executor/binding_iter/aggregation/agg.h"
 #include "query/parser/op/op.h"
 
+class Expr;
+
 namespace SPARQL {
 
 struct JoinVars {
@@ -68,9 +70,11 @@ public:
 
     std::set<VarId> group_vars;
 
-    std::vector<VarId> order_vars;
-    std::set<VarId>    order_saved_vars;
-    std::vector<bool>  order_ascending;
+    std::set<VarId> order_saved_vars;
+
+    OpOrderBy* op_order_by = nullptr;
+
+    OpHaving* op_having = nullptr;
 
     std::map<VarId, std::unique_ptr<Agg>> aggregations;
 

@@ -11,7 +11,7 @@ namespace SPARQL {
 
 class Server;
 
-class Listener : public std::enable_shared_from_this<Listener> {
+class Listener {
     Server& server;
     boost::asio::io_context& io_context;
     boost::asio::ip::tcp::acceptor acceptor;
@@ -73,10 +73,7 @@ private:
         acceptor.async_accept(
             boost::asio::make_strand(io_context),
             [this](boost::system::error_code ec, boost::asio::ip::tcp::socket socket) {
-                if (ec) {
-                    fail(ec, "accept");// TODO: this kills the server
-                    return; // To avoid infinite loop
-                } else {
+                if (!ec) {
                     // Create the session and run it
                     std::make_shared<Session>(server, std::move(socket), timeout)->run();
                 }

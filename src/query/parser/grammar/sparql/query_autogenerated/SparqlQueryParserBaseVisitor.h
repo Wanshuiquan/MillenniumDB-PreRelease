@@ -299,6 +299,26 @@ public:
     return visitChildren(ctx);
   }
 
+  virtual std::any visitPathQuantity(SparqlQueryParser::PathQuantityContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitPathQuantityExact(SparqlQueryParser::PathQuantityExactContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitPathQuantityRange(SparqlQueryParser::PathQuantityRangeContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitPathQuantityMin(SparqlQueryParser::PathQuantityMinContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitPathQuantityMax(SparqlQueryParser::PathQuantityMaxContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
   virtual std::any visitPathPrimary(SparqlQueryParser::PathPrimaryContext *ctx) override {
     return visitChildren(ctx);
   }

@@ -99,14 +99,6 @@ public:
     return visitChildren(ctx);
   }
 
-  virtual std::any visitPathNegatedPropertySet(SparqlUpdateParser::PathNegatedPropertySetContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual std::any visitPathOneInPropertySet(SparqlUpdateParser::PathOneInPropertySetContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
   virtual std::any visitInteger(SparqlUpdateParser::IntegerContext *ctx) override {
     return visitChildren(ctx);
   }

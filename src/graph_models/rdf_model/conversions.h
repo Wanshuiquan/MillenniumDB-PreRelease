@@ -3,12 +3,12 @@
 #include <cstdint>
 #include <string>
 
-#include "graph_models/object_id.h"
-#include "graph_models/rdf_model/datatypes/datetime.h"
-#include "graph_models/rdf_model/datatypes/decimal.h"
+#include "graph_models/common/conversions.h"
 #include "graph_models/rdf_model/rdf_object_id.h"
 
 namespace SPARQL { namespace Conversions {
+
+    using namespace Common::Conversions;
 
     // special value for lang and datatypes
     // that indicates the lang/dtt is inlined in the string
@@ -19,9 +19,7 @@ namespace SPARQL { namespace Conversions {
     static constexpr uint64_t TMP_SHIFT = 44;
 
     // All unpacks assumes type were checked before calling
-    bool        unpack_bool(ObjectId oid);
     uint64_t    unpack_blank(ObjectId oid);
-    DateTime    unpack_date(ObjectId oid);
     std::string unpack_iri(ObjectId oid);
     std::string unpack_string(ObjectId oid);
 
@@ -45,13 +43,22 @@ namespace SPARQL { namespace Conversions {
 
     ObjectId string_simple_to_xsd(ObjectId oid);
 
-    inline ObjectId pack_blank_inline(uint64_t id) {
+    inline constexpr ObjectId pack_blank_inline(uint64_t id) {
         return ObjectId(ObjectId::MASK_ANON_INLINED | id);
     }
 
-    inline ObjectId pack_blank_tmp(uint64_t blank_id) {
+    inline constexpr ObjectId pack_blank_tmp(uint64_t blank_id) {
         return ObjectId(blank_id | ObjectId::MASK_ANON_TMP);
     }
+
+    // constexpr ObjectId build_iri_extern(uint64_t id_extern, uint64_t prefix_id) {
+    //     uint64_t prefix_id_shifted = static_cast<uint64_t>(prefix_id) << 48;
+    //     return ObjectId(id_extern | ObjectId::MASK_IRI | prefix_id_shifted);
+    // }
+
+    // constexpr ObjectId build_string_extern(uint64_t id_extern) {
+    //     return ObjectId(id_extern | ObjectId::MASK_STRING_SIMPLE_EXTERN);
+    // }
 
     ObjectId pack_iri_inline(const char* str, uint_fast8_t prefix_id);
     ObjectId pack_string_simple_inline(const char* str);
@@ -65,25 +72,13 @@ namespace SPARQL { namespace Conversions {
     ObjectId try_pack_integer(const std::string& dt, const std::string& str);
 
     constexpr ObjectId pack_empty_string() {
-        return ObjectId(ObjectId::STRING_SIMPLE_EMPTY);
+        return ObjectId(ObjectId::MASK_STRING_SIMPLE_INLINED);
     }
-
-    constexpr uint64_t get_path_id(ObjectId oid) {
-        return oid.id & 0x00FF'FFFF'FFFF'FFFFUL;
-    }
-
-    constexpr ObjectId pack_bool(bool b) {
-        return b ? ObjectId(ObjectId::MASK_BOOL | 1)
-                 : ObjectId(ObjectId::MASK_BOOL | 0);
-    }
-
 
     constexpr uint64_t DECIMAL_SIGN_MASK      = 0x0080'0000'0000'0000UL;
     constexpr uint64_t DECIMAL_NUMBER_MASK    = 0x007F'FFFF'FFFF'FFF0UL;
     constexpr uint64_t DECIMAL_SEPARATOR_MASK = 0x0000'0000'0000'000FUL;
-    constexpr uint64_t FLOAT_SIGN_MASK        = 0x0000'0000'8000'0000UL;
-
-    constexpr int64_t  INTEGER_MAX            = 0x00FF'FFFF'FFFF'FFFFL;
+    // constexpr uint64_t FLOAT_SIGN_MASK        = 0x0000'0000'8000'0000UL;
 
     // The order, int < dec < flt < inv is important
     constexpr uint8_t OPTYPE_INTEGER = 0x01;
@@ -92,29 +87,22 @@ namespace SPARQL { namespace Conversions {
     constexpr uint8_t OPTYPE_DOUBLE  = 0x04;
     constexpr uint8_t OPTYPE_INVALID = 0x05;
 
-    int64_t unpack_int(ObjectId oid);
     Decimal unpack_decimal(ObjectId oid);
-    float   unpack_float(ObjectId oid);
-    double  unpack_double(ObjectId oid);
 
     uint8_t calculate_optype(ObjectId oid1, ObjectId oid2);
     uint8_t calculate_optype(ObjectId oid);
 
-    inline ObjectId pack_date(const DateTime& dt) { return ObjectId(dt.id); }
-
     ObjectId pack_iri(const std::string& str);
     ObjectId pack_string_simple(const std::string& str);
     ObjectId pack_string_xsd(const std::string& str);
-    ObjectId pack_int(int64_t i);
     ObjectId pack_decimal(Decimal dec);
-    ObjectId pack_float(float flt);
     ObjectId pack_double(double dbl);
 
-    int64_t     to_integer(ObjectId oid);
-    Decimal     to_decimal(ObjectId oid);
-    float       to_float(ObjectId oid);
-    double      to_double(ObjectId oid);
-    ObjectId    to_boolean(ObjectId oid);
+    int64_t  to_integer(ObjectId oid);
+    Decimal  to_decimal(ObjectId oid);
+    float    to_float(ObjectId oid);
+    double   to_double(ObjectId oid);
+    ObjectId to_boolean(ObjectId oid);
 
     // Returns a string with the lexical representation of the value
     std::string to_lexical_str(ObjectId oid);

@@ -1,4 +1,4 @@
-#include "graph_models/rdf_model/datatypes/datetime.h"
+#include "graph_models/common/datatypes/datetime.h"
 
 #include <algorithm>
 #include <iostream>

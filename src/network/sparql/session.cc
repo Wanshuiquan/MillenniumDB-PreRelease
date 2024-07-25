@@ -157,9 +157,6 @@ void Session::execute_update(const std::string& query, std::ostream& os) {
     // mutex to allow only one write query at a time
     std::lock_guard<std::mutex> lock(update_mutex);
 
-    DurationMS parser_duration;
-    DurationMS execution_duration;
-
     std::unique_ptr<BufferManager::VersionScope> version_scope;
     std::unique_ptr<OpUpdate> logical_plan;
     try {
@@ -205,15 +202,15 @@ void Session::execute_update(const std::string& query, std::ostream& os) {
         execution_duration = std::chrono::system_clock::now() - execution_start;
 
         logger.log(Category::ExecutionStats, [&update_executor] (std::ostream& os) {
-            os << "Update Stats";
+            os << "Update Stats\n";
             if (update_executor.triples_inserted != 0) {
-                os << "\nTriples inserted: " << update_executor.triples_inserted;
+                os << "Triples inserted: " << update_executor.triples_inserted << '\n';
             }
             if (update_executor.triples_deleted != 0) {
-                os << "\nTriples deleted: " << update_executor.triples_deleted;
+                os << "Triples deleted: " << update_executor.triples_deleted << '\n';
             }
             if (update_executor.triples_inserted == 0 && update_executor.triples_deleted == 0) {
-                os << "\nNo modifications were performed";
+                os << "No modifications were performed\n";
             }
         });
     }
@@ -242,7 +239,7 @@ void Session::execute_update(const std::string& query, std::ostream& os) {
     }
 
     os << "HTTP/1.1 204 No Content\r\n";
-    logger(Category::Info) << "Parser duration:" << parser_duration.count() << "ms\n"
+    logger(Category::Info) << "Parser duration: " << parser_duration.count() << "ms\n"
         << "Execution duration:" << execution_duration.count() << "ms";
 }
 

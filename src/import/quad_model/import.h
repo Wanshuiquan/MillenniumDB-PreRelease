@@ -4,9 +4,10 @@
 #include <functional>
 #include <iostream>
 
+#include "graph_models/common/conversions.h"
 #include "graph_models/inliner.h"
+#include "graph_models/common/datatypes/datetime.h"
 #include "graph_models/quad_model/quad_catalog.h"
-#include "graph_models/rdf_model/datatypes/datetime.h"
 #include "import/disk_vector.h"
 #include "import/exceptions.h"
 #include "import/external_string.h"
@@ -115,14 +116,22 @@ private:
         }
     }
 
+    int64_t try_parse_int(char* c_str) {
+        return Common::Conversions::pack_int(atoll(c_str)).id;
+    }
+
+    int64_t try_parse_float(char* c_str) {
+        return Common::Conversions::pack_float(atof(c_str)).id;
+    }
+
     void save_first_id_int() {
         ids_stack.clear();
-        id1 = Inliner::inline_int(atoll(lexer.str));
+        id1 = try_parse_int(lexer.str);
     }
 
     void save_first_id_float() {
         ids_stack.clear();
-        id1 = Inliner::inline_float(atof(lexer.str));
+        id1 = try_parse_float(lexer.str);
     }
 
     void save_first_id_true() {
@@ -231,11 +240,11 @@ private:
     }
 
     void save_second_id_int() {
-        id2 = Inliner::inline_int(atoll(lexer.str));
+        id2 = try_parse_int(lexer.str);
     }
 
     void save_second_id_float() {
-        id2 = Inliner::inline_float(atof(lexer.str));
+        id2 = try_parse_float(lexer.str);
     }
 
     void save_second_id_true() {
@@ -348,12 +357,12 @@ private:
     }
 
     void add_node_prop_int() {
-        uint64_t value_id = Inliner::inline_int(atoll(lexer.str));
+        uint64_t value_id = try_parse_int(lexer.str);
         properties.push_back({id1, key_id, value_id});
     }
 
     void add_node_prop_float() {
-        uint64_t value_id = Inliner::inline_float(atof(lexer.str));
+        uint64_t value_id = try_parse_float(lexer.str);
         properties.push_back({id1, key_id, value_id});
     }
 
@@ -381,12 +390,12 @@ private:
     }
 
     void add_edge_prop_int() {
-        uint64_t value_id = Inliner::inline_int(atoll(lexer.str));
+        uint64_t value_id = try_parse_int(lexer.str);
         properties.push_back({edge_id, key_id, value_id});
     }
 
     void add_edge_prop_float() {
-        uint64_t value_id = Inliner::inline_float(atof(lexer.str));
+        uint64_t value_id = try_parse_float(lexer.str);
         properties.push_back({edge_id, key_id, value_id});
     }
 
@@ -485,7 +494,7 @@ private:
             return 0;
         }
 
-        uint8_t buffer[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+        uint8_t buffer[9] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
         for (unsigned i = 0; i < unicode_length; ++i) {
             if (is_hex(*str_ptr)) {
                 buffer[i] = *str_ptr;
@@ -495,8 +504,7 @@ private:
             }
         }
 
-        char*          endptr = NULL;
-        const uint32_t code   = (uint32_t) strtoul((const char*) buffer, &endptr, 16);
+        const uint32_t code = strtoul((const char*) buffer, NULL, 16);
 
         uint8_t size = 0;
         if (code < 0x0080) {

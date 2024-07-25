@@ -6,11 +6,11 @@
 #include <thread>
 #include <vector>
 
-#include <boost/asio.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 
 #include "misc/logger.h"
+#include "network/new-server/protocol.h"
 #include "network/new-server/listener.h"
 #include "query/query_context.h"
 
@@ -107,7 +107,8 @@ void write(beast::tcp_stream& stream, http::message<isRequest, Body, Fields>&& m
 }
 
 
-void browser_session(tcp::socket&& socket) {
+template <uint64_t ModelId>
+void Server<ModelId>::browser_session(tcp::socket&& socket) {
     http::request<http::string_body> req = {};
 
     beast::tcp_stream stream { std::move(socket) };
@@ -177,7 +178,7 @@ void browser_session(tcp::socket&& socket) {
         }
 
         // Build the path to the requested file
-        std::string path = path_cat(Server::DEFAULT_BROWSER_PATH, req.target());
+        std::string path = path_cat(NewServer::Protocol::DEFAULT_BROWSER_PATH, req.target());
         if (req.target().back() == '/')
             path.append("index.html");
 
@@ -229,7 +230,8 @@ void browser_session(tcp::socket&& socket) {
 }
 
 
-void browser_listener(asio::io_context* browser_io_context, int port) {
+template <uint64_t ModelId>
+void Server<ModelId>::browser_listener(asio::io_context* browser_io_context, int port) {
     // Start the acceptor and listen for connections, dispatching them to the session
     asio::ip::tcp::acceptor acceptor(*browser_io_context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port));
 
@@ -243,17 +245,15 @@ void browser_listener(asio::io_context* browser_io_context, int port) {
 }
 
 
-bool Server::shutdown_server { false };
-
-
-void Server::run(unsigned short       port,
-                 unsigned short       browser_port,
-                 bool                 launch_browser,
-                 int                  num_workers,
-                 std::chrono::seconds timeout) {
+template <uint64_t ModelId>
+void Server<ModelId>::run(unsigned short       port,
+                          unsigned short       browser_port,
+                          bool                 launch_browser,
+                          int                  num_workers,
+                          std::chrono::seconds timeout) {
     asio::io_context io_context { num_workers };
 
-    auto listener = std::make_shared<Listener>(*this, io_context, tcp::endpoint(tcp::v4(), port), timeout);
+    Listener<ModelId> listener(*this, io_context, tcp::endpoint(tcp::v4(), port), timeout);
 
     std::signal(SIGTERM, &signal_shutdown_server);
     std::signal(SIGINT, &signal_shutdown_server);
@@ -274,7 +274,7 @@ void Server::run(unsigned short       port,
         });
     }
 
-    listener->run();
+    listener.run();
     work_guard.reset();
 
     std::cout << "\nMillenniumDB TCP server listening on localhost:" << port << std::endl;
@@ -308,12 +308,14 @@ void Server::run(unsigned short       port,
 }
 
 
-void Server::signal_shutdown_server(int) {
+template <uint64_t ModelId>
+void Server<ModelId>::signal_shutdown_server(int) {
     shutdown_server = true;
 }
 
 
-void Server::execute_timeouts() {
+template <uint64_t ModelId>
+void Server<ModelId>::execute_timeouts() {
     while (!shutdown_server) {
         const auto now = std::chrono::system_clock::now();
         {
@@ -328,3 +330,7 @@ void Server::execute_timeouts() {
         std::this_thread::sleep_for(std::chrono::milliseconds(1'000));
     }
 }
+
+
+template class NewServer::Server<NewServer::Protocol::QUAD_MODEL_ID>;
+template class NewServer::Server<NewServer::Protocol::RDF_MODEL_ID>;

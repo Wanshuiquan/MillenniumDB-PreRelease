@@ -53,6 +53,7 @@ uint64_t ReturnStreamingExecutor::get_result_count() const {
 
 
 void ReturnStreamingExecutor::analyze(std::ostream& os, bool print_stats, int indent) const {
-    BindingIterPrinter printer(os, print_stats, indent);
+    os << std::string(indent, ' ') << "ReturnStreamingExecutor()";
+    BindingIterPrinter printer(os, print_stats, indent + 2);
     iter->accept_visitor(printer);
 }

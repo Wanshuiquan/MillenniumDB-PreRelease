@@ -15,21 +15,13 @@
 
 using namespace SPARQL;
 
-bool Conversions::unpack_bool(ObjectId oid) {
-    return oid.id != ObjectId::BOOL_FALSE;
-}
-
 uint64_t Conversions::unpack_blank(ObjectId oid) {
     return oid.get_value();
 }
 
-DateTime Conversions::unpack_date(ObjectId oid) {
-    return DateTime(oid);
-}
-
 ObjectId Conversions::string_simple_to_xsd(ObjectId oid) {
     auto mod = oid.get_mod();
-    return ObjectId(oid.get_value() | mod | ObjectId::MASK_STRING_SIMPLE );
+    return ObjectId(oid.get_value() | mod | ObjectId::MASK_STRING_SIMPLE);
 }
 
 
@@ -217,18 +209,18 @@ ObjectId Conversions::try_pack_string_datatype(const std::string& dt, const std:
     else if (xsd_suffix == "integer" || xsd_suffix == "long" || xsd_suffix == "int" || xsd_suffix == "short"
              || xsd_suffix == "byte")
     {
-        return try_pack_integer(str, dt);
+        return try_pack_integer(dt, str);
 
     }
     // Negative integer
     else if (xsd_suffix == "nonPositiveInteger" || xsd_suffix == "negativeInteger") {
-        return try_pack_integer(str, dt);
+        return try_pack_integer(dt, str);
     }
     // Positive integer
     else if (xsd_suffix == "positiveInteger" || xsd_suffix == "nonNegativeInteger" || xsd_suffix == "unsignedLong"
                || xsd_suffix == "unsignedInt" || xsd_suffix == "unsignedShort" || xsd_suffix == "unsignedByte")
     {
-        return try_pack_integer(str, dt);
+        return try_pack_integer(dt, str);
 
     } else if (xsd_suffix == "boolean") {
         if (str == "true" || str == "1") {
@@ -272,7 +264,7 @@ ObjectId Conversions::pack_string_datatype(const std::string& dt, const std::str
 }
 
 
-ObjectId Conversions::try_pack_integer(const std::string& str, const std::string& dt) {
+ObjectId Conversions::try_pack_integer(const std::string& dt, const std::string& str) {
     try {
         size_t  pos;
         int64_t n = std::stoll(str, &pos);
@@ -361,23 +353,6 @@ Conversion:
 */
 
 
-/**
- *  @brief Unpacks an int (positive or negative) inside an ObjectId.
- *  @param oid The ObjectId to unpack.
- *  @return The value inside the ObjectId.
- */
-int64_t Conversions::unpack_int(ObjectId oid) {
-    switch (oid.get_type()) {
-    case ObjectId::MASK_NEGATIVE_INT:
-        return static_cast<int64_t>((~oid.id) & ObjectId::VALUE_MASK) * -1;
-    case ObjectId::MASK_POSITIVE_INT:
-        return static_cast<int64_t>(oid.get_value());
-    default:
-        throw LogicException("Called unpack_int with incorrect ObjectId type, this should never happen");
-    }
-}
-
-
 Decimal unpack_decimal_inlined(ObjectId oid) {
     assert(oid.get_type() == ObjectId::MASK_DECIMAL_INLINED);
 
@@ -442,67 +417,6 @@ Decimal Conversions::unpack_decimal(ObjectId oid) {
 }
 
 
-float Conversions::unpack_float(ObjectId oid) {
-    assert(oid.get_type() == ObjectId::MASK_FLOAT);
-
-    auto  value = oid.id;
-    float flt;
-    auto  dst = reinterpret_cast<char*>(&flt);
-
-    dst[0] = value & 0xFF;
-    dst[1] = (value >> 8) & 0xFF;
-    dst[2] = (value >> 16) & 0xFF;
-    dst[3] = (value >> 24) & 0xFF;
-
-    return flt;
-}
-
-
-double Conversions::unpack_double(ObjectId oid) {
-    assert(oid.get_sub_type() == ObjectId::MASK_DOUBLE);
-
-    std::stringstream ss;
-    uint64_t external_id = oid.id & ObjectId::MASK_EXTERNAL_ID;
-
-    switch (oid.get_mod()) {
-        case ObjectId::MOD_TMP: {
-            tmp_manager.print_str(ss, external_id);
-            break;
-        }
-        case ObjectId::MOD_EXTERNAL: {
-            string_manager.print(ss, external_id);
-            break;
-        }
-    }
-
-    double dbl;
-    auto dst = reinterpret_cast<char*>(&dbl);
-    ss.read(dst, 8);
-
-    return dbl;
-}
-
-
-ObjectId Conversions::pack_int(int64_t i) {
-    uint64_t oid = ObjectId::MASK_POSITIVE_INT;
-
-    if (i < 0) {
-        oid = ObjectId::MASK_NEGATIVE_INT;
-        i *= -1;
-        if (i > INTEGER_MAX) {
-            return ObjectId::get_null();
-        }
-        i = (~i) & ObjectId::VALUE_MASK;
-    } else {
-        if (i > INTEGER_MAX) {
-            return ObjectId::get_null();
-        }
-    }
-
-    return ObjectId(oid | i);
-}
-
-
 ObjectId Conversions::pack_decimal(Decimal dec) {
     auto oid = dec.to_internal();
 
@@ -530,19 +444,6 @@ ObjectId Conversions::pack_double(double dbl) {
     } else {
         oid = ObjectId::MASK_DOUBLE_TMP | tmp_manager.get_bytes_id(bytes, sizeof(double));
     }
-    return ObjectId(oid);
-}
-
-
-ObjectId Conversions::pack_float(float flt) {
-    auto src = reinterpret_cast<unsigned char*>(&flt);
-
-    auto oid = ObjectId::MASK_FLOAT;
-    oid |= static_cast<uint64_t>(src[0]);
-    oid |= static_cast<uint64_t>(src[1]) << 8;
-    oid |= static_cast<uint64_t>(src[2]) << 16;
-    oid |= static_cast<uint64_t>(src[3]) << 24;
-
     return ObjectId(oid);
 }
 
@@ -887,7 +788,7 @@ std::ostream& Conversions::debug_print(std::ostream& os, ObjectId oid) {
 ObjectId Conversions::pack_string_simple(const std::string& str) {
     uint64_t oid;
     if (str.size() == 0) {
-        return ObjectId(ObjectId::STRING_SIMPLE_EMPTY);
+        return ObjectId(ObjectId::MASK_STRING_SIMPLE_INLINED);
     } else if (str.size() <= ObjectId::STR_INLINE_BYTES) {
         oid = Inliner::inline_string(str.c_str()) | ObjectId::MASK_STRING_SIMPLE_INLINED;
     } else {
@@ -905,7 +806,7 @@ ObjectId Conversions::pack_string_simple(const std::string& str) {
 ObjectId Conversions::pack_string_xsd(const std::string& str) {
     uint64_t oid;
     if (str.size() == 0) {
-        return ObjectId(ObjectId::STRING_XSD_EMPTY);
+        return ObjectId(ObjectId::MASK_STRING_XSD_INLINED);
     } else if (str.size() <= ObjectId::STR_INLINE_BYTES) {
         oid = Inliner::inline_string(str.c_str()) | ObjectId::MASK_STRING_XSD_INLINED;
     } else {
@@ -950,13 +851,7 @@ void Conversions::print_iri(ObjectId oid, std::ostream& os) {
 
     switch (oid.get_type()) {
     case ObjectId::MASK_IRI_INLINED: {
-        for (int i = 5; i >= 0; i--) {
-            uint8_t c = (oid.id >> (i*8)) & 0xFF;
-            if (c == 0) {
-                break;
-            }
-            os << static_cast<char>(c);
-        }
+        Inliner::print_string_inlined<6>(os, oid.id);
         break;
     }
     case ObjectId::MASK_IRI_EXTERN: {
@@ -980,15 +875,7 @@ std::string Conversions::unpack_iri(ObjectId oid) {
 
     switch (oid.get_type()) {
     case ObjectId::MASK_IRI_INLINED: {
-        for (int i = 5; i >= 0; i--) {
-            uint8_t c = (oid.id >> (i*8)) & 0xFF;
-            if (c == 0) {
-                break;
-            }
-            prefix += static_cast<char>(c);
-        }
-
-        return prefix;
+        return prefix + Inliner::get_string_inlined<6>(oid.id);
     }
     case ObjectId::MASK_IRI_EXTERN: {
         std::stringstream ss;
@@ -1016,16 +903,7 @@ void Conversions::print_string(ObjectId oid, std::ostream& os) {
     switch (oid.get_type()) {
     case ObjectId::MASK_STRING_SIMPLE_INLINED:
     case ObjectId::MASK_STRING_XSD_INLINED: {
-        char str[8];
-        int  shift_size = 6 * 8;
-        for (int i = 0; i < ObjectId::MAX_INLINED_BYTES; i++) {
-            uint8_t byte = (oid.id >> shift_size) & 0xFF;
-            str[i]       = byte;
-            shift_size -= 8;
-        }
-        str[7] = '\0';
-
-        os << str;
+        Inliner::print_string_inlined<7>(os, oid.id);
         break;
     }
     case ObjectId::MASK_STRING_SIMPLE_EXTERN:
@@ -1050,16 +928,7 @@ std::string Conversions::unpack_string(ObjectId oid) {
     switch (oid.get_type()) {
     case ObjectId::MASK_STRING_SIMPLE_INLINED:
     case ObjectId::MASK_STRING_XSD_INLINED: {
-        char str[8];
-        int  shift_size = 6 * 8;
-        for (int i = 0; i < ObjectId::MAX_INLINED_BYTES; i++) {
-            uint8_t byte = (oid.id >> shift_size) & 0xFF;
-            str[i]       = byte;
-            shift_size -= 8;
-        }
-        str[7] = '\0';
-
-        return std::string(str);
+        return Inliner::get_string_inlined<ObjectId::STR_INLINE_BYTES>(oid.id);
     }
     case ObjectId::MASK_STRING_SIMPLE_EXTERN:
     case ObjectId::MASK_STRING_XSD_EXTERN: {
@@ -1088,14 +957,7 @@ std::pair<std::string, std::string> Conversions::unpack_string_lang(ObjectId oid
 
     switch (oid.get_type()) {
     case ObjectId::MASK_STRING_LANG_INLINED: {
-        const uint8_t* data = reinterpret_cast<uint8_t*>(&oid.id);
-        char str_b[6] = {}; // 5 + 1 for null byte, zero initialized
-
-        for (size_t i = 0; i < 5; i++) {
-            str_b[i] = data[4 - i];
-        }
-
-        str = std::string(str_b);
+        str = Inliner::get_string_inlined<5>(oid.id);
         break;
     }
     case ObjectId::MASK_STRING_LANG_EXTERN: {
@@ -1137,14 +999,7 @@ std::pair<std::string, std::string> Conversions::unpack_string_lang(ObjectId oid
 void Conversions::print_string_lang(ObjectId oid, std::ostream& os) {
     switch (oid.get_type()) {
     case ObjectId::MASK_STRING_LANG_INLINED: {
-        const uint8_t* data = reinterpret_cast<uint8_t*>(&oid.id);
-        char str[6] = {}; // 5 + 1 for null byte, zero initialized
-
-        for (size_t i = 0; i < 5; i++) {
-            str[i] = data[4 - i];
-        }
-
-        os << str;
+        Inliner::print_string_inlined<5>(os, oid.id);
         break;
     }
     case ObjectId::MASK_STRING_LANG_EXTERN: {
@@ -1170,15 +1025,7 @@ std::pair<std::string, std::string> Conversions::unpack_string_datatype(ObjectId
 
     switch (oid.get_type()) {
     case ObjectId::MASK_STRING_DATATYPE_INLINED: {
-        const uint8_t* data = reinterpret_cast<uint8_t*>(&oid.id);
-
-        char str_b[6] = {}; // 5 + 1 for null byte, zero initialized
-
-        for (size_t i = 0; i < 5; i++) {
-            str_b[i] = data[4 - i];
-        }
-
-        str = std::string(str_b);
+        str = Inliner::get_string_inlined<5>(oid.id);
         break;
     }
     case ObjectId::MASK_STRING_DATATYPE_EXTERN: {
@@ -1220,15 +1067,7 @@ std::pair<std::string, std::string> Conversions::unpack_string_datatype(ObjectId
 void Conversions::print_string_datatype(ObjectId oid, std::ostream& os) {
     switch (oid.get_type()) {
     case ObjectId::MASK_STRING_DATATYPE_INLINED: {
-        const uint8_t* data = reinterpret_cast<uint8_t*>(&oid.id);
-
-        char str[6] = {}; // 5 + 1 for null byte, zero initialized
-
-        for (size_t i = 0; i < 5; i++) {
-            str[i] = data[4 - i];
-        }
-
-        os << str;
+        Inliner::print_string_inlined<5>(os, oid.id);
         break;
     }
     case ObjectId::MASK_STRING_DATATYPE_EXTERN: {

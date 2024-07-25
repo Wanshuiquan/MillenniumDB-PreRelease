@@ -1,7 +1,8 @@
 #include "comparisons.h"
 
+#include "graph_models/common/datatypes/datetime.h"
 #include "graph_models/inliner.h"
-#include "graph_models/rdf_model/datatypes/datetime.h"
+#include "graph_models/quad_model/conversions.h"
 #include "storage/string_manager.h"
 #include "storage/tmp_manager.h"
 
@@ -102,14 +103,7 @@ int64_t Comparisons::compare(ObjectId lhs, ObjectId rhs) {
             break;
         }
         case ObjectId::MASK_FLOAT: {
-            float f;
-            uint8_t* dest = reinterpret_cast<uint8_t*>(&f);
-            dest[0] =  lhs.id        & 0xFF;
-            dest[1] = (lhs.id >> 8)  & 0xFF;
-            dest[2] = (lhs.id >> 16) & 0xFF;
-            dest[3] = (lhs.id >> 24) & 0xFF;
-
-            lhs_value = f;
+            lhs_value = Conversions::unpack_float(lhs);
             break;
         }
         default:
@@ -130,14 +124,7 @@ int64_t Comparisons::compare(ObjectId lhs, ObjectId rhs) {
             break;
         }
         case ObjectId::MASK_FLOAT: {
-            float f;
-            uint8_t* dest = reinterpret_cast<uint8_t*>(&f);
-            dest[0] =  rhs.id        & 0xFF;
-            dest[1] = (rhs.id >> 8)  & 0xFF;
-            dest[2] = (rhs.id >> 16) & 0xFF;
-            dest[3] = (rhs.id >> 24) & 0xFF;
-
-            rhs_value = f;
+            rhs_value = Conversions::unpack_float(rhs);
             break;
         }
         default:

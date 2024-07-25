@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstring>
+
 #include "storage/string_manager.h"
 #include "third_party/hashes/hash_function_wrapper.h"
 

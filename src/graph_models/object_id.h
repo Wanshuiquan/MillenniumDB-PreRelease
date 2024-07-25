@@ -99,17 +99,14 @@ public:
     static constexpr uint64_t MASK_EDGE                    = 0x80'00000000000000UL; // 0b1000'00'00  GENERIC
     static constexpr uint64_t MASK_PATH                    = 0x90'00000000000000UL; // 0b1001'00'00  GENERIC
     static constexpr uint64_t MASK_NOT_FOUND               = 0xA0'00000000000000UL; // 0b1010'00'00  GENERIC
-    static constexpr uint64_t MASK_MAX                     = 0xFF'FFFFFFFFFFFFFFUL; // 0b1010'00'00  GENERIC
 
     static_assert(MASK_NEGATIVE_INT < MASK_POSITIVE_INT, "Integers won't be ordered properly in the B+Tree.");
     static_assert(MASK_NEGATIVE_INT < 0x80'00000000000000UL, "Integer IDs can't be subtracted without overflow.");
     static_assert(MASK_POSITIVE_INT < 0x80'00000000000000UL, "Integer IDs can't be subtracted without overflow.");
 
-    static constexpr uint64_t NULL_ID             = MASK_NULL;
-    static constexpr uint64_t BOOL_FALSE          = MASK_BOOL | 0UL;
-    static constexpr uint64_t BOOL_TRUE           = MASK_BOOL | 1UL;
-    static constexpr uint64_t STRING_SIMPLE_EMPTY = MASK_STRING_SIMPLE_INLINED | 0UL;
-    static constexpr uint64_t STRING_XSD_EMPTY    = MASK_STRING_XSD_INLINED | 0UL;
+    static constexpr uint64_t NULL_ID    = MASK_NULL;
+    static constexpr uint64_t BOOL_FALSE = MASK_BOOL | 0UL;
+    static constexpr uint64_t BOOL_TRUE  = MASK_BOOL | 1UL;
 
     uint64_t id;
 
@@ -121,7 +118,7 @@ public:
         return ObjectId(NULL_ID);
     }
 
-    static inline ObjectId get_not_found() noexcept {
+    static constexpr ObjectId get_not_found() noexcept {
         return ObjectId(MASK_NOT_FOUND);
     }
 
@@ -131,10 +128,6 @@ public:
 
     inline uint64_t get_sub_type() const noexcept {
         return id & SUB_TYPE_MASK;
-    }
-
-    inline uint64_t get_generic_type() const noexcept {
-        return id & GENERIC_TYPE_MASK;
     }
 
     inline uint64_t get_mod() const noexcept {
@@ -154,35 +147,15 @@ public:
     }
 
     inline bool is_true() const noexcept {
-        auto gen_type = id & GENERIC_TYPE_MASK;
-        auto value = id & VALUE_MASK;
-        return gen_type == MASK_BOOL && value == 1;
+        return id == BOOL_TRUE;
     }
 
     inline bool is_false() const noexcept {
-        auto gen_type = id & GENERIC_TYPE_MASK;
-        auto value = id & VALUE_MASK;
-        return gen_type == MASK_BOOL && value == 0;
-    }
-
-    inline bool is_numeric() const noexcept {
-        return (id & GENERIC_TYPE_MASK) == MASK_NUMERIC;
-    }
-
-    inline bool is_iri() const noexcept {
-        return (id & GENERIC_TYPE_MASK) == MASK_IRI;
-    }
-
-    inline bool is_bnode() const noexcept {
-        return (id & GENERIC_TYPE_MASK) == MASK_ANON;
-    }
-
-    inline bool is_string() const noexcept{
-        return (id & GENERIC_TYPE_MASK) == MASK_STRING;
+        return id == BOOL_FALSE;
     }
 
     inline bool is_not_found() const noexcept {
-        return (id & GENERIC_TYPE_MASK) == MASK_NOT_FOUND;
+        return id == MASK_NOT_FOUND;
     }
 
     inline bool is_valid() const noexcept {

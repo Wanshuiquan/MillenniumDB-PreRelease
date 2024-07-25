@@ -31,7 +31,8 @@ void index_predicate(Trie&          trie,
         auto subject_oid = binding[subject_var];
         auto object_oid  = binding[object_var];
 
-        if ((object_oid.id & ObjectId::GENERIC_TYPE_MASK) == ObjectId::MASK_STRING) {
+        auto gen_t = RDF_OID::get_generic_type(object_oid);
+        if (gen_t == RDF_OID::GenericType::STRING) {
             auto string = SPARQL::Conversions::to_lexical_str(object_oid);
             // std::cout << "Indexing \"" << string << "\"\n";
 

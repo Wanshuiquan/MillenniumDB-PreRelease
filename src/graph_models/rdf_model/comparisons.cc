@@ -28,21 +28,20 @@ int64_t Comparisons::_compare(ObjectId lhs_oid, ObjectId rhs_oid, bool* error) {
         return 0;
     }
 
-    auto lhs_gen_t = lhs_oid.get_generic_type();
-    auto rhs_gen_t = rhs_oid.get_generic_type();
+    auto lhs_gen_t = RDF_OID::get_generic_type(lhs_oid);
+    auto rhs_gen_t = RDF_OID::get_generic_type(rhs_oid);
 
     if (lhs_gen_t != rhs_gen_t) {
         if constexpr (mode == Comparisons::Mode::Strict) {
             *error = true;
             return 0;
         } else {
-            // The bit shift is to ensure the MSB is not set when casting to int64_t
-            return static_cast<int64_t>(lhs_gen_t >> 1) - static_cast<int64_t>(rhs_gen_t >> 1);
+            return static_cast<int64_t>(lhs_gen_t) - static_cast<int64_t>(rhs_gen_t);
         }
     }
 
     switch (lhs_gen_t) {
-    case ObjectId::MASK_IRI: {
+    case RDF_OID::GenericType::IRI: {
         auto lhs_mod = lhs_oid.get_mod();
         auto rhs_mod = rhs_oid.get_mod();
 
@@ -90,7 +89,7 @@ int64_t Comparisons::_compare(ObjectId lhs_oid, ObjectId rhs_oid, bool* error) {
 
         return string_manager.compare(*lhs_iter, *rhs_iter);
     }
-    case ObjectId::MASK_STRING: {
+    case RDF_OID::GenericType::STRING: {
         auto lhs_sub_t = lhs_oid.get_sub_type();
         auto rhs_sub_t = rhs_oid.get_sub_type();
 
@@ -191,7 +190,7 @@ int64_t Comparisons::_compare(ObjectId lhs_oid, ObjectId rhs_oid, bool* error) {
 
         return string_manager.compare(*lhs_string_iter, *rhs_string_iter);
     }
-    case ObjectId::MASK_NUMERIC: {
+    case RDF_OID::GenericType::NUMERIC: {
         auto lhs_sub_t = lhs_oid.get_sub_type();
         auto rhs_sub_t = rhs_oid.get_sub_type();
         // Integer optimization
@@ -283,7 +282,7 @@ int64_t Comparisons::_compare(ObjectId lhs_oid, ObjectId rhs_oid, bool* error) {
             throw LogicException("This should never happen");
         }
     }
-    case ObjectId::MASK_DT: {
+    case RDF_OID::GenericType::DATE: {
         DateTime lhs_dt(lhs_oid);
         DateTime rhs_dt(rhs_oid);
 
@@ -293,7 +292,7 @@ int64_t Comparisons::_compare(ObjectId lhs_oid, ObjectId rhs_oid, bool* error) {
             return lhs_dt.compare<DateTimeComparisonMode::Normal>(rhs_dt, error);
         }
     }
-    case ObjectId::MASK_BOOL: {
+    case RDF_OID::GenericType::BOOL: {
         return static_cast<int64_t>(lhs_oid.id & 1) - static_cast<int64_t>(rhs_oid.id & 1);
     }
     default: {

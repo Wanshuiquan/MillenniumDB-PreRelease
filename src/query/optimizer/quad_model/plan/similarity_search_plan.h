@@ -47,4 +47,6 @@ private:
     std::string        tensor_store_name;
     int64_t            k;
     std::vector<float> query_tensor;
+
+    mutable std::vector<std::pair<uint64_t, float>> top_k;
 };

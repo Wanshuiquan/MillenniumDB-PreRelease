@@ -6,6 +6,7 @@
 #include <type_traits>
 
 #include "graph_models/object_id.h"
+#include "graph_models/rdf_model/rdf_object_id.h"
 #include "query/query_context.h"
 #include "query/rewriter/sparql/expr/rewrite_rules/expr_rewrite_rule.h"
 
@@ -40,7 +41,7 @@ private:
         if (expr == nullptr) {
             return false;
         }
-        return expr->term.get_generic_type() == ObjectId::MASK_BOOL;
+        return RDF_OID::get_generic_type(expr->term) == RDF_OID::GenericType::BOOL;
     }
 
     bool get_bool(ObjectId& oid) {

@@ -7,15 +7,16 @@
 
 namespace NewServer {
 
-class Listener : public std::enable_shared_from_this<Listener> {
+template <uint64_t ModelId>
+class Listener {
 public:
-    Server&                        server;
+    Server<ModelId>&               server;
     boost::asio::io_context&       io_context;
     boost::asio::ip::tcp::acceptor acceptor;
     boost::asio::ip::tcp::endpoint endpoint;
     std::chrono::seconds           timeout;
 
-    explicit Listener(Server&                        server,
+    explicit Listener(Server<ModelId>&               server,
                       boost::asio::io_context&       io_context,
                       boost::asio::ip::tcp::endpoint endpoint,
                       std::chrono::seconds           timeout);

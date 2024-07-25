@@ -1,5 +1,6 @@
 #include "construct_executor.h"
 
+#include "graph_models/rdf_model/conversions.h"
 #include "query/executor/query_executor/sparql/ttl_writer.h"
 
 using namespace SPARQL;
@@ -24,7 +25,7 @@ bool ConstructExecutor::process_element(Id id, Idx idx, BlankNodeMap& blank_node
         if (var_name.size() > 2 && var_name[0] == '_' && var_name[1] == ':') {
             auto oid_it = blank_nodes.find(var_name);
             if (oid_it == blank_nodes.end()) {
-                auto oid = ObjectId(ObjectId::MASK_ANON_TMP | get_query_ctx().get_new_blank_node());
+                auto oid = Conversions::pack_blank_tmp(get_query_ctx().get_new_blank_node());
                 blank_nodes.insert({ var_name, oid });
                 current_triple[static_cast<size_t>(idx)] = oid;
             } else {

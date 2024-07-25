@@ -10,24 +10,21 @@
  */
 class TensorPage {
     friend class TensorBufferManager;
+    friend class FileManager;
 
 public:
-    // Contains file_id and page_number
+    static constexpr size_t SIZE = 4096;
+
+    // contains file_id and page_number of this page
     PageId page_id;
 
-    // Mark as dirty so when page is replaced it is written back to disk
-    inline void make_dirty() noexcept {
-        dirty = true;
-    }
+    // mark as dirty so when page is replaced it is written back to disk
+    inline void make_dirty() noexcept { dirty = true; }
 
-    // Get the start memory position of the allocated bytes
-    inline char* get_bytes() const noexcept {
-        return bytes;
-    }
+    // get the start memory position of `SIZE` allocated bytes
+    inline char* get_bytes() const noexcept { return bytes; }
 
-    inline uint32_t get_page_number() const noexcept {
-        return page_id.page_number;
-    };
+    inline uint32_t get_page_number() const noexcept { return page_id.page_number; }
 
 private:
     // Start memory address of the page
@@ -37,16 +34,21 @@ private:
     std::atomic<uint32_t> pins;
 
     // Used by the replacement policy
-    std::atomic<uint32_t> usage;
+    bool second_chance;
 
     // True if data in memory is different from disk
     bool dirty;
 
-    TensorPage() noexcept : page_id(FileId(FileId::UNASSIGNED), 0), bytes(nullptr), pins(0), usage(0), dirty(false) { }
+    TensorPage() noexcept :
+        page_id       (FileId(FileId::UNASSIGNED), 0),
+        bytes         (nullptr),
+        pins          (0),
+        second_chance (false),
+        dirty         (false) { }
 
     void pin() noexcept {
         pins++;
-        usage++;
+        second_chance = true;
     }
 
     void unpin() noexcept {
@@ -54,24 +56,36 @@ private:
         pins--;
     }
 
+    void set_bytes(char* bytes) {
+        this->bytes = bytes;
+    }
+
     // Only meant for buffer_manager.remove()
     void reset() noexcept {
         assert(pins == 0 && "Cannot reset page if it is pinned");
-        this->bytes   = nullptr;
-        this->page_id = PageId(FileId(FileId::UNASSIGNED), 0);
-        this->pins    = 0;
-        this->usage   = 0;
-        this->dirty   = false;
+        this->bytes         = nullptr;
+        this->page_id       = PageId(FileId(FileId::UNASSIGNED), 0);
+        this->pins          = 0;
+        this->second_chance = false;
+        this->dirty         = false;
     }
 
-    void reassign(PageId page_id, char* bytes) noexcept {
+    void reassign(PageId page_id) noexcept {
         assert(!dirty && "Cannot reassign page if it is dirty");
         assert(pins == 0 && "Cannot reassign page if it is pinned");
-        assert(usage == 0 && "Should not reassign page if usage is not 0");
+        assert(second_chance == false && "Should not reassign page if second_chance is true");
+
+        this->page_id       = page_id;
+        this->pins          = 1;
+        this->second_chance = true;
+    }
+
+    // Reassign without preventing this page from immediately being replaced, because the preload will fill the buffer
+    void reassign_preload(PageId page_id) noexcept {
+        assert(!dirty && "Cannot reassign page if it is dirty");
+        assert(pins == 0 && "Cannot reassign page if it is pinned");
+        assert(second_chance == false && "Should not reassign page if second_chance is true");
 
         this->page_id = page_id;
-        this->bytes   = bytes;
-        this->pins    = 1;
-        this->usage   = 1;
     }
 };

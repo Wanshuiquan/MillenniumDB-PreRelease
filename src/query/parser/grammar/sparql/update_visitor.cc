@@ -156,11 +156,7 @@ Any UpdateVisitor::visitPrefixDecl(SUP::PrefixDeclContext* ctx) {
     std::string iri_prefix = ctx->IRIREF()->getText();
     iri_prefix = iri_prefix.substr(1, iri_prefix.size() - 2); // remove '<' ... '>'
 
-    if (iri_prefix_map.find(alias) != iri_prefix_map.end()) {
-        throw QuerySemanticException("Multiple prefix declarations for prefix: '" + alias + "'");
-    }
-
-    iri_prefix_map.insert({alias, iri_prefix});
+    iri_prefix_map[alias] = iri_prefix;
     return 0;
 }
 
@@ -189,6 +185,7 @@ Any UpdateVisitor::visitTriplesTemplate(SUP::TriplesTemplateContext* ctx) {
     }
     return 0;
 }
+
 
 Any UpdateVisitor::visitTriplesSameSubject(SUP::TriplesSameSubjectContext* ctx) {
     if (ctx->graphTerm()) { // graphTerm propertyListNotEmpty

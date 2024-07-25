@@ -3,15 +3,16 @@
 #include <string>
 
 #include "graph_models/inliner.h"
-#include "graph_models/rdf_model/conversions.h" // TODO: review dates of sparql
 #include "graph_models/quad_model/conversions.h"
 #include "graph_models/quad_model/quad_model.h"
+#include "graph_models/rdf_model/conversions.h"
 #include "query/executor/binding_iter/index_scan.h"
 #include "query/executor/binding_iter/nested_loop_anti_join.h"
 #include "query/executor/binding_iter/scan_ranges/assigned_var.h"
 #include "query/executor/binding_iter/scan_ranges/scan_range.h"
 #include "query/executor/binding_iter/scan_ranges/unassigned_var.h"
 #include "query/executor/query_executor/json_ostream_escape.h"
+#include "query/executor/query_executor/mql/return_executor.h"
 #include "storage/buffer_manager.h"
 #include "storage/index/bplus_tree/bplus_tree.h"
 #include "third_party/cli11/CLI11.hpp"
@@ -21,175 +22,35 @@ static std::string oid2str(uint64_t oid) {
     return MQL::Conversions::to_lexical_str(ObjectId(oid));
 }
 
-// TODO: should not be here
-static std::string oid2json_str(uint64_t oid, bool quoted) {
+static std::string oid2json_str(uint64_t oid) {
     std::stringstream ss;
-    JsonOstreamEscape escaped_os_(ss);
-    std::ostream      escaped_os(&escaped_os_);
 
-    const auto mask        = oid & ObjectId::TYPE_MASK;
-    const auto unmasked_id = oid & ObjectId::VALUE_MASK;
+    bool need_quote;
 
+    const auto mask = oid & ObjectId::TYPE_MASK;
     switch (mask) {
-    case ObjectId::MASK_NULL: {
-        return "null";
+        case ObjectId::MASK_NULL:
+        case ObjectId::MASK_NEGATIVE_INT:
+        case ObjectId::MASK_POSITIVE_INT:
+        case ObjectId::MASK_FLOAT:
+        case ObjectId::MASK_BOOL:
+        // strings already come with double quotes
+        case ObjectId::MASK_STRING_SIMPLE_INLINED:
+        case ObjectId::MASK_STRING_SIMPLE_EXTERN:
+        case ObjectId::MASK_STRING_SIMPLE_TMP:
+            need_quote = false;
+            break;
+        default:
+            need_quote = true;
+            break;
     }
-    case ObjectId::MASK_ANON_INLINED: {
-        if (quoted) {
-            ss << "\"_a" << unmasked_id << "\"";
-        } else {
-            ss << "_a" << unmasked_id;
-        }
-        return ss.str();
-    }
-    case ObjectId::MASK_NAMED_NODE_INLINED: {
-        if (quoted) {
-            ss << "\"";
-            Inliner::print_string_inlined<7>(ss, unmasked_id);
-            ss << "\"";
-        } else {
-            Inliner::print_string_inlined<7>(ss, unmasked_id);
-        }
-        return ss.str();
-    }
-    case ObjectId::MASK_NAMED_NODE_EXTERN: {
-        if (quoted) {
-            ss << "\"";
-            string_manager.print(ss, unmasked_id);
-            ss << "\"";
-        } else {
-            string_manager.print(ss, unmasked_id);
-        }
-        return ss.str();
-    }
-    case ObjectId::MASK_NAMED_NODE_TMP: {
-        if (quoted) {
-            ss << "\"";
-            tmp_manager.print_str(ss, unmasked_id);
-            ss << "\"";
-        } else {
-            tmp_manager.print_str(ss, unmasked_id);
-        }
-        return ss.str();
-    }
-    case ObjectId::MASK_STRING_SIMPLE_INLINED: {
-        if (quoted) {
-            ss << "\"";
-            Inliner::print_string_inlined<7>(escaped_os, unmasked_id);
-            ss << "\"";
-        } else {
-            Inliner::print_string_inlined<7>(escaped_os, unmasked_id);
-        }
-        return ss.str();
-    }
-    case ObjectId::MASK_STRING_SIMPLE_EXTERN: {
-        if (quoted) {
-            ss << "\"";
-            string_manager.print(escaped_os, unmasked_id);
-            ss << "\"";
-        } else {
-            string_manager.print(escaped_os, unmasked_id);
-        }
-        return ss.str();
-    }
-    case ObjectId::MASK_STRING_SIMPLE_TMP: {
-        if (quoted) {
-            ss << "\"";
-            tmp_manager.print_str(escaped_os, unmasked_id);
-            ss << "\"";
-        } else {
-            tmp_manager.print_str(escaped_os, unmasked_id);
-        }
-        return ss.str();
-    }
-    case ObjectId::MASK_NEGATIVE_INT: {
-        int64_t i = (~oid) & 0x00FF'FFFF'FFFF'FFFFUL;
-        ss << (i * -1);
-        return ss.str();
-    }
-    case ObjectId::MASK_POSITIVE_INT: {
-        int64_t i = unmasked_id;
-        ss << i;
-        return ss.str();
-    }
-    case ObjectId::MASK_FLOAT: {
-        float    f;
-        uint8_t* dest = reinterpret_cast<uint8_t*>(&f);
-        dest[0]       = oid & 0xFF;
-        dest[1]       = (oid >> 8) & 0xFF;
-        dest[2]       = (oid >> 16) & 0xFF;
-        dest[3]       = (oid >> 24) & 0xFF;
 
-        ss << std::setprecision(std::numeric_limits<float>::digits10 + 1) << f;
-        return ss.str();
-    }
-    case ObjectId::MASK_BOOL: {
-        ss << (unmasked_id == 0 ? "false" : "true");
-        return ss.str();
-    }
-    case ObjectId::MASK_EDGE: {
-        if (quoted) {
-            ss << "\"_e" << unmasked_id << "\"";
-        } else {
-            ss << "_e" << unmasked_id;
-        }
-        return ss.str();
-    }
-    case ObjectId::MASK_DT_TIME: {
-        DateTime datetime = SPARQL::Conversions::unpack_date(ObjectId(oid));
-        if (quoted) {
-            ss << "\"";
-            escaped_os << "time(\"";
-            escaped_os << datetime.get_value_string();
-            escaped_os << "\")";
-            ss << "\"";
-        } else {
-            ss << "time(\"" << datetime.get_value_string() << "\")";
-        }
-        return ss.str();
-    }
-    case ObjectId::MASK_DT_DATE: {
-        DateTime datetime = SPARQL::Conversions::unpack_date(ObjectId(oid));
-        if (quoted) {
-            ss << "\"";
-            escaped_os << "date(\"";
-            escaped_os << datetime.get_value_string();
-            escaped_os << "\")";
-            ss << "\"";
-        } else {
-            ss << "date(\"" << datetime.get_value_string() << "\")";
-        }
-        return ss.str();
-    }
-    case ObjectId::MASK_DT_DATETIME: {
-        DateTime datetime = SPARQL::Conversions::unpack_date(ObjectId(oid));
-        if (quoted) {
-            ss << "\"";
-            escaped_os << "dateTime(\"";
-            escaped_os << datetime.get_value_string();
-            escaped_os << "\")";
-            ss << "\"";
-        } else {
-            ss << "dateTime(\"" << datetime.get_value_string() << "\")";
-        }
-        return ss.str();
-    }
-    case ObjectId::MASK_DT_DATETIMESTAMP: {
-        DateTime datetime = SPARQL::Conversions::unpack_date(ObjectId(oid));
-        if (quoted) {
-            ss << "\"";
-            escaped_os << "dateTimeStamp(\"";
-            escaped_os << datetime.get_value_string();
-            escaped_os << "\")";
-            ss << "\"";
-        } else {
-            ss << "dateTimeStamp(\"" << datetime.get_value_string() << "\")";
-        }
-        return ss.str();
-    }
-    default:
-        throw std::logic_error("Unmanaged mask in oid2json_str: " + std::to_string(mask));
-    }
+    if (need_quote) ss << '"';
+
+    // We use TSV escape because its the same as JSON escapes
+    MQL::ReturnExecutor<MQL::ReturnType::TSV>::print(ss, ObjectId(oid));
+    if (need_quote) ss << '"';
+    return ss.str();
 }
 
 
@@ -208,7 +69,7 @@ void dump_nodes_json(const std::string& path) {
         auto object_key_value    = object_key_value_it.next();
         auto sep_property        = "";
         while (object_key_value != nullptr) {
-            fs << sep_property << oid2json_str((*object_key_value)[1], true) << ":" << oid2json_str((*object_key_value)[2], true);
+            fs << sep_property << oid2json_str((*object_key_value)[1]) << ":" << oid2json_str((*object_key_value)[2]);
             sep_property     = ",";
             object_key_value = object_key_value_it.next();
         }
@@ -223,14 +84,14 @@ void dump_nodes_json(const std::string& path) {
     while (label_node != nullptr) {
         if ((*label_node)[0] != prev_label) {
             // Handle first occurrence of label
-            fs << sep_label << oid2json_str((*label_node)[0], true) << ":{\n  ";
-            fs << oid2json_str((*label_node)[1], true) << ":{";
+            fs << sep_label << oid2json_str((*label_node)[0]) << ":{\n  ";
+            fs << oid2json_str((*label_node)[1]) << ":{";
 
             sep_label  = "\n},\n";
             prev_label = (*label_node)[0];
         } else {
             // Handle subsequent occurrence of label
-            fs << ",\n  " << oid2json_str((*label_node)[1], true) << ":{";
+            fs << ",\n  " << oid2json_str((*label_node)[1]) << ":{";
         }
         // Write out properties
         write_properties((*label_node)[1]);
@@ -250,14 +111,14 @@ void dump_nodes_json(const std::string& path) {
         bool output { false };
         if (node != nullptr) {
             // Handle first node
-            fs << "\n\"\":{\n  " << oid2json_str((*node)[0], true) << ":{";
+            fs << "\n\"\":{\n  " << oid2json_str((*node)[0]) << ":{";
             write_properties((*node)[0]);
             fs << "}";
             output = true;
             node   = node_it.next();
         }
         while (node != nullptr) {
-            fs << ",\n  " << oid2json_str((*node)[0], true) << ":{";
+            fs << ",\n  " << oid2json_str((*node)[0]) << ":{";
             write_properties((*node)[0]);
             fs << "}";
             node = node_it.next();
@@ -292,14 +153,14 @@ void dump_nodes_json(const std::string& path) {
             // Handle first unlabelled node
             fs << ",\n\"\":{\n  ";
             node_id = binding[node_var].id;
-            fs << oid2json_str(node_id, true) << ":{";
+            fs << oid2json_str(node_id) << ":{";
             write_properties(node_id);
             fs << "}";
         }
         while (unlabelled_node_it->next()) {
             // Handle subsequent unlabelled nodes
             node_id = binding[node_var].id;
-            fs << ",\n  " << oid2json_str(node_id, true) << ":{";
+            fs << ",\n  " << oid2json_str(node_id) << ":{";
             write_properties(node_id);
             fs << "}";
         }
@@ -330,15 +191,15 @@ void dump_edges_json(const std::string& path) {
     while (type_from_to_edge != nullptr) {
         if ((*type_from_to_edge)[0] != prev_type) {
             // Handle first occurrence of type
-            fs << sep_type << oid2json_str((*type_from_to_edge)[0], true) << ":[\n  {\"from\":";
-            fs << oid2json_str((*type_from_to_edge)[1], true) << ",\"to\":";
-            fs << oid2json_str((*type_from_to_edge)[2], true);
+            fs << sep_type << oid2json_str((*type_from_to_edge)[0]) << ":[\n  {\"from\":";
+            fs << oid2json_str((*type_from_to_edge)[1]) << ",\"to\":";
+            fs << oid2json_str((*type_from_to_edge)[2]);
             sep_type  = "\n],\n";
             prev_type = (*type_from_to_edge)[0];
         } else {
             // Handle subsequent occurrence of type
-            fs << ",\n  {\"from\":" << oid2json_str((*type_from_to_edge)[1], true);
-            fs << ",\"to\":" << oid2json_str((*type_from_to_edge)[2], true);
+            fs << ",\n  {\"from\":" << oid2json_str((*type_from_to_edge)[1]);
+            fs << ",\"to\":" << oid2json_str((*type_from_to_edge)[2]);
         }
         // Write out properties if any
         auto object_key_value_it =
@@ -350,8 +211,8 @@ void dump_edges_json(const std::string& path) {
             fs << ",\"properties\":{";
             auto sep_property = "";
             while (object_key_value != nullptr) {
-                fs << sep_property << oid2json_str((*object_key_value)[1], true) << ":"
-                   << oid2json_str((*object_key_value)[2], true);
+                fs << sep_property << oid2json_str((*object_key_value)[1]) << ":"
+                   << oid2json_str((*object_key_value)[2]);
                 sep_property     = ",";
                 object_key_value = object_key_value_it.next();
             }

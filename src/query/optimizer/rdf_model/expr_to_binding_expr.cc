@@ -65,7 +65,7 @@ void ExprToBindingExpr::visit(ExprBNode& expr_bnode) {
         );
     } else {
         tmp = make_unique<BindingExprTerm>(
-            ObjectId(ObjectId::MASK_ANON_TMP | get_query_ctx().get_new_blank_node())
+            Conversions::pack_blank_tmp(get_query_ctx().get_new_blank_node())
         );
     }
 }

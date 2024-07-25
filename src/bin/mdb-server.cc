@@ -12,6 +12,7 @@
 #include "storage/file_manager.h"
 #include "storage/filesystem.h"
 #include "storage/index/tensor_store/lsh/forest_index.h"
+#include "storage/index/tensor_store/tensor_buffer_manager.h"
 #include "storage/index/tensor_store/tensor_store.h"
 #include "storage/string_manager.h"
 
@@ -36,7 +37,7 @@ static uint64_t read_uint64(std::fstream& fs) {
 }
 
 
-void load_tensor_stores() {
+void load_tensor_stores(uint64_t tensor_pages_buffer, bool preload) {
     std::string tensor_stores_path = file_manager.get_file_path(TensorStore::TENSOR_STORES_DIR);
     if (Filesystem::is_directory(tensor_stores_path)) {
         robin_hood::unordered_set<std::string> tensor_store_names;
@@ -48,7 +49,7 @@ void load_tensor_stores() {
         for (const auto& tensor_store_name : tensor_store_names) {
             if (TensorStore::exists(tensor_store_name)) {
                 std::cout << "Loading tensor store \"" << tensor_store_name << "\"...\n";
-                auto tensor_store = std::make_unique<TensorStore>(tensor_store_name);
+                auto tensor_store = std::make_unique<TensorStore>(tensor_store_name, tensor_pages_buffer, preload);
                 std::cout << "Successfully loaded tensor store \"" << tensor_store_name << "\"\n";
                 std::cout << "  size           : " << tensor_store->size() << std::endl;
                 std::cout << "  tensors_dim    : " << tensor_store->tensors_dim << std::endl;
@@ -92,6 +93,8 @@ int main(int argc, char* argv[]) {
     uint64_t versioned_pages_buffer   = BufferManager::DEFAULT_VERSIONED_PAGES_BUFFER_SIZE;
     uint64_t private_pages_buffer     = BufferManager::DEFAULT_PRIVATE_PAGES_BUFFER_SIZE;
     uint64_t unversioned_pages_buffer = BufferManager::DEFAULT_UNVERSIONED_PAGES_BUFFER_SIZE;
+    uint64_t tensor_pages_buffer      = TensorBufferManager::DEFAULT_TENSOR_PAGES_BUFFER_SIZE;
+    bool     preload_tensors          = false;
 
     std::string db_directory;
     std::string config_path;
@@ -161,6 +164,15 @@ int main(int argc, char* argv[]) {
         ->option_text("bfs|dfs")
         ->transform(PathModeValidator());
 
+    app.add_option("--tensor-buffer", tensor_pages_buffer)
+      ->description("Size of buffer for tensor pages shared between threads\nAllows units such as MB and GB")
+      ->option_text("<bytes> [2GB]")
+      ->transform(CLI::AsSizeValue(false))
+      ->check(CLI::Range(1024ULL * 1024, 1024ULL * 1024 * 1024 * 1024));
+
+    app.add_flag("--preload-tensors", preload_tensors)
+      ->description("Fill the tensor buffer before starting the server");
+
     CLI11_PARSE(app, argc, argv);
 
     if (!config_path.empty()) {
@@ -211,7 +223,7 @@ int main(int argc, char* argv[]) {
 
                 quad_model.catalog().print(std::cout);
 
-                load_tensor_stores();
+                load_tensor_stores(tensor_pages_buffer, preload_tensors);
 
                 MQL::Server server;
                 server.run(port, max_threads, std::chrono::seconds(seconds_timeout));

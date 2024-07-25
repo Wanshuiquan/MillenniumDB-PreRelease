@@ -4,28 +4,23 @@
 #include <mutex>
 #include <vector>
 
+#include <boost/asio.hpp>
+
 #include "query/query_context.h"
+
 
 namespace NewServer {
 
-// Server singleton
+template<uint64_t ModelId>
 class Server {
 public:
-    static constexpr std::string_view DEFAULT_BROWSER_PATH = "./browser";
-
-    static constexpr uint_fast32_t DEFAULT_PORT = 1234;
-
-    static constexpr uint_fast32_t DEFAULT_BROWSER_PORT = 4321;
-
-    static constexpr uint_fast32_t DEFAULT_TIMEOUT_SECONDS = 60;
+    static inline bool shutdown_server = false;
 
     void run(unsigned short       port,
              unsigned short       browser_port,
              bool                 launch_browser,
              int                  num_threads,
              std::chrono::seconds timeout);
-
-    static bool shutdown_server;
 
     std::vector<QueryContext> query_contexts;
 
@@ -35,5 +30,10 @@ public:
     static void signal_shutdown_server(int signal);
 
     void execute_timeouts();
+
+private:
+    static void browser_session(boost::asio::ip::tcp::socket&& socket);
+
+    static void browser_listener(boost::asio::io_context* browser_io_context, int port);
 };
 } // namespace NewServer

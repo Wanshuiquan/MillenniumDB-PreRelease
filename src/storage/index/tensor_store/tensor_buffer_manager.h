@@ -1,12 +1,5 @@
 #pragma once
 
-#include <cassert>
-#include <mutex>
-#include <queue>
-#include <string>
-#include <thread>
-#include <vector>
-
 #include "storage/file_id.h"
 #include "tensor_page.h"
 #include "third_party/robin_hood/robin_hood.h"
@@ -16,12 +9,17 @@
  * is already in memory or needs to be read from disk.
  *
  * Unlike the global buffer_manager, this class manages a single TensorStore per instance.
+ *
+ * NOTE: We do not need a mutex because we do not support insertions during the server execution
  */
 class TensorBufferManager {
 public:
-    static constexpr uint64_t DEFAULT_BUFFER_SIZE = 8ULL * 1024ULL * 1024ULL * 1024ULL; // 8GB
+    static constexpr uint64_t DEFAULT_TENSOR_PAGES_BUFFER_SIZE = 2ULL * 1024ULL * 1024ULL * 1024ULL; // 2GB
 
-    TensorBufferManager(FileId file_id, uint_fast32_t num_pages, uint_fast32_t page_size);
+    static_assert(DEFAULT_TENSOR_PAGES_BUFFER_SIZE % TensorPage::SIZE == 0,
+                  "DEFAULT_TENSOR_PAGES_BUFFER_SIZE should be multiple of TensorPage::SIZE");
+
+    TensorBufferManager(FileId file_id, uint64_t tensor_page_buffer_pool_size, bool preload_pages);
 
     ~TensorBufferManager();
 
@@ -30,16 +28,17 @@ public:
     // the returned page anymore.
     TensorPage& get_page(uint_fast32_t page_number) noexcept;
 
-    // Similar to get_page, but the page_number is the greatest number such that page number exist on disk.
-    TensorPage& get_last_page();
-
     // Similar to get_page, but the page_number is the smallest number such that page number does not exist on disk.
     // The page returned has all its bytes initialized to 0. This operation perform a disk write immediately
     // so 2 append_page in a row will work as expected.
     TensorPage& append_page();
 
+    TensorPage& get_or_append_page(uint_fast32_t page_number);
+
     // Write all dirty pages to disk
     void flush();
+
+    uint_fast32_t count_pages() const;
 
     // Increases the count of objects using the page. When you get a page using the methods get_page or get_ppage
     // the page is already pinned, so you shouldn't call this method unless you want to pin the page more than once
@@ -53,11 +52,7 @@ public:
     }
 
     constexpr auto get_shared_buffer_pool_size() const noexcept {
-        return shared_buffer_pool_size;
-    }
-
-    uint_fast32_t get_page_size() const noexcept {
-        return page_size;
+        return tensor_page_pool_size;
     }
 
 private:
@@ -66,22 +61,17 @@ private:
     uint_fast32_t clock_pos;
 
     // Array of `buffer_pool_size` pages
-    TensorPage* const buffer_pool;
+    TensorPage* const tensor_page_pool;
 
     // Beginning of the allocated memory for the pages of the shared buffer
-    char* const bytes;
-
-    std::mutex shared_buffer_mutex;
+    char* const tensor_data;
 
     // Maximum pages the buffer can have
-    const uint_fast32_t shared_buffer_pool_size;
-
-    // Size of each page
-    const uint_fast32_t page_size;
+    const uint64_t tensor_page_pool_size;
 
     // Used to search the index in the `buffer_pool` of a certain page
-    robin_hood::unordered_map<PageId, TensorPage*> pages;
+    robin_hood::unordered_map<PageId, TensorPage*> pages_map;
 
-    // Returns the index of an unpinned page from shared buffer (`buffer_pool`)
-    uint_fast32_t get_buffer_available();
+    // Returns an unpinned page from the tensor_page_pool
+    TensorPage& get_tensor_page_available();
 };

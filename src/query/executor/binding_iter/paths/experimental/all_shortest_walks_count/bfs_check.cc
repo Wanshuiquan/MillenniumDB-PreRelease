@@ -1,5 +1,6 @@
 #include "bfs_check.h"
 
+#include "graph_models/common/conversions.h"
 #include "query/executor/binding_iter/paths/path_manager.h"
 
 using namespace std;
@@ -58,7 +59,7 @@ bool BFSCheck::_next() {
         // Starting state is solution
         if (automaton.is_final_state[automaton.start_state] && current_state->node_id == end_object_id) {
             path_count += current_state->count;
-            parent_binding->add(path_var, ObjectId(ObjectId::MASK_POSITIVE_INT | path_count));
+            parent_binding->add(path_var, Common::Conversions::pack_int(path_count));
 
             // Empty queue because the only state with 0 distance is the first state
             open.pop();
@@ -73,7 +74,7 @@ bool BFSCheck::_next() {
 
         // Check if current paths are solution
         if (automaton.is_final_state[current_state->automaton_state] && current_state->node_id == end_object_id) {
-            parent_binding->add(path_var, ObjectId(ObjectId::MASK_POSITIVE_INT | path_count));
+            parent_binding->add(path_var, Common::Conversions::pack_int(path_count));
 
             // Empty queue, no more optimal paths can be counted
             queue<const SearchState*> empty;

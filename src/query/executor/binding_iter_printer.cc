@@ -207,7 +207,7 @@ void BindingIterPrinter::visit(Filter& binding_iter) {
 
 
 void BindingIterPrinter::visit(ExprEvaluator& binding_iter) {
-    auto helper = BindingIterPrinterHelper("GroupExpressions", *this, binding_iter);
+    auto helper = BindingIterPrinterHelper("ExprEvaluator", *this, binding_iter);
 
     os << "expressions: ";
 
@@ -307,7 +307,7 @@ void BindingIterPrinter::visit(LeapfrogJoin& binding_iter) {
     os << ")\n";
 
     for (auto& iter : binding_iter.leapfrog_iters) {
-        os << std::string(indent, ' ') << "LeapFrogIter(ranges:";
+        os << std::string(indent, ' ') << iter->get_iter_name() << "(ranges:";
         for (auto& range : iter->initial_ranges) {
             os << " ";
             range->print(os);
@@ -407,7 +407,7 @@ void BindingIterPrinter::visit(OrderBy& binding_iter) {
     auto first = true;
     for (size_t i = 0; i < binding_iter.order_vars.size(); i++) {
         if (first) first = false; else os << ", ";
-        if (binding_iter.ascending[i]) os << "ASC" ; else os << "DESC ";
+        if (binding_iter.ascending[i]) os << "ASC " ; else os << "DESC ";
         os << '?' << get_query_ctx().get_var_name(binding_iter.order_vars[i]);
     }
 

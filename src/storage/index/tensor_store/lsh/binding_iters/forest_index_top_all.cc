@@ -1,7 +1,6 @@
 #include "forest_index_top_all.h"
 
 #include "graph_models/quad_model/conversions.h"
-#include "macros/likely.h"
 #include "storage/index/tensor_store/lsh/forest_index_query_iter.h"
 
 using namespace LSH;
@@ -27,8 +26,6 @@ void ForestIndexTopAll::_begin(Binding& parent_binding) {
 
 bool ForestIndexTopAll::_next() {
     if (query_iter->next()){
-        if (MDB_unlikely(get_query_ctx().thread_info.interruption_requested))
-            throw InterruptedException();
         parent_binding->add(object_var, ObjectId((*query_iter->current).first));
         parent_binding->add(similarity_var, MQL::Conversions::pack_float((*query_iter->current).second));
         return true;

@@ -65,21 +65,23 @@ public:
     RulePropertyListPath = 57, RulePropertyListPathNotEmpty = 58, RulePropertyListPathNotEmptyList = 59, 
     RuleVerbPath = 60, RuleVerbSimple = 61, RuleObjectListPath = 62, RuleObjectPath = 63, 
     RulePath = 64, RulePathAlternative = 65, RulePathSequence = 66, RulePathElt = 67, 
-    RulePathEltOrInverse = 68, RulePathMod = 69, RulePathPrimary = 70, RulePathNegatedPropertySet = 71, 
-    RulePathOneInPropertySet = 72, RuleInteger = 73, RuleTriplesNode = 74, 
-    RuleBlankNodePropertyList = 75, RuleTriplesNodePath = 76, RuleBlankNodePropertyListPath = 77, 
-    RuleCollection = 78, RuleCollectionPath = 79, RuleGraphNode = 80, RuleGraphNodePath = 81, 
-    RuleVarOrTerm = 82, RuleVarOrIRI = 83, RuleVar = 84, RuleGraphTerm = 85, 
-    RuleNil = 86, RuleExpression = 87, RuleConditionalOrExpression = 88, 
-    RuleConditionalAndExpression = 89, RuleRelationalExpression = 90, RuleAdditiveExpression = 91, 
-    RuleRhsAdditiveExpression = 92, RuleRhsAdditiveExpressionSub = 93, RuleMultiplicativeExpression = 94, 
-    RuleUnaryExpression = 95, RulePrimaryExpression = 96, RuleBuiltInCall = 97, 
-    RuleRegexExpression = 98, RuleSubStringExpression = 99, RuleStrReplaceExpression = 100, 
-    RuleExistsFunction = 101, RuleNotExistsFunction = 102, RuleAggregate = 103, 
-    RuleIriOrFunction = 104, RuleRdfLiteral = 105, RuleNumericLiteral = 106, 
-    RuleNumericLiteralUnsigned = 107, RuleNumericLiteralPositive = 108, 
-    RuleNumericLiteralNegative = 109, RuleBooleanLiteral = 110, RuleString = 111, 
-    RuleIri = 112, RulePrefixedName = 113, RuleBlankNode = 114, RuleAnon = 115
+    RulePathEltOrInverse = 68, RulePathMod = 69, RulePathQuantity = 70, 
+    RulePathQuantityExact = 71, RulePathQuantityRange = 72, RulePathQuantityMin = 73, 
+    RulePathQuantityMax = 74, RulePathPrimary = 75, RulePathNegatedPropertySet = 76, 
+    RulePathOneInPropertySet = 77, RuleInteger = 78, RuleTriplesNode = 79, 
+    RuleBlankNodePropertyList = 80, RuleTriplesNodePath = 81, RuleBlankNodePropertyListPath = 82, 
+    RuleCollection = 83, RuleCollectionPath = 84, RuleGraphNode = 85, RuleGraphNodePath = 86, 
+    RuleVarOrTerm = 87, RuleVarOrIRI = 88, RuleVar = 89, RuleGraphTerm = 90, 
+    RuleNil = 91, RuleExpression = 92, RuleConditionalOrExpression = 93, 
+    RuleConditionalAndExpression = 94, RuleRelationalExpression = 95, RuleAdditiveExpression = 96, 
+    RuleRhsAdditiveExpression = 97, RuleRhsAdditiveExpressionSub = 98, RuleMultiplicativeExpression = 99, 
+    RuleUnaryExpression = 100, RulePrimaryExpression = 101, RuleBuiltInCall = 102, 
+    RuleRegexExpression = 103, RuleSubStringExpression = 104, RuleStrReplaceExpression = 105, 
+    RuleExistsFunction = 106, RuleNotExistsFunction = 107, RuleAggregate = 108, 
+    RuleIriOrFunction = 109, RuleRdfLiteral = 110, RuleNumericLiteral = 111, 
+    RuleNumericLiteralUnsigned = 112, RuleNumericLiteralPositive = 113, 
+    RuleNumericLiteralNegative = 114, RuleBooleanLiteral = 115, RuleString = 116, 
+    RuleIri = 117, RulePrefixedName = 118, RuleBlankNode = 119, RuleAnon = 120
   };
 
   explicit SparqlQueryParser(antlr4::TokenStream *input);
@@ -169,6 +171,11 @@ public:
   class PathEltContext;
   class PathEltOrInverseContext;
   class PathModContext;
+  class PathQuantityContext;
+  class PathQuantityExactContext;
+  class PathQuantityRangeContext;
+  class PathQuantityMinContext;
+  class PathQuantityMaxContext;
   class PathPrimaryContext;
   class PathNegatedPropertySetContext;
   class PathOneInPropertySetContext;
@@ -1330,12 +1337,14 @@ public:
 
   class  PathModContext : public antlr4::ParserRuleContext {
   public:
-    antlr4::Token *op = nullptr;
     PathModContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     antlr4::tree::TerminalNode *QUESTION_MARK();
     antlr4::tree::TerminalNode *ASTERISK();
     antlr4::tree::TerminalNode *PLUS_SIGN();
+    antlr4::tree::TerminalNode *OPEN_CURLY_BRACE();
+    PathQuantityContext *pathQuantity();
+    antlr4::tree::TerminalNode *CLOSE_CURLY_BRACE();
 
 
     virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
@@ -1343,6 +1352,82 @@ public:
   };
 
   PathModContext* pathMod();
+
+  class  PathQuantityContext : public antlr4::ParserRuleContext {
+  public:
+    PathQuantityContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    PathQuantityExactContext *pathQuantityExact();
+    PathQuantityRangeContext *pathQuantityRange();
+    PathQuantityMinContext *pathQuantityMin();
+    PathQuantityMaxContext *pathQuantityMax();
+
+
+    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  PathQuantityContext* pathQuantity();
+
+  class  PathQuantityExactContext : public antlr4::ParserRuleContext {
+  public:
+    PathQuantityExactContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *INTEGER();
+
+
+    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  PathQuantityExactContext* pathQuantityExact();
+
+  class  PathQuantityRangeContext : public antlr4::ParserRuleContext {
+  public:
+    antlr4::Token *min = nullptr;
+    antlr4::Token *max = nullptr;
+    PathQuantityRangeContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *COMMA();
+    std::vector<antlr4::tree::TerminalNode *> INTEGER();
+    antlr4::tree::TerminalNode* INTEGER(size_t i);
+
+
+    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  PathQuantityRangeContext* pathQuantityRange();
+
+  class  PathQuantityMinContext : public antlr4::ParserRuleContext {
+  public:
+    antlr4::Token *min = nullptr;
+    PathQuantityMinContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *COMMA();
+    antlr4::tree::TerminalNode *INTEGER();
+
+
+    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  PathQuantityMinContext* pathQuantityMin();
+
+  class  PathQuantityMaxContext : public antlr4::ParserRuleContext {
+  public:
+    antlr4::Token *max = nullptr;
+    PathQuantityMaxContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *COMMA();
+    antlr4::tree::TerminalNode *INTEGER();
+
+
+    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  PathQuantityMaxContext* pathQuantityMax();
 
   class  PathPrimaryContext : public antlr4::ParserRuleContext {
   public:
@@ -1692,7 +1777,7 @@ public:
     antlr4::Token *s143 = nullptr;
     std::vector<antlr4::Token *> op;
     antlr4::Token *s147 = nullptr;
-    antlr4::Token *_tset1636 = nullptr;
+    antlr4::Token *_tset1701 = nullptr;
     RhsAdditiveExpressionContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     RhsAdditiveExpressionSubContext *rhsAdditiveExpressionSub();
@@ -1732,7 +1817,7 @@ public:
     antlr4::Token *s143 = nullptr;
     std::vector<antlr4::Token *> op;
     antlr4::Token *s147 = nullptr;
-    antlr4::Token *_tset1679 = nullptr;
+    antlr4::Token *_tset1744 = nullptr;
     MultiplicativeExpressionContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     std::vector<UnaryExpressionContext *> unaryExpression();

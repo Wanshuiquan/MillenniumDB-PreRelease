@@ -5,23 +5,26 @@
 #include "boost/bind/bind.hpp"
 #include "misc/logger.h"
 #include "network/new-server/protocol.h"
-#include "network/new-server/session/tcp_streaming_session.h"
-#include "network/new-server/session/websocket_streaming_session.h"
+#include "network/new-server/session/websocket/websocket_streaming_session.h"
+#include "query/exceptions.h"
 
 
 using namespace NewServer;
 using namespace boost;
 
-void SessionDispatcher::run() {
+template<uint64_t ModelId>
+void SessionDispatcher<ModelId>::run() {
     boost::asio::async_read(socket,
                             buffer.prepare(sizeof(uint32_t)),
                             boost::bind(&SessionDispatcher::do_read,
-                                        shared_from_this(),
+                                        this->shared_from_this(),
                                         boost::asio::placeholders::error,
                                         boost::asio::placeholders::bytes_transferred));
 }
 
-void SessionDispatcher::do_read(const boost::system::error_code& ec_, std::size_t /*bytes_transferred*/) {
+
+template<uint64_t ModelId>
+void SessionDispatcher<ModelId>::do_read(const boost::system::error_code& ec_, std::size_t /*bytes_transferred*/) {
     boost::system::error_code ec;
     if (ec_) {
         socket.close();
@@ -39,9 +42,8 @@ void SessionDispatcher::do_read(const boost::system::error_code& ec_, std::size_
     preamble |= static_cast<uint32_t>(tmp[3]);
 
     if (preamble == Protocol::MDB_PREAMBLE) {
-        beast::tcp_stream stream { std::move(socket) };
-        logger(Category::Info) << "TCP client accepted";
-        std::make_shared<TCPStreamingSession>(server, timeout, std::move(stream))->run();
+        // TODO: Implement
+        throw NotSupportedException("TCP Client not supported yet");
     } else if (preamble == Protocol::HTTP_GET_PREAMBLE) {
         // Try to handshake the WebSocket upgrade request
         asio::read_until(socket, buffer, "\r\n\r\n", ec);
@@ -54,13 +56,17 @@ void SessionDispatcher::do_read(const boost::system::error_code& ec_, std::size_
         stream.accept(buffer.data(), ec);
         if (ec) {
             socket.close();
-            logger(Category::Error) << "WebSocket handshake failed";
+            logger(Category::Error) << "WebSocket handshake failed. " << ec.message();
             return;
         }
         logger(Category::Info) << "WebSocket client accepted";
-        std::make_shared<WebSocketStreamingSession>(server, timeout, std::move(stream))->run();
+        std::make_shared<WebSocketStreamingSession<ModelId>>(server, timeout, std::move(stream))->run();
     } else {
         socket.close();
         logger(Category::Error) << "Unknown client type";
     }
 }
+
+
+template class NewServer::SessionDispatcher<NewServer::Protocol::QUAD_MODEL_ID>;
+template class NewServer::SessionDispatcher<NewServer::Protocol::RDF_MODEL_ID>;

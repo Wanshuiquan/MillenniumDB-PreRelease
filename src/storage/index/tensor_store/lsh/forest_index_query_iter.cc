@@ -1,9 +1,12 @@
 #include "forest_index_query_iter.h"
 
+#include "macros/likely.h"
 #include "storage/index/tensor_store/lsh/forest_index.h"
 #include "storage/index/tensor_store/lsh/tree.h"
 #include "storage/index/tensor_store/lsh/tree_node.h"
 #include "storage/index/tensor_store/tensor_store.h"
+#include "query/exceptions.h"
+#include "query/query_context.h"
 
 using namespace LSH;
 
@@ -37,6 +40,10 @@ void ForestIndexQueryIter::begin() {
 
 bool ForestIndexQueryIter::next() {
     while (!stack.empty() || current_maximum_depth > 0) {
+        if (MDB_unlikely(get_query_ctx().thread_info.interruption_requested)) {
+            throw InterruptedException();
+        }
+
         // Return elements from the stack
         if (!stack.empty()) {
             if (current == nullptr) {
@@ -82,8 +89,13 @@ void ForestIndexQueryIter::reset() {
 
 
 void ForestIndexQueryIter::intersect_buckets() {
+    if (std::any_of(buckets.begin(), buckets.end(), [](const auto& bucket) { return bucket.empty(); })) {
+        // Fast path for empty intersection due to empty buckets
+        return;
+    }
+
     // Start with the first bucket
-    boost::unordered_set<uint64_t> intersection_bucket = buckets[0];
+    robin_hood::unordered_flat_set<uint64_t> intersection_bucket = buckets[0];
     for (uint_fast32_t i = 1; i < buckets.size(); ++i) {
         // For each other bucket, remove the elements that are not present
         for (auto it = intersection_bucket.begin(); it != intersection_bucket.end();) {
@@ -92,25 +104,28 @@ void ForestIndexQueryIter::intersect_buckets() {
             else
                 ++it;
         }
+
+        // Fast path for empty intersection
+        if (intersection_bucket.empty()) {
+            return;
+        }
     }
 
-    // Fill stack if there was an intersection
-    if (!intersection_bucket.empty()) {
-        // Remove the intersection from all the current buckets to avoid duplicates
-        for (auto& bucket : buckets) {
-            for (const auto& object_id : intersection_bucket)
-                bucket.erase(object_id);
-        }
-
-        // Fill the stack
-        std::vector<float> tensor_buffer(forest_index.tensor_store.tensors_dim);
+    // Remove the intersection from all the current buckets to avoid duplicates
+    for (auto& bucket : buckets) {
         for (const auto& object_id : intersection_bucket) {
-            forest_index.tensor_store.get(object_id, tensor_buffer);
-            const float similarity = forest_index.similarity_fn(query_tensor, tensor_buffer);
-            stack.emplace_back(object_id, similarity);
+            bucket.erase(object_id);
         }
-
-        // Sort by similarity (in descending order)
-        std::sort(stack.begin(), stack.end(), [](const auto& a, const auto& b) { return a.second > b.second; });
     }
+
+    // Fill the stack
+    std::vector<float> tensor_buffer(forest_index.tensor_store.tensors_dim);
+    for (const auto& object_id : intersection_bucket) {
+        forest_index.tensor_store.get(object_id, tensor_buffer);
+        const float similarity = forest_index.similarity_fn(query_tensor, tensor_buffer);
+        stack.emplace_back(object_id, similarity);
+    }
+
+    // Sort by similarity (in descending order)
+    std::sort(stack.begin(), stack.end(), [](const auto& a, const auto& b) { return a.second > b.second; });
 }

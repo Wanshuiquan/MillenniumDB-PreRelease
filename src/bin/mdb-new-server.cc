@@ -4,13 +4,16 @@
 
 #include "graph_models/exceptions.h"
 #include "graph_models/quad_model/quad_model.h"
+#include "graph_models/rdf_model/rdf_model.h"
 #include "misc/fatal_error.h"
 #include "misc/logger.h"
+#include "network/new-server/protocol.h"
 #include "network/new-server/server.h"
 #include "storage/buffer_manager.h"
 #include "storage/file_manager.h"
 #include "storage/filesystem.h"
 #include "storage/index/tensor_store/lsh/forest_index.h"
+#include "storage/index/tensor_store/tensor_buffer_manager.h"
 #include "storage/string_manager.h"
 
 #include "third_party/cli11/CLI11.hpp"
@@ -34,7 +37,7 @@ static uint64_t read_uint64(std::fstream& fs) {
 }
 
 
-void load_tensor_stores() {
+void load_tensor_stores(uint64_t tensor_pages_buffer, bool preload) {
     std::string tensor_stores_path = file_manager.get_file_path(TensorStore::TENSOR_STORES_DIR);
     if (Filesystem::is_directory(tensor_stores_path)) {
         robin_hood::unordered_set<std::string> tensor_store_names;
@@ -46,7 +49,7 @@ void load_tensor_stores() {
         for (const auto& tensor_store_name : tensor_store_names) {
             if (TensorStore::exists(tensor_store_name)) {
                 std::cout << "Loading tensor store \"" << tensor_store_name << "\"...\n";
-                auto tensor_store = std::make_unique<TensorStore>(tensor_store_name);
+                auto tensor_store = std::make_unique<TensorStore>(tensor_store_name, tensor_pages_buffer, preload);
                 std::cout << "Successfully loaded tensor store \"" << tensor_store_name << "\"\n";
                 std::cout << "  size           : " << tensor_store->size() << std::endl;
                 std::cout << "  tensors_dim    : " << tensor_store->tensors_dim << std::endl;
@@ -69,16 +72,18 @@ int main(int argc, char* argv[]) {
 
     bool no_browser = false;
 
-    auto timeout_seconds = NewServer::Server::DEFAULT_TIMEOUT_SECONDS;
-    auto port            = NewServer::Server::DEFAULT_PORT;
-    auto browser_port    = NewServer::Server::DEFAULT_BROWSER_PORT;
+    auto timeout_seconds = NewServer::Protocol::DEFAULT_TIMEOUT_SECONDS;
+    auto port            = NewServer::Protocol::DEFAULT_PORT;
+    auto browser_port    = NewServer::Protocol::DEFAULT_BROWSER_PORT;
     auto max_threads     = std::thread::hardware_concurrency();
 
-    uint64_t limit          = 0;
-    uint64_t load_strings   = StringManager::DEFAULT_LOAD_STR;
+    uint64_t limit                    = 0;
+    uint64_t load_strings             = StringManager::DEFAULT_LOAD_STR;
     uint64_t versioned_pages_buffer   = BufferManager::DEFAULT_VERSIONED_PAGES_BUFFER_SIZE;
     uint64_t private_pages_buffer     = BufferManager::DEFAULT_PRIVATE_PAGES_BUFFER_SIZE;
     uint64_t unversioned_pages_buffer = BufferManager::DEFAULT_UNVERSIONED_PAGES_BUFFER_SIZE;
+    uint64_t tensor_pages_buffer      = TensorBufferManager::DEFAULT_TENSOR_PAGES_BUFFER_SIZE;
+    bool     preload_tensors          = false;
 
     std::string db_directory;
     std::string config_path;
@@ -126,22 +131,22 @@ int main(int argc, char* argv[]) {
       ->check(CLI::Range(1024ULL * 1024, 1024ULL * 1024 * 1024 * 1024));
 
     app.add_option("--versioned-buffer", versioned_pages_buffer)
-        ->description("Size of buffer for versioned pages shared between threads\nAllows units such as MB and GB")
-        ->option_text("<bytes> [1GB]")
-        ->transform(CLI::AsSizeValue(false))
-        ->check(CLI::Range(1024ULL * 1024, 1024ULL * 1024 * 1024 * 1024));
+      ->description("Size of buffer for versioned pages shared between threads\nAllows units such as MB and GB")
+      ->option_text("<bytes> [1GB]")
+      ->transform(CLI::AsSizeValue(false))
+      ->check(CLI::Range(1024ULL * 1024, 1024ULL * 1024 * 1024 * 1024));
 
     app.add_option("--private-buffer", private_pages_buffer)
-        ->description("Size of private per-thread buffers,\nAllows units such as MB and GB")
-        ->option_text("<bytes> [64MB]")
-        ->transform(CLI::AsSizeValue(false))
-        ->check(CLI::Range(1024ULL * 1024, 1024ULL * 1024 * 1024 * 1024));
+      ->description("Size of private per-thread buffers,\nAllows units such as MB and GB")
+      ->option_text("<bytes> [64MB]")
+      ->transform(CLI::AsSizeValue(false))
+      ->check(CLI::Range(1024ULL * 1024, 1024ULL * 1024 * 1024 * 1024));
 
     app.add_option("--unversioned-buffer", unversioned_pages_buffer)
-        ->description("Size of buffer for unversioned pages shared between threads,\nAllows units such as MB and GB")
-        ->option_text("<bytes> [128MB]")
-        ->transform(CLI::AsSizeValue(false))
-        ->check(CLI::Range(1024ULL * 1024, 1024ULL * 1024 * 1024 * 1024));
+      ->description("Size of buffer for unversioned pages shared between threads,\nAllows units such as MB and GB")
+      ->option_text("<bytes> [128MB]")
+      ->transform(CLI::AsSizeValue(false))
+      ->check(CLI::Range(1024ULL * 1024, 1024ULL * 1024 * 1024 * 1024));
 
     app.add_option("--path-mode", path_mode)
       ->description("Path mode")
@@ -158,8 +163,16 @@ int main(int argc, char* argv[]) {
         "Validates the path mode",
         "path_mode_validator"));
 
-    app.add_flag("--no-browser", no_browser)
-      ->description("Disable browser interface");
+    app.add_option("--tensor-buffer", tensor_pages_buffer)
+      ->description("Size of buffer for tensor pages shared between threads\nAllows units such as MB and GB")
+      ->option_text("<bytes> [2GB]")
+      ->transform(CLI::AsSizeValue(false))
+      ->check(CLI::Range(1024ULL * 1024, 1024ULL * 1024 * 1024 * 1024));
+
+    app.add_flag("--preload-tensors", preload_tensors)
+      ->description("Fill the tensor buffer before starting the server");
+
+    app.add_flag("--no-browser", no_browser)->description("Disable browser interface");
 
     CLI11_PARSE(app, argc, argv);
 
@@ -189,28 +202,50 @@ int main(int argc, char* argv[]) {
         case QuadCatalog::MODEL_ID: {
             std::cout << "Initializing Quad Model...\n";
 
-            auto model_destroyer = QuadModel::init(
-                db_directory,
-                load_strings,
-                versioned_pages_buffer,
-                private_pages_buffer,
-                unversioned_pages_buffer,
-                max_threads
-            );
+            auto model_destroyer = QuadModel::init(db_directory,
+                                                   load_strings,
+                                                   versioned_pages_buffer,
+                                                   private_pages_buffer,
+                                                   unversioned_pages_buffer,
+                                                   max_threads);
 
             if (limit != 0) {
                 quad_model.MAX_LIMIT = limit;
             }
 
             if (!path_mode.empty()) {
-                quad_model.path_mode = path_mode == "bfs" ? PathMode::BFS : PathMode::DFS;
+                quad_model.path_mode = path_mode == "dfs" ? PathMode::DFS : PathMode::BFS;
             }
 
             quad_model.catalog().print(std::cout);
 
-            load_tensor_stores();
+            load_tensor_stores(tensor_pages_buffer, preload_tensors);
 
-            NewServer::Server server;
+            NewServer::Server<QuadCatalog::MODEL_ID> server;
+            server.run(port, browser_port, !no_browser, max_threads, std::chrono::seconds(timeout_seconds));
+            return EXIT_SUCCESS;
+        }
+        case RdfCatalog::MODEL_ID: {
+            std::cout << "Initializing RDF Model...\n";
+
+            auto model_destroyer = RdfModel::init(db_directory,
+                                                  load_strings,
+                                                  versioned_pages_buffer,
+                                                  private_pages_buffer,
+                                                  unversioned_pages_buffer,
+                                                  max_threads);
+
+            if (limit != 0) {
+                rdf_model.MAX_LIMIT = limit;
+            }
+
+            if (!path_mode.empty()) {
+                rdf_model.path_mode = path_mode == "dfs" ? PathMode::DFS : PathMode::BFS;
+            }
+
+            rdf_model.catalog().print(std::cout);
+
+            NewServer::Server<RdfCatalog::MODEL_ID> server;
             server.run(port, browser_port, !no_browser, max_threads, std::chrono::seconds(timeout_seconds));
             return EXIT_SUCCESS;
         }

@@ -100,13 +100,16 @@ bool SimilaritySearchPlan::get_leapfrog_iter(std::vector<std::unique_ptr<Leapfro
     std::vector<VarId> intersection_vars = { object_var };
     std::vector<VarId> enumeration_vars  = { similarity_var };
 
-    auto top_k = quad_model.catalog().name2tensor_store.at(tensor_store_name)->query_top_k(query_tensor, k);
+    if (top_k.empty()) {
+        top_k = quad_model.catalog().name2tensor_store.at(tensor_store_name)->query_top_k(query_tensor, k);
+    }
+
     leapfrog_iters.push_back(std::make_unique<LeapfrogSimilaritySearchIter>(
         &get_query_ctx().thread_info.interruption_requested,
         std::move(initial_ranges),
         std::move(intersection_vars),
         std::move(enumeration_vars),
-        std::move(top_k)
+        top_k
     ));
 
     return true;

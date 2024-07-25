@@ -1,6 +1,7 @@
 #include "return_executor.h"
 
 #include "graph_models/inliner.h"
+#include "graph_models/quad_model/conversions.h"
 #include "graph_models/rdf_model/conversions.h"
 #include "query/executor/binding_iter/paths/path_manager.h"
 #include "query/executor/query_executor/csv_ostream_escape.h"
@@ -12,17 +13,19 @@ using namespace MQL;
 
 template<ReturnType ret>
 void ReturnExecutor<ret>::print(std::ostream& os, ObjectId oid) {
-    if (ret == ReturnType::CSV) {
+    if constexpr (ret == ReturnType::CSV) {
         CSVOstreamEscape csv_ostream_escape(os);
         std::ostream escaped_os(&csv_ostream_escape);
         print(os, escaped_os, oid);
 
-    } else {
+    }
+    if constexpr (ret == ReturnType::TSV) {
         TSVOstreamEscape tsv_ostream_escape(os);
         std::ostream escaped_os(&tsv_ostream_escape);
         print(os, escaped_os, oid);
     }
 }
+
 
 template<ReturnType ret>
 void ReturnExecutor<ret>::print_path_node(std::ostream& os, ObjectId node_id) {
@@ -30,6 +33,7 @@ void ReturnExecutor<ret>::print_path_node(std::ostream& os, ObjectId node_id) {
     ReturnExecutor::print(os, os, node_id);
     os << ")";
 }
+
 
 template<ReturnType ret>
 void ReturnExecutor<ret>::print_path_edge(std::ostream& os, ObjectId edge_id, bool inverse) {
@@ -88,24 +92,14 @@ void ReturnExecutor<ret>::print(std::ostream& os, std::ostream& escaped_os, Obje
         os << '"';
         break;
     }
-    case ObjectId::MASK_NEGATIVE_INT: {
-        int64_t i = (~oid.id) & 0x00FF'FFFF'FFFF'FFFFUL;
-        os << (i*-1);
-        break;
-    }
+    case ObjectId::MASK_NEGATIVE_INT:
     case ObjectId::MASK_POSITIVE_INT: {
-        int64_t i = unmasked_id;
+        int64_t i = Conversions::unpack_int(oid);
         os << i;
         break;
     }
     case ObjectId::MASK_FLOAT: {
-        float f;
-        uint8_t* dest = reinterpret_cast<uint8_t*>(&f);
-        dest[0] =  oid.id        & 0xFF;
-        dest[1] = (oid.id >> 8)  & 0xFF;
-        dest[2] = (oid.id >> 16) & 0xFF;
-        dest[3] = (oid.id >> 24) & 0xFF;
-
+        float f = Conversions::unpack_float(oid);
         os << f;
         break;
     }
@@ -231,3 +225,4 @@ void ReturnExecutor<ret>::analyze(std::ostream& os, bool print_stats, int indent
 
 template class MQL::ReturnExecutor<MQL::ReturnType::CSV>;
 template class MQL::ReturnExecutor<MQL::ReturnType::TSV>;
+

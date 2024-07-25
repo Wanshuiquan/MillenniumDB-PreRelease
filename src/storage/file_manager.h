@@ -32,12 +32,15 @@
 #endif
 
 #include "storage/page/private_page.h"
+#include "storage/index/tensor_store/tensor_page.h"
 #include "storage/page/unversioned_page.h"
 #include "storage/page/versioned_page.h"
 
 class FileManager {
 friend class Page; // to allow calling file_manager.flush
+friend class TensorPage; // to allow calling file_manager.flush
 friend class BufferManager; // to allow calling file_manager.read_existing_page
+friend class TensorBufferManager; // to allow calling file_manager.read_existing_page
 public:
     ~FileManager() = default;
 
@@ -52,7 +55,7 @@ public:
 
     // count how many pages a file have
     uint_fast32_t count_pages(FileId file_id) const {
-        static_assert(VPage::SIZE == PPage::SIZE && VPage::SIZE == UPage::SIZE);
+        static_assert(VPage::SIZE == PPage::SIZE && VPage::SIZE == UPage::SIZE && VPage::SIZE == TensorPage::SIZE);
         // We don't need mutex here as long as db is readonly
         return lseek(file_id.id, 0, SEEK_END) / VPage::SIZE;
     }
@@ -63,10 +66,6 @@ public:
     inline const std::string get_file_path(const std::string& filename) const noexcept {
         return db_folder + "/" + filename;
     }
-
-    void read_big_page(PageId page_id, char* bytes, uint64_t page_size) const;
-
-    void flush_big_page(FileId& file_id, uint64_t page_number, char* bytes, uint64_t page_size) const;
 
 private:
     // folder where all the used files will be
@@ -85,6 +84,9 @@ private:
 
     // page back to disk
     void flush(PPage& page) const;
+
+    // page back to disk
+    void flush(TensorPage& page) const;
 
     // read a tmp page from disk into memory pointed by `bytes`.
     void read_tmp_page(PageId page_id, char* bytes) const;

@@ -10,7 +10,7 @@ using namespace std;
 OrderBy::OrderBy(
     unique_ptr<BindingIter>  child_iter,
     const set<VarId>&        _saved_vars,
-    std::vector<VarId>&&     order_vars,
+    vector<VarId>&&          order_vars,
     vector<bool>&&           ascending,
     int64_t(*_compare)(ObjectId, ObjectId)
 ) :
