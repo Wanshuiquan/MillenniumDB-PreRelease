@@ -99,6 +99,7 @@ message(STATUS "Build MillenniumDB's binaries")
 add_subdirectory(${CMAKE_SOURCE_DIR}/third_party/antlr4-runtime-4.13.1)
 include_directories(${CMAKE_SOURCE_DIR}/third_party/antlr4-runtime-4.13.1/src)
 include_directories(${CMAKE_SOURCE_DIR}/third_party/boost_1_82/include)
+
 # Define targets
 add_library(millenniumdb STATIC ${SRCS})
 target_compile_definitions(millenniumdb PUBLIC SERD_STATIC)
@@ -126,6 +127,7 @@ set(TEST_TARGETS
     regular_path_expr_to_rpq_dfa
     scsu-test
     variable_set
+        test_ast
 )
 # Build targets
 foreach(target ${BUILD_TARGETS})
@@ -136,6 +138,7 @@ foreach(target ${BUILD_TARGETS})
         ${FS}
         ssl
         crypto
+            z3
         ${NCURSES}
     )
 endforeach(target)
@@ -150,6 +153,7 @@ foreach(target ${TEST_TARGETS})
         antlr4_cpp_runtime
         ${FS}
         ssl
+            z3
         crypto
     )
     add_test(
