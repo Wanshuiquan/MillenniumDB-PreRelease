@@ -149,7 +149,7 @@ void RewriteRuleVisitor::visit(OpNotExists& op_not_exists) {
 
 
 void RewriteRuleVisitor::visit(OpSequence&) {
-    assert(false && "Rewrites should happen before opSequence is created");
+    assert(false && "Rewrites should happen before OpSequence is created");
 }
 
 void RewriteRuleVisitor::visit(OpUnion& op_union) {

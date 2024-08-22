@@ -36,7 +36,7 @@ private:
         std::vector<bool> ascending_order;
     };
 
-    struct SimilaritySortInfo {
+    struct ProjectSimilarityInfo {
         VarId              object_var { 0 };
         VarId              similarity_var { 0 };
         std::string        tensor_store_name;
@@ -49,7 +49,7 @@ private:
 
     OrderByInfo order_by_info;
 
-    SimilaritySortInfo similarity_sort_info;
+    ProjectSimilarityInfo project_similarity_info;
 
     std::vector<std::pair<VarId, ObjectId>> set_items;
 
@@ -150,7 +150,7 @@ public:
     virtual std::any visitAdditiveExpr(MQL_Parser::AdditiveExprContext* ctx) override;
     virtual std::any visitMultiplicativeExpr(MQL_Parser::MultiplicativeExprContext* ctx) override;
     virtual std::any visitUnaryExpr(MQL_Parser::UnaryExprContext* ctx) override;
-  
+
     virtual std::any visitSimilaritySearch(MQL_Parser::SimilaritySearchContext* ctx) override;
     virtual std::any visitProjectSimilarity(MQL_Parser::ProjectSimilarityContext* ctx) override;
     virtual std::any visitTensor(MQL_Parser::TensorContext* ctx) override;

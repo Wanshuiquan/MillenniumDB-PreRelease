@@ -2,9 +2,13 @@
 
 #include <cassert>
 #include <cstdio>
+#include <iostream>
 #include <fstream>
+#include <sstream>
 #include <stdexcept>
 
+#include "graph_models/quad_model/quad_model.h"
+#include "graph_models/quad_model/quad_object_id.h"
 #include "query/exceptions.h"
 #include "storage/file_manager.h"
 #include "storage/filesystem.h"
@@ -81,6 +85,123 @@ bool TensorStore::exists(const std::string& name) {
 }
 
 
+void TensorStore::bulk_import(const std::string& tensors_csv_path,
+                              const std::string& tensor_store_name,
+                              uint64_t           tensors_dim) {
+    if (tensors_dim < 1) {
+        throw std::invalid_argument("Tensor dimension must be at least 1");
+    }
+
+    // Create the tensor stores directory if it does not exist
+    const auto tensor_stores_path = file_manager.get_file_path(TENSOR_STORES_DIR);
+    if (!Filesystem::is_directory(tensor_stores_path)) {
+        Filesystem::create_directories(tensor_stores_path);
+    }
+
+
+    // Create the files
+    const auto tensors_file_path = file_manager.get_file_path(TENSOR_STORES_DIR + "/" + tensor_store_name + ".tensors");
+    const auto mapping_file_path = file_manager.get_file_path(TENSOR_STORES_DIR + "/" + tensor_store_name + ".mapping");
+    std::fstream tensors_file_ofs(tensors_file_path, std::ios::out | std::ios::binary | std::ios::trunc);
+    std::fstream mapping_file_ofs(mapping_file_path, std::ios::out | std::ios::binary | std::ios::trunc);
+
+    std::string   line;
+    std::string   cell;
+    uint_fast32_t current_line_index = 0;
+
+    robin_hood::unordered_flat_set<uint64_t> object_ids;
+
+    std::fstream tensors_csv_ifs(tensors_csv_path, std::ios::in | std::ios::binary);
+    Serialization::write_uint64(mapping_file_ofs, tensors_dim);
+    Serialization::write_uint64(mapping_file_ofs, 0);
+
+    // Process the csv line by line and insert the tensors
+    std::cout << "Inserting tensors...\n";
+    const auto start = std::chrono::high_resolution_clock::now();
+    while (std::getline(tensors_csv_ifs, line)) {
+        std::stringstream ss(line);
+
+        // ObjectId
+        std::getline(ss, cell, ',');
+        const auto object_id = QuadObjectId::get_named_node(cell);
+        if (object_ids.contains(object_id.id)) {
+            std::cout << "Skipping duplicate ObjectId: \"" << cell << "\" at line " << current_line_index << "\n";
+            continue;
+        }
+
+        // Write object_id2tensor_offset
+        Serialization::write_uint64(mapping_file_ofs, object_id.id);
+        Serialization::write_uint64(mapping_file_ofs, tensors_file_ofs.tellp());
+
+        object_ids.insert(object_id.id);
+
+        // Tensor entries
+        for (auto i = 0u; i < tensors_dim; i++) {
+            std::getline(ss, cell, ',');
+            const auto f = std::strtof(cell.c_str(), nullptr);
+            Serialization::write_float(tensors_file_ofs, f);
+        }
+        ++current_line_index;
+    }
+    tensors_csv_ifs.close();
+
+    // Add zeroes in order to make the file size a multiple of TensorPage::SIZE (nesessary for the tensor_buffer_manager)
+    const auto tensors_file_size = tensors_file_ofs.tellp();
+    if (tensors_file_size % TensorPage::SIZE != 0) {
+        size_t remaining_bytes = TensorPage::SIZE - (tensors_file_size % TensorPage::SIZE);
+        while (remaining_bytes > 0) {
+            tensors_file_ofs.write("\0", 1);
+            --remaining_bytes;
+        }
+    }
+    tensors_file_ofs.close();
+
+    // Update the metadata in the mapping file
+    mapping_file_ofs.seekp(sizeof(uint64_t));
+    Serialization::write_uint64(mapping_file_ofs, object_ids.size());
+    mapping_file_ofs.close();
+
+    const auto end = std::chrono::high_resolution_clock::now();
+    std::cout << "TensorStore::bulk_import took: "
+              << std::chrono::duration_cast<std::chrono::seconds>(end - start).count() << " seconds for "
+              << object_ids.size() << " tensors\n";
+}
+
+
+void TensorStore::load_tensor_stores(uint64_t tensor_page_buffer_size_in_bytes, bool preload) {
+    const auto tensor_stores_path = file_manager.get_file_path(TensorStore::TENSOR_STORES_DIR);
+
+    if (Filesystem::is_directory(tensor_stores_path)) {
+        robin_hood::unordered_set<std::string> tensor_store_names;
+        // Get the stem of each file
+        for (const auto& file : Filesystem::directory_iterator(tensor_stores_path)) {
+            tensor_store_names.insert(file.path().filename().stem());
+        }
+
+        // Load the tensor stores
+        for (const auto& tensor_store_name : tensor_store_names) {
+            if (TensorStore::exists(tensor_store_name)) {
+                std::cout << "Loading Tensor Store \"" << tensor_store_name << "\"...\n";
+                auto tensor_store = std::make_unique<TensorStore>(tensor_store_name, tensor_page_buffer_size_in_bytes, preload);
+                std::cout << "  num_tensors     : " << tensor_store->size() << "\n";
+                std::cout << "  tensors_dim     : " << tensor_store->tensors_dim << "\n";
+                if (tensor_store->forest_index != nullptr) {
+                    std::cout << "  num_trees       : " << tensor_store->forest_index->num_trees << "\n";
+                    std::cout << "  max_bucket_size : " << tensor_store->forest_index->max_bucket_size << "\n";
+                    std::cout << "  max_depth       : " << tensor_store->forest_index->max_depth << "\n";
+                }
+                quad_model.catalog().name2tensor_store.emplace(tensor_store_name, std::move(tensor_store));
+            }
+        }
+    }
+
+    if (quad_model.catalog().name2tensor_store.size() > 0) {
+        std::cout << "Successfully loaded " << quad_model.catalog().name2tensor_store.size() << " Tensor Store(s)\n";
+        std::cout << "-------------------------------------\n";
+    }
+}
+
+
 bool TensorStore::contains(uint64_t object_id) const {
     return object_id2tensor_offset.find(object_id) != object_id2tensor_offset.end();
 }
@@ -105,7 +226,7 @@ bool TensorStore::get(uint64_t object_id, std::vector<float>& vec) const {
     while (remaining > 0) {
         size_t max_read   = (TensorPage::SIZE - page_offset);
         char* current_ptr = current_page->get_bytes() + page_offset;
-        if (remaining < max_read) {
+        if (remaining <= max_read) {
             // All the remaining bytes are in the current page
             std::memcpy(&vec_bytes[vec_bytes_size - remaining], current_ptr, remaining);
             tensor_buffer_manager->unpin(*current_page);
@@ -121,51 +242,6 @@ bool TensorStore::get(uint64_t object_id, std::vector<float>& vec) const {
     }
 
     return true;
-}
-
-
-void TensorStore::insert(uint64_t object_id, const std::vector<float>& tensor) {
-    assert(tensor.size() == tensors_dim);
-    uint64_t tensor_offset;
-    auto     it = object_id2tensor_offset.find(object_id);
-    if (it != object_id2tensor_offset.end()) {
-        // Replace an existing tensor
-        tensor_offset = it->second;
-    } else {
-        // Insert a new tensor
-        tensor_offset = object_id2tensor_offset.size() * sizeof(float) * tensors_dim;
-        object_id2tensor_offset.insert({ object_id, tensor_offset });
-    }
-
-    auto vec_bytes      = reinterpret_cast<const char*>(tensor.data());
-    auto vec_bytes_size = tensor.size() * sizeof(float);
-
-    // Start from the corresponding page and offset
-    auto page_number         = tensor_offset / TensorPage::SIZE;
-    auto page_offset         = tensor_offset % TensorPage::SIZE;
-    TensorPage* current_page = &tensor_buffer_manager->get_or_append_page(page_number);
-
-    // Write the tensor directly from the vector bytes
-    size_t remaining = sizeof(float) * tensor.size();
-    while (remaining > 0) {
-        size_t max_write  = (TensorPage::SIZE - page_offset);
-        char* current_ptr = current_page->get_bytes() + page_offset;
-        if (remaining < max_write) {
-            // All the remaining bytes fit in the current page
-            std::memcpy(current_ptr, &vec_bytes[vec_bytes_size - remaining], remaining);
-            current_page->make_dirty();
-            tensor_buffer_manager->unpin(*current_page);
-            break;
-        } else {
-            // There are remaining bytes that wont fit in the current page
-            std::memcpy(current_ptr, &vec_bytes[vec_bytes_size - remaining], max_write);
-            current_page->make_dirty();
-            tensor_buffer_manager->unpin(*current_page);
-            remaining -= max_write;
-            ++page_number;
-            current_page = &tensor_buffer_manager->get_or_append_page(page_number);
-        }
-    }
 }
 
 

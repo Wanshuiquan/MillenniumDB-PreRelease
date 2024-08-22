@@ -9,8 +9,13 @@ namespace SPARQL {
 class AggAvgDistinct : public Agg {
 public:
     using Agg::Agg;
+
+    AggAvgDistinct(VarId var_id, std::unique_ptr<BindingExpr> expr) :
+        Agg (var_id, std::move(expr)),
+        hash_table (1) { }
+
     void begin() override {
-        hash_table = std::make_unique<DistinctBindingHash<ObjectId>>(1);
+        hash_table.reset();
 
         sum_integer = 0;
         sum_decimal = Decimal(0);
@@ -35,7 +40,7 @@ public:
         }
 
         oid_vec[0] = oid;
-        if (hash_table->is_in_or_insert(oid_vec)) {
+        if (hash_table.is_in_or_insert(oid_vec)) {
             return;
         }
 
@@ -121,7 +126,7 @@ private:
 
     uint64_t count = 0;
 
-    std::unique_ptr<DistinctBindingHash<ObjectId>> hash_table;
+    DistinctBindingHash hash_table;
 
     // Vector to pass oid to the hash table
     std::vector<ObjectId> oid_vec{1};

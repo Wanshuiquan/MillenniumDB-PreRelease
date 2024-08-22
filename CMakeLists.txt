@@ -48,6 +48,11 @@ set(CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic -pthread -march=native -funroll-loo
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g3 -fsanitize=undefined,address -fno-omit-frame-pointer")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -g0")
 
+if(PROFILE)
+    add_definitions(-DBOOST_STACKTRACE_USE_ADDR2LINE)
+endif(PROFILE)
+
+
 # When compiling with Clang generate debug info specifically for lldb
 if(CMAKE_CXX_COMPILER_ID STREQUAL Clang)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -glldb -fstandalone-debug")
@@ -57,8 +62,15 @@ if(APPLE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated")
 endif(APPLE)
 
+# Enable OpenMP if available
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+else()
+    message(WARNING "OpenMP not found")
+endif(OpenMP_CXX_FOUND)
 
-# Enable interprocedural optimization and OpenMP if supported and BUILD_TYPE is RELEASE
+# Enable interprocedural optimization if supported and BUILD_TYPE is RELEASE
 string(TOUPPER "${CMAKE_BUILD_TYPE}" BUILD_TYPE)
 if(BUILD_TYPE STREQUAL "RELEASE")
     include(CheckIPOSupported)
@@ -68,13 +80,6 @@ if(BUILD_TYPE STREQUAL "RELEASE")
     else()
         message(WARNING "IPO is not supported:\n${ipo_output}")
     endif(ipo_result)
-
-    find_package(OpenMP)
-    if(OpenMP_CXX_FOUND)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-    else()
-        message(WARNING "OpenMP not found")
-    endif(OpenMP_CXX_FOUND)
 endif(BUILD_TYPE STREQUAL "RELEASE")
 
 # Add include directories
@@ -98,16 +103,17 @@ include_directories(${CMAKE_SOURCE_DIR}/third_party/boost_1_82/include)
 add_library(millenniumdb STATIC ${SRCS})
 target_compile_definitions(millenniumdb PUBLIC SERD_STATIC)
 set(BUILD_TARGETS
-    # mdb-new-server
-    # mdb-cli
-    # mdb-dump
-    mdb-import
-    # mdb-import-tensors
-    # mdb-index-tensors
-    # mdb-query-mql
-    # mdb-scsu
     mdb-server
+    mdb-cli
+    mdb-dump
+    mdb-import
+    mdb-import-tensors
+    mdb-index-tensors
+    # mdb-scsu
     # mdb-text-search
+)
+set(PROFILE_TARGETS
+    profile-query
 )
 set(TEST_TARGETS
     compare_datetime
@@ -133,23 +139,44 @@ foreach(target ${BUILD_TARGETS})
         ${NCURSES}
     )
 endforeach(target)
+
 # Test targets
-# enable_testing()
-# foreach(target ${TEST_TARGETS})
-#     add_executable(${target} ${CMAKE_SOURCE_DIR}/src/tests/${target}.cc)
-#     set_target_properties(${target} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests")
-#     target_link_libraries(${target}
-#         millenniumdb
-#         antlr4_cpp_runtime
-#         ${FS}
-#         ssl
-#         crypto
-#     )
-#     add_test(
-#         NAME ${target}
-#         COMMAND $<TARGET_FILE:${target}>
-#         WORKING_DIRECTORY tests
-#     )
-# endforeach(target)
+enable_testing()
+foreach(target ${TEST_TARGETS})
+    add_executable(${target} ${CMAKE_SOURCE_DIR}/src/tests/${target}.cc)
+    set_target_properties(${target} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests")
+    target_link_libraries(${target}
+        millenniumdb
+        antlr4_cpp_runtime
+        ${FS}
+        ssl
+        crypto
+    )
+    add_test(
+        NAME ${target}
+        COMMAND $<TARGET_FILE:${target}>
+        WORKING_DIRECTORY tests
+    )
+endforeach(target)
+
+if(PROFILE)
+    # Profile targets
+    foreach(target ${PROFILE_TARGETS})
+        add_executable(${target} ${CMAKE_SOURCE_DIR}/src/bin/${target}.cc)
+        target_link_libraries(${target}
+            millenniumdb
+            antlr4_cpp_runtime
+            ${FS}
+            ssl
+            crypto
+            dl
+            -Wl,-no-as-needed
+            -no-pie
+            -fno-pie
+            tcmalloc
+            profiler
+        )
+    endforeach(target)
+endif(PROFILE)
 
 install(TARGETS ${BUILD_TARGETS} RUNTIME DESTINATION bin)

@@ -13,7 +13,7 @@ public:
     static constexpr size_t SIZE = 4096;
 
     // contains file_id and page_number of this page
-    PageId page_id;
+    TmpPageId page_id;
 
     // mark as dirty so when page is replaced it is written back to disk.
     inline void make_dirty() noexcept { dirty = true; }
@@ -38,7 +38,7 @@ private:
     bool dirty;
 
     PPage() noexcept :
-        page_id(FileId(FileId::UNASSIGNED), 0),
+        page_id(TmpPageId::UNASSIGNED_ID, 0),
         bytes(nullptr),
         pins(0),
         second_chance(false),
@@ -61,13 +61,13 @@ private:
     // only meant for buffer_manager.remove()
     void reset() noexcept {
         assert(pins == 0 && "Cannot reset page if it is pinned");
-        this->page_id       = PageId(FileId(FileId::UNASSIGNED), 0);
+        this->page_id       = TmpPageId(TmpPageId::UNASSIGNED_ID, 0);
         this->pins          = 0;
         this->second_chance = 0;
         this->dirty         = false;
     }
 
-    void reassign(PageId page_id) noexcept {
+    void reassign(TmpPageId page_id) noexcept {
         assert(!dirty && "Cannot reassign page if it is dirty");
         assert(pins == 0 && "Cannot reassign page if it is pinned");
         assert(second_chance == false && "Should not reassign page if second_chance is true");

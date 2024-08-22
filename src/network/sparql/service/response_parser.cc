@@ -541,7 +541,7 @@ ObjectId ResponseParser::get_object_id(const string& attr_type,
 {
     string new_type = "";
     if (attr_type == "datatype") {
-        return SPARQL::Conversions::try_pack_string_datatype(attr_value, extra_data);
+        return SPARQL::Conversions::try_pack_string_datatype(extra_data, attr_value);
     }
 
     if (attr_type == "uri") {

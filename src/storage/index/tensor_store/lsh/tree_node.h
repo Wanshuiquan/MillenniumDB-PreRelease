@@ -3,7 +3,6 @@
 #include <cassert>
 #include <cstdint>
 #include <fstream>
-#include <numeric>
 #include <vector>
 
 #include "storage/index/tensor_store/serialization.h"
@@ -119,7 +118,7 @@ public:
     }
 
     void deserialize(std::fstream& fs) override {
-        auto plane_normal_size = Serialization::read_uint64(fs);
+        const auto plane_normal_size = Serialization::read_uint64(fs);
         plane_normal           = Serialization::read_float_vec(fs, plane_normal_size);
         plane_offset           = Serialization::read_float(fs);
     }

@@ -20,17 +20,19 @@ inline void print_duration(const std::string& msg,
                            std::chrono::system_clock::time_point& start)
 {
     auto end = std::chrono::system_clock::now();
-    std::chrono::duration<float> duration = end - start;
-    auto seconds_duration = duration.count();
-    if (seconds_duration < 1) {
-         std::cout << msg << " duration: " << seconds_duration*1000 << " milliseconds" << std::endl;
-    } else if (seconds_duration <= 60) {
-        std::cout << msg << " duration: " << seconds_duration << " seconds" << std::endl;
-    } else if (seconds_duration <= 60*60) {
-        std::cout << msg << " duration: " << (seconds_duration / 60) << " minutes" << std::endl;
+    auto ms_duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
+    std::cout << msg << " duration: ";
+    if (ms_duration < 1000) {
+         std::cout << ms_duration << " milliseconds";
+    } else if (ms_duration <= 60'000) { // less than 1 minute: print seconds
+        std::cout << ms_duration / 1000.0 << " seconds";
+    } else if (ms_duration <= 3'600'000) { // less than 1 hour: print minutes
+        std::cout << (ms_duration / 60'000.0) << " minutes";
     } else {
-        std::cout << msg << " duration: " << (seconds_duration / (60*60)) << " hours" << std::endl;
+        std::cout << (ms_duration / 3'600'000.0) << " hours";
     }
+    std::cout << std::endl;
     start = end;
 }
 

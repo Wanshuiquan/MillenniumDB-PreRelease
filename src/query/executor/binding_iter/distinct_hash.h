@@ -13,7 +13,7 @@ public:
     ) :
         child_iter       (std::move(child_iter)),
         projected_vars   (std::move(_projected_vars)),
-        extendable_table (DistinctBindingHash<ObjectId>( projected_vars.size() )) { }
+        extendable_table (projected_vars.size()) { }
 
     void _begin(Binding& parent_binding) override;
     void _reset() override;
@@ -29,7 +29,7 @@ public:
 
 private:
     std::vector<VarId> projected_vars;
-    DistinctBindingHash<ObjectId> extendable_table;
+    DistinctBindingHash extendable_table;
 
     std::vector<ObjectId> current_tuple;
     Binding* parent_binding;

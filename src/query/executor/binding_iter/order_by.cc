@@ -17,8 +17,8 @@ OrderBy::OrderBy(
     child_iter     (std::move(child_iter)),
     order_vars     (std::move(order_vars)),
     ascending      (std::move(ascending)),
-    first_file_id  (file_manager.get_tmp_file_id()),
-    second_file_id (file_manager.get_tmp_file_id()),
+    first_file_id  (buffer_manager.get_tmp_file_id()),
+    second_file_id (buffer_manager.get_tmp_file_id()),
     compare        (_compare)
 {
     uint_fast32_t current_index = 0;
@@ -31,8 +31,8 @@ OrderBy::OrderBy(
 
 OrderBy::~OrderBy() {
     run.reset();
-    file_manager.remove_tmp(first_file_id);
-    file_manager.remove_tmp(second_file_id);
+    buffer_manager.remove_tmp(first_file_id);
+    buffer_manager.remove_tmp(second_file_id);
 }
 
 

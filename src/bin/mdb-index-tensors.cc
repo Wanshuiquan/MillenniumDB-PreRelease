@@ -1,7 +1,5 @@
-// #include <cstdio>
 #include <chrono>
 #include <iostream>
-#include <thread>
 
 #include "graph_models/quad_model/quad_model.h"
 #include "storage/buffer_manager.h"
@@ -73,18 +71,18 @@ int main(int argc, char* argv[]) {
     app.add_option("num-trees", num_trees)
       ->description("number of trees in the LSH Forest Index")
       ->type_name("<num>")
-      ->check(CLI::Range(1, 128))
+      ->check(CLI::Range(1, 65'536))
       ->required();
 
     app.add_option("--max-bucket-size", max_bucket_size)
       ->description("maximum bucket size for the leaves in the LSH Forest Index trees")
       ->type_name("<num>")
-      ->check(CLI::Range(256, 8192));
+      ->check(CLI::Range(64, 32'768));
 
     app.add_option("--max-depth", max_depth)
       ->description("maximum depth of the trees in the LSH Forest Index")
       ->type_name("<num>")
-      ->check(CLI::Range(2, 1024));
+      ->check(CLI::Range(2, 4'096));
 
     app.add_option("--tensor-buffer", tensor_buffer)
       ->description("size of buffer for tensor pages shared between threads\nAllows units such as MB and GB")
@@ -126,7 +124,7 @@ int main(int argc, char* argv[]) {
                                            BufferManager::DEFAULT_VERSIONED_PAGES_BUFFER_SIZE,
                                            BufferManager::DEFAULT_PRIVATE_PAGES_BUFFER_SIZE,
                                            BufferManager::DEFAULT_UNVERSIONED_PAGES_BUFFER_SIZE,
-                                           std::thread::hardware_concurrency());
+                                           1);
     std::cout << "QuadModel initialized\n";
 
     if (!TensorStore::exists(tensor_store_name)) {

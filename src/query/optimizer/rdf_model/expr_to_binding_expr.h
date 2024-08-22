@@ -42,7 +42,8 @@ public:
         bic (bic),
         as_var (as_var) { }
 
-    template<typename AggType> AggType* check_and_make_aggregate(Expr*);
+    template<typename AggType, class ... Args>
+    void check_and_make_aggregate(Expr*, Args&&... args);
 
     void visit(SPARQL::ExprVar&)            override;
     void visit(SPARQL::ExprTerm&)           override;

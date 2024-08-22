@@ -5,7 +5,7 @@
 
 #include "macros/aligned_alloc.h"
 #include "misc/fatal_error.h"
-#include "query/query_context.h"
+#include "query/exceptions.h"
 #include "storage/file_manager.h"
 
 // memory for the object
@@ -58,6 +58,7 @@ BufferManager::BufferManager(uint64_t vpage_buffer_pool_size,
 
     pp_map.resize(workers);
     pp_clocks.resize(workers);
+    tmp_info.resize(workers);
 
     vp_map.reserve(vpage_buffer_pool_size);
     up_map.reserve(upage_buffer_pool_size);
@@ -197,24 +198,22 @@ VPage& BufferManager::get_vpage_available() {
 }
 
 
-PPage& BufferManager::get_ppage_available(uint_fast32_t thread_pos) {
-    PPage* page;
-
+PPage& BufferManager::get_ppage_available(uint_fast32_t thread_pos) noexcept {
     auto& clock = pp_clocks[thread_pos];
-    while (true) {
-        // when pins == 0 the are no synchronization problems with pins and usage
-        page = &pp_pool[(thread_pos * pp_pool_size) + clock];
-        if (page->pins == 0) {
-            if (!page->second_chance) {
-                break;
-            } else {
-                page->second_chance = false;
-            }
-        }
+    do {
         clock++;
         clock = clock < pp_pool_size ? clock : 0;
-    }
-    return *page;
+
+        // when pins == 0 the are no synchronization problems with pins and usage
+        auto& page = pp_pool[(thread_pos * pp_pool_size) + clock];
+        if (page.pins == 0) {
+            if (!page.second_chance) {
+                return page;
+            } else {
+                page.second_chance = false;
+            }
+        }
+    } while (true);
 }
 
 
@@ -237,7 +236,7 @@ VPage& BufferManager::get_page_readonly(FileId file_id, uint64_t page_number) no
         page.next_version = nullptr;
         vp_map.insert({ page_id, &page });
 
-        file_manager.read_existing_page(page_id, page.get_bytes());
+        file_manager.read_existing_page(page_id, page.bytes);
         vp_mutex.unlock();
 
         return page;
@@ -293,8 +292,8 @@ VPage& BufferManager::get_page_editable(FileId file_id, uint64_t page_number) no
 
         vp_map.insert({ page_id, &old_page });
 
-        file_manager.read_existing_page(page_id, old_page.get_bytes());
-        std::memcpy(new_page.get_bytes(), old_page.get_bytes(), VPage::SIZE);
+        file_manager.read_existing_page(page_id, old_page.bytes);
+        std::memcpy(new_page.bytes, old_page.bytes, VPage::SIZE);
 
         current_modifications.push_back(page_id);
 
@@ -321,7 +320,7 @@ VPage& BufferManager::get_page_editable(FileId file_id, uint64_t page_number) no
 
             current_modifications.push_back(page_id);
 
-            std::memcpy(new_page.get_bytes(), page->get_bytes(), VPage::SIZE);
+            std::memcpy(new_page.bytes, page->bytes, VPage::SIZE);
             return new_page;
         } else {
             page->pin();
@@ -338,7 +337,7 @@ VPage& BufferManager::append_vpage(FileId file_id) {
 
     auto& new_page = get_vpage_available(); // need to have vp_mutex locked
 
-    auto page_number = file_manager.append_page(file_id, new_page.get_bytes());
+    auto page_number = file_manager.append_page(file_id, new_page.bytes);
     PageId page_id(file_id, page_number);
     new_page.reassign(page_id);
 
@@ -395,7 +394,7 @@ UPage& BufferManager::get_unversioned_page(FileId file_id, uint64_t page_number)
         page.reassign(page_id);
         up_map.insert({ page_id, &page });
 
-        file_manager.read_existing_page(page_id, page.get_bytes());
+        file_manager.read_existing_page(page_id, page.bytes);
         up_mutex.unlock();
 
         return page;
@@ -413,7 +412,7 @@ UPage& BufferManager::append_unversioned_page(FileId file_id) noexcept {
     up_mutex.lock();
 
     auto& new_page = get_upage_available();
-    auto page_number = file_manager.append_page(file_id, new_page.get_bytes());
+    auto page_number = file_manager.append_page(file_id, new_page.bytes);
     PageId page_id(file_id, page_number);
     new_page.reassign(page_id);
     new_page.dirty = true;
@@ -425,28 +424,57 @@ UPage& BufferManager::append_unversioned_page(FileId file_id) noexcept {
 }
 
 
-PPage& BufferManager::get_ppage(TmpFileId tmp_file_id, uint64_t page_number) noexcept {
-    const PageId page_id(tmp_file_id.file_id, page_number);
-    const auto thread_pos = tmp_file_id.private_buffer_pos;
+PPage& BufferManager::get_ppage(TmpFileId tmp_file_id, uint64_t page_number) /*noexcept*/ {
+    const TmpPageId tmp_page_id(tmp_file_id.id, page_number);
+    const auto worker = get_query_ctx().thread_info.worker_index;
 
-    // We don't need a mutex here because tmp pp_map[thread_pos] is
-    // assigned to one specific thread.
-    // If we change this in the future we might need a mutex lock.
+    auto it = pp_map[worker].find(tmp_page_id);
+    if (it == pp_map[worker].end()) {
+        auto& page = get_ppage_available(worker);
+        if (page.page_id.id != TmpPageId::UNASSIGNED_ID) {
+            pp_map[worker].erase(page.page_id);
 
-    auto it = pp_map[thread_pos].find(page_id);
-    if (it == pp_map[thread_pos].end()) {
-        auto& page = get_ppage_available(thread_pos);
-        if (page.page_id.file_id.id != FileId::UNASSIGNED) {
-            pp_map[thread_pos].erase(page.page_id);
+            auto& evicted_info = tmp_info[worker][page.page_id.id];
+
+            // if file does not exists, create it
+            if (evicted_info.fd == -1) {
+                std::FILE* new_tmp_file = std::tmpfile();
+                evicted_info.fd = fileno(new_tmp_file);
+
+                if (evicted_info.fd == -1) {
+                    throw std::runtime_error("Could not open tmp file");
+                }
+            }
+
+            if (page.dirty) {
+                // if real size is less than page_number, resize file
+                if (evicted_info.real_size <= page.get_page_number()) {
+                    auto write_res = ftruncate(evicted_info.fd, PPage::SIZE * (page.get_page_number() + 1));
+
+                    if (write_res == -1) {
+                        throw std::runtime_error("Could not truncate tmp file");
+                    }
+                    evicted_info.real_size = page.get_page_number() + 1;
+                }
+
+                file_manager.flush(evicted_info.fd, page);
+            }
         }
 
-        if (page.dirty) {
-            file_manager.flush(page);
-        }
-        page.reassign(page_id);
+        page.reassign(tmp_page_id);
 
-        file_manager.read_tmp_page(page_id, page.get_bytes());
-        pp_map[thread_pos].insert({ page_id, &page });
+        auto& new_info = tmp_info[worker][tmp_file_id.id];
+
+        assert(new_info.logical_size >= new_info.real_size);
+        if (page_number < new_info.real_size) {
+            // read from disk as this is an existing page
+            file_manager.read_tmp_page(new_info.fd, page_number, page.bytes);
+        } else {
+            // do not read from disk as this is a new page, just assign zeros
+            memset(page.bytes, 0, PPage::SIZE);
+            new_info.logical_size = page_number + 1;
+        }
+        pp_map[worker].insert({ tmp_page_id, &page });
         return page;
     } else {
         it->second->pins++;
@@ -455,15 +483,31 @@ PPage& BufferManager::get_ppage(TmpFileId tmp_file_id, uint64_t page_number) noe
 }
 
 
+TmpFileId BufferManager::get_tmp_file_id() {
+    auto worker = get_query_ctx().thread_info.worker_index;
+    auto file_id = tmp_info[worker].size();
+    tmp_info[worker].emplace_back();
+    return TmpFileId(file_id);
+}
+
+
 void BufferManager::remove_tmp(TmpFileId tmp_file_id) {
     assert(pp_pool != nullptr);
-    auto offset = pp_pool_size * tmp_file_id.private_buffer_pos;
+    auto worker = get_query_ctx().thread_info.worker_index;
+    auto offset = pp_pool_size * worker;
     for (uint64_t i = 0; i < pp_pool_size; i++) {
         auto page_id = pp_pool[offset + i].page_id;
-        if (page_id.file_id == tmp_file_id.file_id) {
-            pp_map[tmp_file_id.private_buffer_pos].erase(page_id);
+        if (page_id.id == tmp_file_id.id) {
+            pp_map[worker].erase(page_id);
             pp_pool[offset + i].reset();
         }
+    }
+
+    // close file if it was materialized
+    auto fd = tmp_info[worker][tmp_file_id.id].fd;
+    if (fd != -1) {
+        tmp_info[worker][tmp_file_id.id].fd = -1;
+        close(fd);
     }
 }
 

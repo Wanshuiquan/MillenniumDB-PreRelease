@@ -27,11 +27,13 @@ public:
 private:
     std::unique_ptr<BindingIter> child_iter;
 
-    std::vector<VarId>    vars;
+    std::vector<VarId> vars;
+
     std::vector<ObjectId> iris;
 
-    DistinctBindingHash<ObjectId> extendable_table;
-    std::vector<ObjectId>         current_triple;
+    DistinctBindingHash extendable_table;
+
+    std::vector<ObjectId> current_triple;
 
     uint64_t triple_count;
 

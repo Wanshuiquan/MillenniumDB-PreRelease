@@ -28,6 +28,9 @@ are not performed or delayed. For example this is used in the StringHash.
 #include <mutex>
 #include <vector>
 
+#include <boost/unordered/unordered_flat_map.hpp>
+
+#include "query/query_context.h"
 #include "storage/file_id.h"
 #include "storage/page/private_page.h"
 #include "storage/page/unversioned_page.h"
@@ -99,7 +102,7 @@ public:
     // and put in the buffer.
     // Also it will pin the page, so calling buffer_manager.unpin(page) is expected when the caller doesn't need
     // the returned page anymore.
-    PPage& get_ppage(TmpFileId file_id, uint64_t page_number) noexcept;
+    PPage& get_ppage(TmpFileId file_id, uint64_t page_number) /*noexcept*/;
 
     UPage& get_unversioned_page(FileId file_id, uint64_t page_number) noexcept;
 
@@ -133,6 +136,8 @@ public:
         page.unpin();
     }
 
+    TmpFileId get_tmp_file_id();
+
     // invalidates all pages using `tmp_file_id` in private buffer
     void remove_tmp(TmpFileId tmp_file_id);
 
@@ -140,6 +145,8 @@ public:
         std::lock_guard<std::mutex> lck(running_version_count_mutex);
         auto ver = last_stable_version;
         running_version_count[ver]++;
+        auto worker = get_query_ctx().thread_info.worker_index;
+        tmp_info[worker].clear();
         return std::make_unique<VersionScope>(ver, false);
     }
 
@@ -148,6 +155,8 @@ public:
         auto ver = last_stable_version;
         running_version_count[ver]++;
         running_version_count[ver+1]++;
+        auto worker = get_query_ctx().thread_info.worker_index;
+        tmp_info[worker].clear();
         return std::make_unique<VersionScope>(ver, true);
     }
 
@@ -210,8 +219,26 @@ private:
     std::vector<uint64_t> pp_clocks;
 
     // used to search the index in the `pp_pool` of a certain private page
-    std::vector<robin_hood::unordered_flat_map<PageId, PPage*>> pp_map;
+    std::vector<boost::unordered_flat_map<
+        TmpPageId,
+        PPage*,
+        TmpPageId::Hasher
+    >> pp_map;
 
+    struct TmpFileInfo {
+        uint32_t logical_size;
+        uint32_t real_size;
+        int fd;
+
+        TmpFileInfo() :
+            logical_size (0),
+            real_size (0),
+            fd (-1) { }
+    };
+
+    // tmp_info[i] is a list with the info of each temporal file from worker i
+    // closed files of the worker stays in here until the thread finishes
+    std::vector<std::vector<TmpFileInfo>> tmp_info;
 
     ////////////////////// UNVERSIONED PAGES BUFFER //////////////////////
 
@@ -244,7 +271,7 @@ private:
     VPage& get_vpage_available();
 
     // returns an unpinned page from the pp_pool
-    PPage& get_ppage_available(uint_fast32_t thread_number);
+    PPage& get_ppage_available(uint_fast32_t thread_number) noexcept;
 
     // returns an unpinned page from up_pool
     UPage& get_upage_available();

@@ -57,7 +57,7 @@ ObjectId QuadObjectId::get_fixed_node_inside(const std::string& str) {
             return Common::Conversions::pack_int(std::stoll(str));
         } else {
             // is float
-            return Common::Conversions::pack_float(std::stof(str));
+            return Common::Conversions::pack_float(std::strtof(str.c_str(), nullptr));
         }
 
     default:

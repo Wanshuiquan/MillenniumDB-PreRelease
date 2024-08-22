@@ -37,6 +37,10 @@ SimilaritySearchPlan::SimilaritySearchPlan(VarId                     object_var_
             throw QueryException("ObjectId for " + MQL::Conversions::to_lexical_str(query_object) + " not found in tensor store");
     }
 
+    if (tensor_store.tensors_dim != query_tensor.size()) {
+        throw QueryException("Input tensor must have dimension " + std::to_string(tensor_store.tensors_dim));
+    }
+
     assert(!query_tensor.empty() && "query_tensor is empty");
 }
 

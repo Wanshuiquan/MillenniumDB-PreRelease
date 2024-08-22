@@ -9,7 +9,6 @@
 #include <codecvt>
 
 #include "misc/logger.h"
-#include "network/sparql/response_type.h"
 #include "query/optimizer/quad_model/executor_constructor.h"
 #include "query/optimizer/rdf_model/executor_constructor.h"
 #include "query/parser/grammar/error_listener.h"

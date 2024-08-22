@@ -51,10 +51,8 @@ void FileManager::flush(VPage& page) const {
 }
 
 
-void FileManager::flush(PPage& page) const {
-    auto fd = page.page_id.file_id.id;
-    lseek(fd, page.page_id.page_number*PPage::SIZE, SEEK_SET);
-    auto write_res = write(fd, page.get_bytes(), PPage::SIZE);
+void FileManager::flush(int fd, PPage& page) const {
+    auto write_res = pwrite(fd, page.get_bytes(), PPage::SIZE, page.page_id.page_number*PPage::SIZE);
     if (write_res == -1) {
         throw std::runtime_error("Could not write into tmp file when flushing page");
     }
@@ -73,40 +71,11 @@ void FileManager::flush(UPage& page) const {
 }
 
 
-void FileManager::flush(TensorPage& page) const {
-    auto fd = page.page_id.file_id.id;
-    lseek(fd, page.page_id.page_number*TensorPage::SIZE, SEEK_SET);
-    auto write_res = write(fd, page.get_bytes(), TensorPage::SIZE);
-    if (write_res == -1) {
-        throw std::runtime_error("Could not write into str hash file when flushing page");
-    }
-    page.dirty = false;
-}
-
-
-void FileManager::read_tmp_page(PageId page_id, char* bytes) const {
-    auto fd = page_id.file_id.id;
-    lseek(fd, 0, SEEK_END);
-
-    struct stat buf;
-    fstat(fd, &buf);
-    uint64_t file_size = buf.st_size;
-
-    lseek(fd, page_id.page_number*VPage::SIZE, SEEK_SET);
-    if (file_size/VPage::SIZE <= page_id.page_number) {
-        // new file page, write zeros
-        memset(bytes, 0, VPage::SIZE);
-        auto write_res = ftruncate(fd, VPage::SIZE * (page_id.page_number + 1));
-
-        if (write_res == -1) {
-            throw std::runtime_error("Could not write into file");
-        }
-    } else {
-        // reading existing file page
-        auto read_res = read(fd, bytes, VPage::SIZE);
-        if (read_res == -1) {
-            throw std::runtime_error("Could not read file page");
-        }
+void FileManager::read_tmp_page(int fd, uint64_t page_number, char* bytes) const {
+    // reading existing file page
+    auto read_res = pread(fd, bytes, PPage::SIZE, page_number*PPage::SIZE);
+    if (read_res == -1) {
+        throw std::runtime_error("Could not read file page");
     }
 }
 
@@ -124,9 +93,7 @@ void FileManager::read_existing_page(PageId page_id, char* bytes) const {
     assert(page_id.page_number < file_size/VPage::SIZE);
 #endif
 
-    // reading existing file page
-    lseek(fd, page_id.page_number*VPage::SIZE, SEEK_SET);
-    auto read_res = read(fd, bytes, VPage::SIZE);
+    auto read_res = pread(fd, bytes, VPage::SIZE, page_id.page_number*VPage::SIZE);
     if (read_res == -1) {
         throw std::runtime_error("Could not read file page");
     }
@@ -167,20 +134,4 @@ FileId FileManager::get_file_id(const string& filename) {
         filename2file_id.insert({ filename, res });
         return res;
     }
-}
-
-
-TmpFileId FileManager::get_tmp_file_id() {
-    std::FILE* tmp_file = std::tmpfile();
-    auto fd = fileno(tmp_file);
-    if (fd == -1) {
-        throw std::runtime_error("Could not open tmp file");
-    }
-    return TmpFileId(get_query_ctx().thread_info.worker_index, FileId((fd)));
-}
-
-
-void FileManager::remove_tmp(const TmpFileId tmp_file_id) {
-    buffer_manager.remove_tmp(tmp_file_id); // clear pages from buffer_manager
-    close(tmp_file_id.file_id.id);          // close the file stream, file will be removed
 }

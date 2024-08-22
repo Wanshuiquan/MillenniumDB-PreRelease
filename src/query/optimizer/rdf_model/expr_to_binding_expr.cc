@@ -19,6 +19,8 @@ void ExprToBindingExpr::visit(ExprVar& expr_var) {
     tmp = make_unique<BindingExprVar>(expr_var.var);
     if (bic == nullptr) return;
 
+    bic->group_saved_vars.insert(expr_var.var);
+
     if (inside_aggregation) {
         if (!bic->grouping) {
             std::string msg = "Var \""
@@ -855,8 +857,7 @@ void ExprToBindingExpr::visit(ExprAggCountAll& expr) {
             basic_vars.push_back(var);
         }
 
-        auto agg = check_and_make_aggregate<AggCountAllDistinct>(nullptr);
-        agg->set_basic_vars(std::move(basic_vars));
+        check_and_make_aggregate<AggCountAllDistinct>(nullptr, std::move(basic_vars));
     } else {
         check_and_make_aggregate<AggCountAll>(nullptr);
     }
@@ -868,16 +869,14 @@ void ExprToBindingExpr::visit(ExprAggSample& expr) {
 
 void ExprToBindingExpr::visit(ExprAggGroupConcat& expr) {
     if (expr.distinct) {
-        auto agg = check_and_make_aggregate<AggGroupConcatDistinct>(expr.expr.get());
-        agg->sep = expr.separator;
+        check_and_make_aggregate<AggGroupConcatDistinct>(expr.expr.get(), expr.separator);
     } else {
-        auto agg = check_and_make_aggregate<AggGroupConcat>(expr.expr.get());
-        agg->sep = expr.separator;
+        check_and_make_aggregate<AggGroupConcat>(expr.expr.get(), expr.separator);
     }
 }
 
-template<typename AggType>
-AggType* ExprToBindingExpr::check_and_make_aggregate(Expr* expr) {
+template<typename AggType, class ... Args>
+void ExprToBindingExpr::check_and_make_aggregate(Expr* expr, Args&&... args) {
     if (bic == nullptr) {
         throw QuerySemanticException("Aggregation where it is not allowed");
     }
@@ -904,19 +903,18 @@ AggType* ExprToBindingExpr::check_and_make_aggregate(Expr* expr) {
     std::unique_ptr<AggType> agg;
     if (expr) {
         expr->accept_visitor(*this);
-        agg = make_unique<AggType>(var, std::move(tmp));
+        agg = make_unique<AggType>(var, std::move(tmp), std::forward<Args>(args)...);
     } else {
-        agg = make_unique<AggType>(var, nullptr);
+        agg = make_unique<AggType>(var, nullptr, std::forward<Args>(args)...);
     }
 
     bic->aggregations.insert({var, std::move(agg)});
 
-    auto agg_ptr = static_cast<AggType*>(bic->aggregations.at(var).get());
+    // auto agg_ptr = static_cast<AggType*>(bic->aggregations.at(var).get());
 
     tmp = make_unique<BindingExprVar>(var);
 
     // We are done with this branch of the expressions tree.
     // This aggregation does not count for any other branches, which have their own aggregations.
     inside_aggregation = false;
-    return agg_ptr;
 }

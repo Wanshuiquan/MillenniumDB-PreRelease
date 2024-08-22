@@ -2,9 +2,7 @@
 
 #include <algorithm>
 #include <fstream>
-#include <queue>
 
-#include "graph_models/object_id.h"
 #include "storage/index/tensor_store/lsh/forest_index_query_iter.h"
 #include "storage/index/tensor_store/lsh/metric.h"
 #include "storage/index/tensor_store/lsh/tree.h"
@@ -58,11 +56,9 @@ ForestIndex::ForestIndex(const std::string& path, const TensorStore& tensor_stor
 
 
 void ForestIndex::build() {
-    #ifdef _OPENMP
-    #pragma omp parallel for
-    #endif
-    for (auto it = trees.begin(); it < trees.end(); ++it)
-        (*it)->build();
+    for (auto i = 0U; i < trees.size(); ++i) {
+        trees[i]->build();
+    }
 }
 
 
@@ -121,7 +117,7 @@ std::vector<std::pair<uint64_t, float>> ForestIndex::query_top_k(
     }
 
     // Sort by similarity
-    auto result_size = std::min(k, static_cast<uint64_t>(nearest_neighbors.size())); // in MAC .size() is u32, and min cannot infer
+    const auto result_size = std::min(k, static_cast<uint64_t>(nearest_neighbors.size())); // in MAC .size() is u32, and min cannot infer
     std::partial_sort(nearest_neighbors.begin(),
                       nearest_neighbors.begin() + result_size,
                       nearest_neighbors.end(),

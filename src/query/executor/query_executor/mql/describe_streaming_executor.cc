@@ -1,7 +1,7 @@
 #include "describe_streaming_executor.h"
 
 #include "graph_models/quad_model/quad_model.h"
-#include "network/new-server/protocol.h"
+#include "network/server/protocol.h"
 #include "storage/index/bplus_tree/bplus_tree.h"
 
 using namespace MQL;
@@ -58,7 +58,7 @@ const std::vector<VarId>& DescribeStreamingExecutor::get_projection_vars() const
 }
 
 
-bool DescribeStreamingExecutor::pull(NewServer::ResponseWriter& response_writer, uint64_t /*num_records*/) {
+bool DescribeStreamingExecutor::pull(MDBServer::StreamingResponseWriter& response_writer, uint64_t /*num_records*/) {
     if (finished) {
         return false;
     }
@@ -73,10 +73,10 @@ bool DescribeStreamingExecutor::pull(NewServer::ResponseWriter& response_writer,
     }
 
     response_writer.write_map_header(2UL);
-    response_writer.write_string("type", NewServer::Protocol::DataType::STRING);
-    response_writer.write_uint8(static_cast<uint8_t>(NewServer::Protocol::ResponseType::RECORD));
+    response_writer.write_string("type", MDBServer::Protocol::DataType::STRING);
+    response_writer.write_uint8(static_cast<uint8_t>(MDBServer::Protocol::ResponseType::RECORD));
 
-    response_writer.write_string("payload", NewServer::Protocol::DataType::STRING);
+    response_writer.write_string("payload", MDBServer::Protocol::DataType::STRING);
     response_writer.write_list_header(projection_vars.size());
 
     // Labels
@@ -123,13 +123,13 @@ bool DescribeStreamingExecutor::pull(NewServer::ResponseWriter& response_writer,
         response_writer.write_list_header(from_to_type_edge.size());
         for (const auto& [from, to, type, edge] : from_to_type_edge) {
             response_writer.write_map_header(4);
-            response_writer.write_string("from", NewServer::Protocol::DataType::STRING);
+            response_writer.write_string("from", MDBServer::Protocol::DataType::STRING);
             response_writer.write_object_id(from);
-            response_writer.write_string("to", NewServer::Protocol::DataType::STRING);
+            response_writer.write_string("to", MDBServer::Protocol::DataType::STRING);
             response_writer.write_object_id(to);
-            response_writer.write_string("type", NewServer::Protocol::DataType::STRING);
+            response_writer.write_string("type", MDBServer::Protocol::DataType::STRING);
             response_writer.write_object_id(type);
-            response_writer.write_string("edge", NewServer::Protocol::DataType::STRING);
+            response_writer.write_string("edge", MDBServer::Protocol::DataType::STRING);
             response_writer.write_object_id(edge);
         }
     }
@@ -147,13 +147,13 @@ bool DescribeStreamingExecutor::pull(NewServer::ResponseWriter& response_writer,
         response_writer.write_list_header(to_type_from_edge.size());
         for (const auto& [to, type, from, edge] : to_type_from_edge) {
             response_writer.write_map_header(4);
-            response_writer.write_string("from", NewServer::Protocol::DataType::STRING);
+            response_writer.write_string("from", MDBServer::Protocol::DataType::STRING);
             response_writer.write_object_id(from);
-            response_writer.write_string("to", NewServer::Protocol::DataType::STRING);
+            response_writer.write_string("to", MDBServer::Protocol::DataType::STRING);
             response_writer.write_object_id(to);
-            response_writer.write_string("type", NewServer::Protocol::DataType::STRING);
+            response_writer.write_string("type", MDBServer::Protocol::DataType::STRING);
             response_writer.write_object_id(type);
-            response_writer.write_string("edge", NewServer::Protocol::DataType::STRING);
+            response_writer.write_string("edge", MDBServer::Protocol::DataType::STRING);
             response_writer.write_object_id(edge);
         }
     }

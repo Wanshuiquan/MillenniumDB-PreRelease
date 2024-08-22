@@ -1,61 +1,13 @@
-// #include <cstdio>
-#include <chrono>
-#include <fstream>
 #include <iostream>
 #include <thread>
-#include <vector>
 
 #include "graph_models/quad_model/quad_model.h"
-#include "graph_models/quad_model/quad_object_id.h"
 #include "storage/buffer_manager.h"
-#include "storage/index/tensor_store/tensor_buffer_manager.h"
 #include "storage/index/tensor_store/tensor_store.h"
 #include "storage/string_manager.h"
 #include "third_party/cli11/CLI11.hpp"
 
 using namespace LSH;
-
-void build_tensor_store(const std::string& tensors_file_path,
-                        const std::string& tensor_store_name,
-                        uint64_t           tensors_dim,
-                        uint64_t           tensor_buffer) {
-    // Initialize a new tensor store
-    TensorStore tensor_store(tensor_store_name, tensors_dim, tensor_buffer);
-
-    std::fstream tensors_fs(tensors_file_path, std::ios::in | std::ios::binary);
-    std::string  line;
-    std::string  cell;
-    // Process tensors file line by line
-    ObjectId           object_id;
-    std::vector<float> tensor;
-    tensor.resize(tensors_dim);
-
-    std::cout << "Inserting tensors...\n";
-    auto start = std::chrono::system_clock::now();
-    while (std::getline(tensors_fs, line, '\n')) {
-        std::stringstream ss(line);
-
-        // ObjectId
-        std::getline(ss, cell, ',');
-        object_id = QuadObjectId::get_named_node(cell);
-
-        // Tensor entries
-        for (uint64_t i = 0; i < tensors_dim; i++) {
-            std::getline(ss, cell, ',');
-            tensor[i] = std::stof(cell);
-        }
-        tensor_store.insert(object_id.id, tensor);
-    }
-    auto end_insert      = std::chrono::system_clock::now();
-    auto duration_insert = std::chrono::duration_cast<std::chrono::seconds>(end_insert - start);
-    std::cout << "Insertion took: " << duration_insert.count() << " seconds for " << tensor_store.size() << " tensors\n";
-
-    std::cout << "Serializing...\n";
-    tensor_store.serialize();
-    auto end_serialize = std::chrono::system_clock::now();
-    auto duration_serialize = std::chrono::duration_cast<std::chrono::seconds>(end_serialize - end_insert);
-    std::cout << "Serialization took: " << duration_serialize.count() << " seconds\n";
-}
 
 
 int main(int argc, char* argv[]) {
@@ -63,7 +15,6 @@ int main(int argc, char* argv[]) {
     std::string tensors_file;
     std::string tensor_store_name;
     uint64_t    tensors_dim   = 1;
-    uint64_t    tensor_buffer = TensorBufferManager::DEFAULT_TENSOR_PAGES_BUFFER_SIZE;
 
     CLI::App app("MillenniumDB Import Tensors");
     app.get_formatter()->column_width(35);
@@ -92,12 +43,6 @@ int main(int argc, char* argv[]) {
       ->check(CLI::Range(1, 8162))
       ->required();
 
-    app.add_option("--tensor-buffer", tensor_buffer)
-      ->description("size of buffer for tensor pages shared between threads\nAllows units such as MB and GB")
-      ->option_text("<bytes> [2GB]")
-      ->transform(CLI::AsSizeValue(false))
-      ->check(CLI::Range(1024ULL * 1024, 1024ULL * 1024 * 1024 * 1024));
-
     CLI11_PARSE(app, argc, argv);
 
     if (tensor_store_name.empty()) {
@@ -110,7 +55,6 @@ int main(int argc, char* argv[]) {
     std::cout << "  tensors file      : " << tensors_file << "\n";
     std::cout << "  tensor store name : " << tensor_store_name << "\n";
     std::cout << "  tensors dim       : " << tensors_dim << "\n";
-    std::cout << "  tensor_buffer     : " << tensor_buffer << "bytes \n";
 
     std::cout << "Initializing a QuadModel...\n";
     auto model_destroyer = QuadModel::init(db_directory,
@@ -126,7 +70,7 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    build_tensor_store(tensors_file, tensor_store_name, tensors_dim, tensor_buffer);
+    TensorStore::bulk_import(tensors_file, tensor_store_name, tensors_dim);
 
     return EXIT_SUCCESS;
 }

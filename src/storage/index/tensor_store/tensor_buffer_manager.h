@@ -28,19 +28,9 @@ public:
     // the returned page anymore.
     TensorPage& get_page(uint_fast32_t page_number) noexcept;
 
-    // Similar to get_page, but the page_number is the smallest number such that page number does not exist on disk.
-    // The page returned has all its bytes initialized to 0. This operation perform a disk write immediately
-    // so 2 append_page in a row will work as expected.
-    TensorPage& append_page();
-
-    TensorPage& get_or_append_page(uint_fast32_t page_number);
-
-    // Write all dirty pages to disk
-    void flush();
-
     uint_fast32_t count_pages() const;
 
-    // Increases the count of objects using the page. When you get a page using the methods get_page or get_ppage
+    // Increases the count of objects using the page. When you get a page using the methods get_page
     // the page is already pinned, so you shouldn't call this method unless you want to pin the page more than once
     void pin(TensorPage& page) {
         page.pin();
@@ -67,7 +57,7 @@ private:
     char* const tensor_data;
 
     // Maximum pages the buffer can have
-    const uint64_t tensor_page_pool_size;
+    const uint_fast32_t tensor_page_pool_size;
 
     // Used to search the index in the `buffer_pool` of a certain page
     robin_hood::unordered_map<PageId, TensorPage*> pages_map;

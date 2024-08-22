@@ -112,15 +112,15 @@ Any QueryVisitor::visitMatchQuery(MQL_Parser::MatchQueryContext* ctx) {
         std::move(optional_properties)
     );
 
-    if (!similarity_sort_info.tensor_store_name.empty()) {
+    if (!project_similarity_info.tensor_store_name.empty()) {
         current_op = std::make_unique<OpProjectSimilarity>(
             std::move(current_op),
-            similarity_sort_info.object_var,
-            similarity_sort_info.similarity_var,
-            std::move(similarity_sort_info.tensor_store_name),
-            std::move(similarity_sort_info.query_tensor),
-            similarity_sort_info.query_object,
-            similarity_sort_info.metric_type
+            project_similarity_info.object_var,
+            project_similarity_info.similarity_var,
+            std::move(project_similarity_info.tensor_store_name),
+            std::move(project_similarity_info.query_tensor),
+            project_similarity_info.query_object,
+            project_similarity_info.metric_type
         );
     }
 
@@ -1286,27 +1286,27 @@ antlrcpp::Any QueryVisitor::visitProjectSimilarity(MQL_Parser::ProjectSimilarity
     similarity_var_name.erase(0, 1); // remove leading '?'
     auto similarity_var = get_query_ctx().get_or_create_var(similarity_var_name);
 
-    similarity_sort_info.object_var = object_var;
-    similarity_sort_info.similarity_var = similarity_var;
-    similarity_sort_info.tensor_store_name = std::move(tensor_store_name);
+    project_similarity_info.object_var        = object_var;
+    project_similarity_info.similarity_var    = similarity_var;
+    project_similarity_info.tensor_store_name = std::move(tensor_store_name);
     if (ctx->fixedNodeInside() != nullptr) {
         // Get tensor from tensor store with the given object
         auto oid = QuadObjectId::get_fixed_node_inside(ctx->fixedNodeInside()->getText());
-        similarity_sort_info.query_tensor = std::vector<float>{};
-        similarity_sort_info.query_object = oid;
+        project_similarity_info.query_tensor = std::vector<float>{};
+        project_similarity_info.query_object = oid;
     } else {
         // Get tensor from parser, no object involved
         visit(ctx->tensor());
-        similarity_sort_info.query_tensor = std::move(current_tensor);
-        similarity_sort_info.query_object = ObjectId::get_null();
+        project_similarity_info.query_tensor = std::move(current_tensor);
+        project_similarity_info.query_object = ObjectId::get_null();
     }
     auto metricType = ctx->metricType();
     if (metricType->K_ANGULAR()) {
-        similarity_sort_info.metric_type = LSH::MetricType::ANGULAR;
+        project_similarity_info.metric_type = LSH::MetricType::ANGULAR;
     } else if (metricType->K_EUCLIDEAN()) {
-        similarity_sort_info.metric_type = LSH::MetricType::EUCLIDEAN;
+        project_similarity_info.metric_type = LSH::MetricType::EUCLIDEAN;
     } else { // metricType->K_MANHATTAN()
-        similarity_sort_info.metric_type = LSH::MetricType::MANHATTAN;
+        project_similarity_info.metric_type = LSH::MetricType::MANHATTAN;
     }
 
     return 0;
@@ -1314,9 +1314,12 @@ antlrcpp::Any QueryVisitor::visitProjectSimilarity(MQL_Parser::ProjectSimilarity
 
 
 antlrcpp::Any QueryVisitor::visitTensor(MQL_Parser::TensorContext* ctx) {
-    current_tensor.clear();
-    for (std::size_t i = 0; i < ctx->numericValue().size(); i++)
-        current_tensor.push_back(std::stof(ctx->numericValue(i)->getText()));
+    const auto tensor_size = ctx->numericValue().size();
+    current_tensor.resize(tensor_size);
+    for (auto i = 0u; i < ctx->numericValue().size(); i++) {
+        current_tensor[i] = std::strtof(ctx->numericValue(i)->getText().c_str(), nullptr);
+    }
+
     assert(!current_tensor.empty());
 
     return 0;

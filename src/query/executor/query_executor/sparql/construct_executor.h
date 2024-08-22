@@ -37,12 +37,14 @@ public:
 
 private:
     std::unique_ptr<BindingIter> child_iter;
-    std::unique_ptr<Binding>     child_binding;
+
+    std::unique_ptr<Binding> child_binding;
 
     std::vector<Triple> triples;
 
-    DistinctBindingHash<ObjectId> extendable_table;
-    std::vector<ObjectId>         current_triple;
+    DistinctBindingHash extendable_table;
+
+    std::vector<ObjectId> current_triple;
 
     uint64_t triple_count = 0;
 

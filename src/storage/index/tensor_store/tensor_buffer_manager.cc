@@ -1,10 +1,10 @@
 #include "tensor_buffer_manager.h"
 
-#include <sys/stat.h>
-
 #include "macros/aligned_alloc.h"
 #include "misc/fatal_error.h"
 #include "storage/file_manager.h"
+
+#include <sys/stat.h>
 
 using namespace std;
 
@@ -30,9 +30,15 @@ TensorBufferManager::TensorBufferManager(FileId file_id, uint64_t tensor_page_bu
         struct stat buf;
         fstat(file_id.id, &buf);
         const auto file_size = buf.st_size;
-        const auto max_preload = std::min(tensor_page_pool_size, file_size / TensorPage::SIZE);
 
-        for (uint64_t i = 0; i < max_preload; ++i) {
+        // static cast necessary to avoid compilation problems in platforms where
+        // sizeof(uint_fast32_t) != sizeof(file_size)
+        const auto max_preload = std::min(
+            static_cast<uint_fast32_t>(tensor_page_pool_size),
+            static_cast<uint_fast32_t>(file_size / TensorPage::SIZE)
+        );
+
+        for (uint_fast32_t i = 0; i < max_preload; ++i) {
             const PageId page_id(file_id, i);
             auto& page = tensor_page_pool[i];
             page.reassign_preload(page_id);
@@ -44,22 +50,8 @@ TensorBufferManager::TensorBufferManager(FileId file_id, uint64_t tensor_page_bu
 
 
 TensorBufferManager::~TensorBufferManager() {
-    flush();
     delete[](tensor_page_pool);
     MDB_ALIGNED_FREE(tensor_data);
-}
-
-
-void TensorBufferManager::flush() {
-    // flush() is always called at destruction.
-    assert(tensor_page_pool != nullptr);
-    for (uint64_t i = 0; i < tensor_page_pool_size; ++i) {
-        auto& page = tensor_page_pool[i];
-        assert(page.pins == 0);
-        if (page.dirty) {
-            file_manager.flush(page);
-        }
-    }
 }
 
 
@@ -74,7 +66,7 @@ TensorPage& TensorBufferManager::get_tensor_page_available() {
     while (true) {
         page = &tensor_page_pool[clock_pos];
         // when pins == 0 the are no synchronization problems with pins and usage
-        if (tensor_page_pool[clock_pos].pins == 0) {
+        if (page->pins == 0) {
             if (!page->second_chance) {
                 break;
             } else {
@@ -100,9 +92,6 @@ TensorPage& TensorBufferManager::get_page(uint_fast32_t page_number) noexcept {
             pages_map.erase(page.page_id);
         }
 
-        if (page.dirty) {
-            file_manager.flush(page);
-        }
         page.reassign(page_id);
 
         file_manager.read_existing_page(page_id, page.get_bytes());
@@ -114,29 +103,4 @@ TensorPage& TensorBufferManager::get_page(uint_fast32_t page_number) noexcept {
         page->pin();
         return *it->second;
     }
-}
-
-
-TensorPage& TensorBufferManager::append_page() {
-    auto& new_page    = get_tensor_page_available();
-    auto  page_number = file_manager.append_page(file_id, new_page.get_bytes());
-    PageId page_id(file_id, page_number);
-    new_page.reassign(page_id);
-    new_page.dirty = true;
-
-    pages_map.insert({ page_id, &new_page });
-
-    return new_page;
-}
-
-
-TensorPage& TensorBufferManager::get_or_append_page(uint_fast32_t page_number) {
-    if (page_number < count_pages()) {
-        // The page exists
-        return get_page(page_number);
-    }
-
-    assert(page_number == count_pages() && "Should have been called with page_number == count_pages()");
-    // The page does not exist, we need to append it
-    return append_page();
 }

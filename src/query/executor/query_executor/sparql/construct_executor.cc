@@ -11,7 +11,7 @@ ConstructExecutor::ConstructExecutor(
 ) :
     child_iter       (std::move(child_iter)),
     triples          (std::move(triples)),
-    extendable_table (DistinctBindingHash<ObjectId>(3)),
+    extendable_table (DistinctBindingHash(3)),
     current_triple   (std::vector<ObjectId>(3)) { }
 
 
