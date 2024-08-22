@@ -18,6 +18,10 @@ class AggGroupConcat : public Agg {
 public:
     using Agg::Agg;
 
+    AggGroupConcat(VarId var_id, std::unique_ptr<BindingExpr> expr, const std::string& sep) :
+        Agg (var_id, std::move(expr)),
+        sep (std::move(sep)) { }
+
     void begin() override {
         res = std::string();
         type = GroupConcatType::UNSET;

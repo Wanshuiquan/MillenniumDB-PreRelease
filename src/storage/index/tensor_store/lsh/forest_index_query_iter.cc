@@ -18,7 +18,7 @@ ForestIndexQueryIter::ForestIndexQueryIter(
     forest_index(forest_index_)
 {
     // Initialize containers with the right size
-    auto num_trees = forest_index.trees.size();
+    const auto num_trees = forest_index.trees.size();
     nodes.resize(num_trees);
     depths.resize(num_trees);
     buckets.resize(num_trees);
@@ -27,7 +27,7 @@ ForestIndexQueryIter::ForestIndexQueryIter(
 
 void ForestIndexQueryIter::begin() {
     for (uint_fast32_t i = 0; i < forest_index.trees.size(); ++i) {
-        auto [leaf, depth] = forest_index.trees[i]->descend(query_tensor);
+        auto&& [leaf, depth] = forest_index.trees[i]->descend(query_tensor);
         nodes[i]  = leaf;
         depths[i] = depth;
         buckets[i].insert(leaf->object_ids.begin(), leaf->object_ids.end());

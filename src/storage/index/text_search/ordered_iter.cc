@@ -2,7 +2,6 @@
 
 #include "query/exceptions.h"
 #include "storage/buffer_manager.h"
-#include "storage/file_manager.h"
 #include "query/executor/binding_iter/binding_expr/binding_expr.h"
 
 
@@ -10,8 +9,8 @@ namespace TextSearch {
 
 
 OrderedIter::OrderedIter(std::unique_ptr<IndexIter> index_iter) :
-    first_file_id  (file_manager.get_tmp_file_id()),
-    second_file_id (file_manager.get_tmp_file_id())
+    first_file_id  (buffer_manager.get_tmp_file_id()),
+    second_file_id (buffer_manager.get_tmp_file_id())
 {
     total_pages = 0;
     run = get_run(buffer_manager.get_ppage(first_file_id, total_pages));
@@ -41,8 +40,8 @@ OrderedIter::OrderedIter(std::unique_ptr<IndexIter> index_iter) :
 
 OrderedIter::~OrderedIter() {
     run.reset();
-    file_manager.remove_tmp(first_file_id);
-    file_manager.remove_tmp(second_file_id);
+    buffer_manager.remove_tmp(first_file_id);
+    buffer_manager.remove_tmp(second_file_id);
 }
 
 

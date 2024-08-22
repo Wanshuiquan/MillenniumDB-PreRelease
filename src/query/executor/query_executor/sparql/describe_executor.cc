@@ -14,7 +14,7 @@ DescribeExecutor::DescribeExecutor(
     child_iter       (std::move(child_iter)),
     vars             (std::move(vars)),
     iris             (std::move(iris)),
-    extendable_table (DistinctBindingHash<ObjectId>(3)),
+    extendable_table (DistinctBindingHash(3)),
     current_triple   (std::vector<ObjectId>(3)) { }
 
 

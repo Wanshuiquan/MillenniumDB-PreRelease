@@ -216,8 +216,8 @@ void CheckVarNames::visit(OpBind& op_bind) {
 void CheckVarNames::visit(OpUnitTable&) { }
 
 
-void CheckVarNames::visit(OpValues& op_vales) {
-    for (auto& var : op_vales.vars) {
+void CheckVarNames::visit(OpValues& op_values) {
+    for (auto& var : op_values.vars) {
         declared_vars.insert(var);
     }
 }

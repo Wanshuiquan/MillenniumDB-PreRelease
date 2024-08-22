@@ -14,13 +14,13 @@ MaterializeIter::MaterializeIter(
 ) :
     depth                (depth),
     vars                 (vars),
-    tmp_file             (file_manager.get_tmp_file_id()),
+    tmp_file             (buffer_manager.get_tmp_file_id()),
     max_tuples_per_page  (PPage::SIZE / (vars.size() * sizeof(ObjectId))) { }
 
 
 MaterializeIter::~MaterializeIter() {
     buffer_manager.unpin(*current_page);
-    file_manager.remove_tmp(tmp_file);
+    buffer_manager.remove_tmp(tmp_file);
 }
 
 

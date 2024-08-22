@@ -127,7 +127,7 @@ identifier: NAME | keyword;
 
 boolValue: K_TRUE | K_FALSE;
 
-numericValue: ('+' | '-')? (UNSIGNED_INTEGER | UNSIGNED_FLOAT);
+numericValue: ('+' | '-')? (UNSIGNED_INTEGER | UNSIGNED_FLOAT | UNSIGNED_SCIENTIFIC_NOTATION);
 
 datatypeValue: identifier '(' STRING ')';
 

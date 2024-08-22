@@ -118,25 +118,6 @@ void RewriteFilterSubqueries::visit(OpValues&) { }
 // +---------------------------------------------------------------------------+
 // |                            ExprVisitor                                    |
 // +---------------------------------------------------------------------------+
-static std::unique_ptr<Op> DoRewrite(std::unique_ptr<Op> op) {
-    CheckVarNames check_var_names;
-    op->accept_visitor(check_var_names);
-
-    CheckScopedBlankNodes check_scoped_blank_nodes;
-    op->accept_visitor(check_scoped_blank_nodes);
-
-    ReplaceUnscopedVariables replace_unscoped_variables;
-    op->accept_visitor(replace_unscoped_variables);
-
-    QueryParser::use_all_rewrite_rules(op);
-
-    ChangeJoinToSequence join_to_sequence_visitor;
-    op->accept_visitor(join_to_sequence_visitor);
-
-    RewriteFilterSubqueries rewrite_filter_subqueries;
-    op->accept_visitor(rewrite_filter_subqueries);
-    return op;
-}
 
 void RewriteFilterSubqueriesExpr::visit(SPARQL::ExprVar&) { }
 
@@ -229,11 +210,11 @@ void RewriteFilterSubqueriesExpr::visit(SPARQL::ExprNotIn& expr) {
 }
 
 void RewriteFilterSubqueriesExpr::visit(SPARQL::ExprExists& expr) {
-    expr.op = DoRewrite(std::move(expr.op));
+    expr.op = QueryParser::rewrite(std::move(expr.op));
 }
 
 void RewriteFilterSubqueriesExpr::visit(SPARQL::ExprNotExists& expr) {
-    expr.op = DoRewrite(std::move(expr.op));
+    expr.op = QueryParser::rewrite(std::move(expr.op));
 }
 
 void RewriteFilterSubqueriesExpr::visit(SPARQL::ExprAggAvg& expr) {

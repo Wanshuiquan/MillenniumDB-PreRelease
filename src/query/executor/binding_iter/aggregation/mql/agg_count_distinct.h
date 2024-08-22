@@ -9,10 +9,11 @@ namespace MQL {
 class AggCountDistinct : public Agg {
 public:
     AggCountDistinct(VarId var_id, std::unique_ptr<BindingExpr> expr) :
-        Agg (var_id, std::move(expr)) { }
+        Agg (var_id, std::move(expr)),
+        hash_table (1) { }
 
     void begin() override {
-        hash_table = std::make_unique<DistinctBindingHash<ObjectId>>(1);
+        hash_table.reset();
         count = 0;
     }
 
@@ -20,7 +21,7 @@ public:
         auto oid = expr->eval(*binding);
         if (!oid.is_null()) {
             oid_vec[0] = oid;
-            if (!hash_table->is_in_or_insert(oid_vec)) {
+            if (!hash_table.is_in_or_insert(oid_vec)) {
                 count++;
             }
         }
@@ -42,7 +43,7 @@ public:
 private:
     int64_t count = 0;
 
-    std::unique_ptr<DistinctBindingHash<ObjectId>> hash_table;
+    DistinctBindingHash hash_table;
 
     // Vector to pass oid to the hash table
     std::vector<ObjectId> oid_vec{1};

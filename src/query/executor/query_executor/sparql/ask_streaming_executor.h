@@ -13,7 +13,7 @@ public:
 
     const std::vector<VarId>& get_projection_vars() const override;
 
-    bool pull(NewServer::ResponseWriter& response_writer, uint64_t num_records) override;
+    bool pull(MDBServer::StreamingResponseWriter& response_writer, uint64_t num_records) override;
 
     uint64_t get_result_count() const override;
 

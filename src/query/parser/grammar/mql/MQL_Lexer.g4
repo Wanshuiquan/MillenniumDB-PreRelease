@@ -69,7 +69,11 @@ VARIABLE: '?' [A-Za-z] [A-Za-z0-9_]*;
 STRING: '"' ( ~'"' | '\\"')* '"';
 
 UNSIGNED_INTEGER: DIGIT+;
-UNSIGNED_FLOAT: DIGIT+ '.' DIGIT+;
+UNSIGNED_FLOAT: DIGIT+ '.' DIGIT*
+              | '.' DIGIT+;
+UNSIGNED_SCIENTIFIC_NOTATION: DIGIT+ '.' DIGIT* EXPONENT
+                            | '.' DIGIT+ EXPONENT
+                            | DIGIT+ EXPONENT;
 
 NAME: [A-Za-z] [A-Za-z0-9_]*;
 
@@ -105,6 +109,8 @@ SINGLE_LINE_COMMENT: '//' ~[\r\n]* (('\r'? '\n') | EOF) -> channel(HIDDEN);
 UNRECOGNIZED: . ;
 
 fragment DIGIT: [0-9];
+
+fragment EXPONENT : ('e'|'E') ('+' | '-')? DIGIT+;
 
 fragment A: [aA];
 fragment B: [bB];

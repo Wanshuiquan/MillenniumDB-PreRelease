@@ -76,6 +76,7 @@ void BindingIterConstructor::make_solution_modifier_operators(bool is_root_query
                 auto var = std::get<VarId>(item);
                 order_vars.push_back(var);
                 order_saved_vars.insert(var);
+                group_saved_vars.insert(var);
             } else {
                 auto& expr = std::get<std::unique_ptr<Expr>>(item);
                 auto var = get_query_ctx().get_internal_var();
@@ -108,6 +109,32 @@ void BindingIterConstructor::make_solution_modifier_operators(bool is_root_query
             expr->accept_visitor(expr_to_binding_expr);
             having_exprs.push_back(std::move(expr_to_binding_expr.tmp));
         }
+    }
+
+    if (op_group_by) {
+        std::vector<bool> ascending(group_vars.size(), true);
+
+        auto non_redundant_expr_eval = get_non_redundant_exprs(std::move(group_exprs));
+        if (non_redundant_expr_eval.size() > 0) {
+            tmp = std::make_unique<ExprEvaluator>(
+                std::move(tmp),
+                std::move(non_redundant_expr_eval)
+            );
+        }
+
+        std::vector<VarId> group_vars_vector;
+        for (auto& var : group_vars) {
+            group_vars_vector.push_back(var);
+        }
+
+        tmp = std::make_unique<OrderBy>(
+            std::move(tmp),
+            std::move(group_saved_vars),
+            std::move(group_vars_vector),
+            std::move(ascending),
+            &SPARQL::Comparisons::compare
+        );
+        op_group_by = nullptr;
     }
 
     // Create the Aggregation if necessary.
@@ -206,6 +233,7 @@ void BindingIterConstructor::visit(OpDescribe& op_describe) {
     // when building the solution modifier operators.
     for (auto var : op_describe.vars) {
         order_saved_vars.insert(var);
+        group_saved_vars.insert(var);
     }
 
     make_solution_modifier_operators(true, // is_root_query
@@ -222,6 +250,7 @@ void BindingIterConstructor::visit(OpConstruct& op_construct) {
         for (auto var : triple.get_all_vars()) {
             // Make sure the variables used by CONSTRUCT are saved
             order_saved_vars.insert(var);
+            group_saved_vars.insert(var);
             if (group_vars.size() > 0 || aggregations.size() > 0) {
                 if (!is_aggregation_or_group_var(var)) {
                     throw QuerySemanticException("Mixing aggregations and non-aggregations is not allowed");
@@ -269,6 +298,7 @@ void BindingIterConstructor::handle_select(OpSelect& op_select) {
                         + "\" in SELECT, cannot mix agg expressions with non-agg expressions");
                 }
             }
+            group_saved_vars.insert(var);
         }
     }
 
@@ -300,12 +330,8 @@ void BindingIterConstructor::visit(OpSelect& op_select) {
 
 void BindingIterConstructor::visit(OpGroupBy& op_group_by) {
     op_group_by.op->accept_visitor(*this);
-
-    // std::set<VarId> group_saved_vars;
-    // TODO: no need to save all vars, detect only the ones required
-    std::set<VarId> group_saved_vars = get_query_ctx().get_all_vars();
-
-    std::vector<std::pair<VarId, std::unique_ptr<BindingExpr>>> group_expressions;
+    grouping = true;
+    this->op_group_by = &op_group_by;
 
     for (size_t i = 0; i < op_group_by.items.size(); i ++) {
         auto& [op_var, op_expr] = op_group_by.items[i];
@@ -315,7 +341,7 @@ void BindingIterConstructor::visit(OpGroupBy& op_group_by) {
         if (op_expr) {
             ExprToBindingExpr expr_to_binding_expr;
             op_expr->accept_visitor(expr_to_binding_expr);
-            group_expressions.push_back({
+            group_exprs.push_back({
                 var,
                 std::move(expr_to_binding_expr.tmp)
             });
@@ -324,30 +350,6 @@ void BindingIterConstructor::visit(OpGroupBy& op_group_by) {
         group_vars.insert(var);
         group_saved_vars.insert(var);
     }
-    grouping = true;
-
-    std::vector<bool> ascending(group_vars.size(), true);
-
-    auto non_redundant_expr_eval = get_non_redundant_exprs(std::move(group_expressions));
-    if (non_redundant_expr_eval.size() > 0) {
-        tmp = std::make_unique<ExprEvaluator>(
-            std::move(tmp),
-            std::move(non_redundant_expr_eval)
-        );
-    }
-
-    std::vector<VarId> group_vars_vector;
-    for (auto& var : group_vars) {
-        group_vars_vector.push_back(var);
-    }
-
-    tmp = std::make_unique<OrderBy>(
-        std::move(tmp),
-        std::move(group_saved_vars),
-        std::move(group_vars_vector),
-        std::move(ascending),
-        &SPARQL::Comparisons::compare
-    );
 }
 
 

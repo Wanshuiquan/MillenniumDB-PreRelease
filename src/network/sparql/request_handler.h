@@ -5,7 +5,6 @@
 #include <boost/beast/version.hpp>
 
 #include "network/sparql/response_type.h"
-#include "network/sparql/server.h"
 #include "network/sparql/url_helper.h"
 
 namespace SPARQL {

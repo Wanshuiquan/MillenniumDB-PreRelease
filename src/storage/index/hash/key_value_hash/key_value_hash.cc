@@ -3,7 +3,6 @@
 #include <cassert>
 
 #include "graph_models/object_id.h"
-#include "storage/file_manager.h"
 #include "storage/buffer_manager.h"
 #include "storage/index/hash/key_value_hash/key_value_hash_bucket.h"
 #include "storage/index/hash/key_value_hash/key_value_pair_hasher.h"
@@ -15,14 +14,14 @@ KeyValueHash<K, V>::KeyValueHash(std::size_t key_size, std::size_t value_size) :
     key_size        (key_size),
     value_size      (value_size),
     max_tuples      ( (PPage::SIZE - sizeof(uint64_t)) / (key_size*sizeof(K) + value_size*sizeof(V)) ),
-    buckets_file    ( file_manager.get_tmp_file_id())
+    buckets_file    ( buffer_manager.get_tmp_file_id())
     { }
 
 
 template <class K, class V>
 KeyValueHash<K, V>::~KeyValueHash() {
     //current_buckets_pages.clear();
-    file_manager.remove_tmp(buckets_file);
+    buffer_manager.remove_tmp(buckets_file);
 }
 
 

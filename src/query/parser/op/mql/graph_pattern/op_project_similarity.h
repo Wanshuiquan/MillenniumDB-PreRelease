@@ -29,10 +29,8 @@ public:
         query_tensor      (std::move(query_tensor_)),
         query_object      (query_object_),
         metric_type       (metric_type_) {
-            assert((
-                (!query_tensor.empty() && (query_object.id == ObjectId::NULL_ID)) ||
-                ( query_tensor.empty() && (query_object.id != ObjectId::NULL_ID))
-             ) && "Only one of the following is non-null (!tensor.empty() xor query_object.id != NULL_ID)");
+        assert(((query_tensor.size() == 0) ^ (query_object.id == ObjectId::NULL_ID))
+               && "Exactly one of the following must be non-null: query_tensor, query_object");
         };
 
 

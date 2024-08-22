@@ -20,7 +20,7 @@ const std::vector<VarId>& SelectStreamingExecutor::get_projection_vars() const {
 }
 
 
-bool SelectStreamingExecutor::pull(NewServer::ResponseWriter& response_writer, uint64_t num_records) {
+bool SelectStreamingExecutor::pull(MDBServer::StreamingResponseWriter& response_writer, uint64_t num_records) {
     if (num_records == 0) {
         num_records = UINT64_MAX;
     }

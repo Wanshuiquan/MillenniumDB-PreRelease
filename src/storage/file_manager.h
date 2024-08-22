@@ -38,7 +38,6 @@
 
 class FileManager {
 friend class Page; // to allow calling file_manager.flush
-friend class TensorPage; // to allow calling file_manager.flush
 friend class BufferManager; // to allow calling file_manager.read_existing_page
 friend class TensorBufferManager; // to allow calling file_manager.read_existing_page
 public:
@@ -50,18 +49,12 @@ public:
     // Get an id for the corresponding file, creating it if it's necessary
     FileId get_file_id(const std::string& filename);
 
-    // Create a new temporary file id
-    TmpFileId get_tmp_file_id();
-
     // count how many pages a file have
     uint_fast32_t count_pages(FileId file_id) const {
         static_assert(VPage::SIZE == PPage::SIZE && VPage::SIZE == UPage::SIZE && VPage::SIZE == TensorPage::SIZE);
         // We don't need mutex here as long as db is readonly
         return lseek(file_id.id, 0, SEEK_END) / VPage::SIZE;
     }
-
-    // // delete the file represented by `tmp_file_id`, pages in private buffer using that tmp_file_id are cleared
-    void remove_tmp(TmpFileId tmp_file_id);
 
     inline const std::string get_file_path(const std::string& filename) const noexcept {
         return db_folder + "/" + filename;
@@ -83,13 +76,10 @@ private:
     void flush(UPage& page) const;
 
     // page back to disk
-    void flush(PPage& page) const;
-
-    // page back to disk
-    void flush(TensorPage& page) const;
+    void flush(int fd, PPage& page) const;
 
     // read a tmp page from disk into memory pointed by `bytes`.
-    void read_tmp_page(PageId page_id, char* bytes) const;
+    void read_tmp_page(int fd, uint64_t page_id, char* bytes) const;
 
     // read a page from disk into memory pointed by `bytes`.
     void read_existing_page(PageId page_id, char* bytes) const;

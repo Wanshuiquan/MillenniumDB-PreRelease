@@ -8,14 +8,15 @@ namespace MQL {
 class AggCountAllDistinct : public Agg {
 public:
     AggCountAllDistinct(VarId var_id, std::vector<VarId>&& _vars) :
-        Agg (var_id, nullptr),
-        vars (std::move(_vars))
+        Agg        (var_id, nullptr),
+        hash_table (_vars.size()),
+        vars       (std::move(_vars))
     {
         oid_vec.resize(vars.size());
     }
 
     void begin() override {
-        hash_table = std::make_unique<DistinctBindingHash<ObjectId>>(vars.size());
+        hash_table.reset();
         count = 0;
     }
 
@@ -24,7 +25,7 @@ public:
             oid_vec[i] = (*binding)[vars[i]];
         }
 
-        if (!hash_table->is_in_or_insert(oid_vec)) {
+        if (!hash_table.is_in_or_insert(oid_vec)) {
             count++;
         }
     }
@@ -41,7 +42,7 @@ public:
 private:
     uint64_t count = 0;
 
-    std::unique_ptr<DistinctBindingHash<ObjectId>> hash_table;
+    DistinctBindingHash hash_table;
 
     std::vector<VarId> vars;
 

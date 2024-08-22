@@ -253,31 +253,31 @@ std::pair<std::vector<float>, float> Tree::generate_plane(const std::vector<uint
     tensor_store.get(object_ids[centroid_index_a], centroid_a);
     tensor_store.get(object_ids[centroid_index_b], centroid_b);
 
-    uint64_t num_points_a = 1;
-    uint64_t num_points_b = 1;
+    uint_fast32_t num_points_centroid_a = 1;
+    uint_fast32_t num_points_centroid_b = 1;
 
     for (uint_fast32_t epochs = 0; epochs < GENERATE_PLANE_EPOCHS; ++epochs) {
-        uint64_t k        = get_uniform_uint64(0, object_ids.size() - 1);
+        const auto k = get_uniform_uint64(0, object_ids.size() - 1);
         tensor_store.get(object_ids[k], tensor_buffer);
 
-        float similarity_ak = similarity_fn(centroid_a, tensor_buffer);
-        float similarity_bk = similarity_fn(centroid_b, tensor_buffer);
+        const float similarity_ak = similarity_fn(centroid_a, tensor_buffer);
+        const float similarity_bk = similarity_fn(centroid_b, tensor_buffer);
         if (similarity_ak < similarity_bk) {
-            // centroid_a is more similar, update it
+            // Centroid A is more similar, update it
             #ifdef _OPENMP
             #pragma omp simd
             #endif
             for (uint_fast32_t i = 0; i < tensor_store.tensors_dim; ++i)
-                centroid_a[i] = (num_points_a * centroid_a[i] + tensor_buffer[i]) / (num_points_a + 1);
-            ++num_points_a;
+                centroid_a[i] = (num_points_centroid_a * centroid_a[i] + tensor_buffer[i]) / (num_points_centroid_a + 1);
+            ++num_points_centroid_a;
         } else {
-            // centroid_b is more similar, update it
+            // Centroid B is more similar, update it
             #ifdef _OPENMP
             #pragma omp simd
             #endif
             for (uint_fast32_t i = 0; i < tensor_store.tensors_dim; ++i)
-                centroid_b[i] = (num_points_b * centroid_b[i] + tensor_buffer[i]) / (num_points_b + 1);
-            ++num_points_b;
+                centroid_b[i] = (num_points_centroid_b * centroid_b[i] + tensor_buffer[i]) / (num_points_centroid_b + 1);
+            ++num_points_centroid_b;
         }
     }
 

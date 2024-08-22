@@ -467,6 +467,9 @@ void BindingIterConstructor::visit(OpProjectSimilarity& op_project_similarity) {
         query_tensor = std::move(op_project_similarity.query_tensor);
     }
 
+    if (tensor_store.tensors_dim != query_tensor.size())
+        throw QueryException("Input tensor must have dimension " + std::to_string(tensor_store.tensors_dim));
+
     tmp = std::make_unique<LSH::ProjectTensorSimilarity>(
         std::move(tmp),
         op_project_similarity.object_var,

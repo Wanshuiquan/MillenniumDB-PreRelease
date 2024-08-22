@@ -1,6 +1,6 @@
 #include "project_tensor_similarity.h"
 
-#include "graph_models/quad_model/conversions.h"
+#include "graph_models/common/conversions.h"
 #include "storage/index/tensor_store/lsh/metric.h"
 #include "storage/index/tensor_store/tensor_store.h"
 
@@ -49,14 +49,14 @@ void ProjectTensorSimilarity::_begin(Binding& _parent_binding) {
 
 bool ProjectTensorSimilarity::_next() {
     if (child_iter->next()) {
-        auto child_object_oid = (*parent_binding)[object_var];
-        bool found = tensor_store.get(child_object_oid.id, tensor_buffer);
-        if (found) {
-            auto similarity = similarity_fn(query_tensor, tensor_buffer);
-            parent_binding->add(similarity_var, MQL::Conversions::pack_float(similarity));
+        const auto child_object_oid = (*parent_binding)[object_var];
+        if (tensor_store.get(child_object_oid.id, tensor_buffer)) {
+            // Tensor found, project similarity
+            const auto similarity = similarity_fn(query_tensor, tensor_buffer);
+            parent_binding->add(similarity_var, Common::Conversions::pack_float(similarity));
         } else {
-            // No tensor found for the current child object id, set similarity to infinity
-            parent_binding->add(similarity_var, MQL::Conversions::pack_float(std::numeric_limits<float>::infinity()));
+            // No tensor found for the current child object id, just project infinity
+            parent_binding->add(similarity_var, Common::Conversions::pack_float(std::numeric_limits<float>::infinity()));
         }
         return true;
     }

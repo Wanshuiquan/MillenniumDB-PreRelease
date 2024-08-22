@@ -1,7 +1,10 @@
 #pragma once
 /*
  * TensorStore is an on-disk map between object ids and float tensors. The supported operations are insert (also
- * with replacement) and get. It has its own buffer manager for each instance.
+ * with replacement) and get. It has its own buffer manager for each instance. Once created the TensorStore is a
+ * read-only structure, but in nothing in our architecture prevents the implementation of a writeable TensorStore
+ * in the future.
+ *
  * The TensorStore disk storage are the .tensors and .mapping files:
  *
  * {tensor_store_name}.tensors - stores all the tensor data as an adjacently-arranged vector of floats
@@ -37,6 +40,12 @@ public:
     // Check if a tensor store with a given name exists. At least the mapping and tensor files must exist
     static bool exists(const std::string& name);
 
+    // Create a new tensor store
+    static void bulk_import(const std::string& tensors_csv_path, const std::string& tensor_store_name, uint64_t tensors_dim);
+
+    // Load all existing tensor stores
+    static void load_tensor_stores(uint64_t tensor_page_buffer_size_in_bytes, bool preload);
+
     const std::string name;
     uint64_t          tensors_dim;
 
@@ -58,9 +67,6 @@ public:
     // Write a tensor with the given object id into vec. It is assumed that vec.size() == tensors_dim. Return true
     // if the tensor is found, false otherwise
     bool get(uint64_t object_id, std::vector<float>& vec) const;
-
-    // Insert a new tensor or replace an existing one
-    void insert(uint64_t object_id, const std::vector<float>& tensor);
 
     size_t size() const;
 
