@@ -36,6 +36,7 @@ enum class PathSemantic {
     ANY_SHORTEST_SIMPLE,
     ANY_SHORTEST_TRAILS,
     ANY_SHORTEST_WALKS,
+    DATA_TEST,
     DEFAULT,
 };
 
@@ -58,6 +59,7 @@ namespace Paths {
             case PathSemantic::ANY_SHORTEST_SIMPLE: return "ANY_SHORTEST_SIMPLE";
             case PathSemantic::ANY_SHORTEST_TRAILS: return "ANY_SHORTEST_TRAILS";
             case PathSemantic::ANY_SHORTEST_WALKS: return "ANY_SHORTEST_WALKS";
+            case PathSemantic::DATA_TEST: return "DATA_TEST";
             case PathSemantic::DEFAULT: return "DEFAULT";
             default: return "UNDECLARED PATH SEMANTIC";
         }

@@ -119,8 +119,13 @@ set(TEST_TARGETS
     normalize_decimal
     regular_path_expr_to_rpq_dfa
     scsu-test
+        test_ast
     variable_set
 )
+
+####### Setting Z3################
+find_package(Z3
+        NO_DEFAULT_PATH)
 # Build targets
 foreach(target ${BUILD_TARGETS})
     add_executable(${target} ${CMAKE_SOURCE_DIR}/src/bin/${target}.cc)
@@ -130,26 +135,28 @@ foreach(target ${BUILD_TARGETS})
         ${FS}
         ssl
         crypto
-        ${NCURSES}
+        ${NCURSES},
+            z3
     )
 endforeach(target)
 # Test targets
-# enable_testing()
-# foreach(target ${TEST_TARGETS})
-#     add_executable(${target} ${CMAKE_SOURCE_DIR}/src/tests/${target}.cc)
-#     set_target_properties(${target} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests")
-#     target_link_libraries(${target}
-#         millenniumdb
-#         antlr4_cpp_runtime
-#         ${FS}
-#         ssl
-#         crypto
-#     )
-#     add_test(
-#         NAME ${target}
-#         COMMAND $<TARGET_FILE:${target}>
-#         WORKING_DIRECTORY tests
-#     )
-# endforeach(target)
+ enable_testing()
+ foreach(target ${TEST_TARGETS})
+     add_executable(${target} ${CMAKE_SOURCE_DIR}/src/tests/${target}.cc)
+     set_target_properties(${target} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests")
+     target_link_libraries(${target}
+         millenniumdb
+         antlr4_cpp_runtime
+         ${FS}
+         ssl
+         crypto
+             z3
+     )
+     add_test(
+         NAME ${target}
+         COMMAND $<TARGET_FILE:${target}>
+         WORKING_DIRECTORY tests
+     )
+ endforeach(target)
 
 install(TARGETS ${BUILD_TARGETS} RUNTIME DESTINATION bin)
