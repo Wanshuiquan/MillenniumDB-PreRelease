@@ -10,6 +10,7 @@
 #include "query/parser/paths/path_negated_set.h"
 #include "query/parser/paths/path_optional.h"
 #include "query/parser/paths/path_sequence.h"
+#include  "query/parser/paths/path_smt_atom.h"
 #include "query/parser/paths/regular_path_expr.h"
 
 std::unique_ptr<RegularPathExpr> PathDenull::denull(std::unique_ptr<RegularPathExpr> path) {
@@ -41,6 +42,8 @@ std::unique_ptr<RegularPathExpr> PathDenull::accept_denull(std::unique_ptr<Regul
         return denull(std::move(casted));
     }
 
+
+
     case PathType::PATH_KLEENE_PLUS: {
         std::unique_ptr<PathKleenePlus> casted;
         casted.reset(dynamic_cast<PathKleenePlus*>(path.release()));
@@ -51,6 +54,12 @@ std::unique_ptr<RegularPathExpr> PathDenull::accept_denull(std::unique_ptr<Regul
         std::unique_ptr<PathAtom> casted;
         casted.reset(dynamic_cast<PathAtom*>(path.release()));
         return denull(std::move(casted));
+    }
+
+    case PathType::SMT_ATOM:{
+            std::unique_ptr<PathAtom> casted;
+            casted.reset(std::unique_ptr<PathAtom>::pointer(dynamic_cast<SMTAtom*>(path.release())));
+            return denull(std::move(casted));
     }
 
     case PathType::PATH_CHECK: {

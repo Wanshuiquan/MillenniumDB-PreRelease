@@ -99,6 +99,10 @@ public:
 
     virtual std::any visitPathAtomAlternatives(MQL_Parser::PathAtomAlternativesContext *context) = 0;
 
+    virtual std::any visitPathAtomSmt(MQL_Parser::PathAtomSmtContext *context) = 0;
+
+    virtual std::any visitObject(MQL_Parser::ObjectContext *context) = 0;
+
     virtual std::any visitPathSuffix(MQL_Parser::PathSuffixContext *context) = 0;
 
     virtual std::any visitPathType(MQL_Parser::PathTypeContext *context) = 0;

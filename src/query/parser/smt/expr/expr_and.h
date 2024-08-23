@@ -3,9 +3,9 @@
 #include <memory>
 #include <vector>
 
-#include "query/parser/expr/expr.h"
+#include "query/parser/smt/smt_expr.h"
 
-namespace MQL {
+namespace SMT {
 class ExprAnd : public Expr {
 public:
     std::vector<std::unique_ptr<Expr>> and_list;

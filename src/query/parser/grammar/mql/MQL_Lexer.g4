@@ -52,7 +52,7 @@ K_TRUE: 'true';
 K_TRAILS: T R A I L S;
 K_WALKS: W A L K S;
 K_WHERE: W H E R E;
-
+DATA_TEST: D A T A '_' T E S T;
 
 // Special cases: true and false are not a valid identifier
 TRUE_PROP: ':' 'true';

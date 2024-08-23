@@ -175,6 +175,14 @@ public:
     return visitChildren(ctx);
   }
 
+  virtual std::any visitPathAtomSmt(MQL_Parser::PathAtomSmtContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitObject(MQL_Parser::ObjectContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
   virtual std::any visitPathSuffix(MQL_Parser::PathSuffixContext *ctx) override {
     return visitChildren(ctx);
   }

@@ -16,12 +16,14 @@ enum class PathType {
     PATH_OPTIONAL,
     PATH_CHECK,
     PATH_NEGATED_SET,
+    SMT_ATOM,
 };
 
 enum class PathSemantic {
     ALL_ACYCLIC,
     ALL_SIMPLE,
     ALL_TRAILS,
+    DATA_TEST,
     // ALL_WALKS not supported
     ALL_SHORTEST_ACYCLIC,
     ALL_SHORTEST_SIMPLE,
@@ -36,7 +38,6 @@ enum class PathSemantic {
     ANY_SHORTEST_SIMPLE,
     ANY_SHORTEST_TRAILS,
     ANY_SHORTEST_WALKS,
-    DATA_TEST,
     DEFAULT,
 };
 

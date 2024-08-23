@@ -2,9 +2,10 @@
 
 #include "graph_models/object_id.h"
 #include "query/query_context.h"
-#include "query/parser/expr/expr.h"
+#include "query/parser/smt/smt_expr.h"
 
-namespace MQL {
+
+namespace SMT {
 class ExprConstant : public Expr {
 public:
     ObjectId value;
@@ -12,7 +13,7 @@ public:
     ExprConstant(ObjectId value) :
         value (value) { }
 
-    std::unique_ptr<Expr> clone() const override {
+    virtual std::unique_ptr<Expr> clone() const override {
         return std::make_unique<ExprConstant>(value);
     }
 

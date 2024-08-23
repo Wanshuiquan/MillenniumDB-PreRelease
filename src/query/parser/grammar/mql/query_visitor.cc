@@ -1,6 +1,7 @@
 #include "query_visitor.h"
 
 #include <cassert>
+#include <third_party/cli11/CLI11.hpp>
 
 #include "graph_models/common/datatypes/datetime.h"
 #include "graph_models/quad_model/quad_object_id.h"
@@ -9,6 +10,7 @@
 #include "query/parser/expr/mql_exprs.h"
 #include "query/parser/paths/path_alternatives.h"
 #include "query/parser/paths/path_atom.h"
+#include "query/parser/paths/path_smt_atom.h"
 #include "query/parser/paths/path_kleene_plus.h"
 #include "query/parser/paths/path_kleene_star.h"
 #include "query/parser/paths/path_optional.h"
@@ -822,6 +824,12 @@ Any QueryVisitor::visitPath(MQL_Parser::PathContext* ctx) {
 
     PathSemantic semantic = PathSemantic::DEFAULT;
     if (ctx->pathType() != nullptr) {
+
+            if (ctx -> pathType() ->DATA_TEST())
+            {
+                semantic = PathSemantic::DATA_TEST;
+            }
+
         if (ctx->pathType()->K_ALL()) {
             if (ctx->pathType()->K_SHORTEST()) {
                 if (ctx->pathType()->K_ACYCLIC()) {
@@ -844,7 +852,9 @@ Any QueryVisitor::visitPath(MQL_Parser::PathContext* ctx) {
                     throw QueryException("ALL WALKS path semantic not allowed");
                 }
             }
-        } else { // K_ANY
+
+        }
+        else { // K_ANY
             if (ctx->pathType()->K_SHORTEST()) {
                 if (ctx->pathType()->K_ACYCLIC()) {
                     semantic = PathSemantic::ANY_SHORTEST_ACYCLIC;
@@ -1012,6 +1022,69 @@ Any QueryVisitor::visitPathAtomAlternatives(MQL_Parser::PathAtomAlternativesCont
     return 0;
 }
 
+Any QueryVisitor::visitPathAtomSmt(MQL_Parser::PathAtomSmtContext* ctx)
+{   // inverse
+    bool inverse = (ctx->children[0]->getText() == "^") ^ current_path_inverse;
+    //object
+    auto object = ctx->object();
+    object_atom obj;
+    if (object ->TYPE() != nullptr)
+    {
+        obj = object_atom(object->TYPE()->getText().erase(0,1));
+    }
+    else if (object ->node() ->fixedNode() != nullptr)
+    {
+        obj = object_atom(QuadObjectId::get_fixed_node_inside(object->node()->getText()));
+    }
+    else if (object ->node() -> varNode() != nullptr)
+    {
+        throw std::runtime_error("not support");
+    }
+    // handle formula
+    auto f = ctx ->conditionalAndExpr();
+    f->comparisonExpr()[0]->accept(this);
+
+    assert (f->comparisonExpr().size() > 0);
+        std::vector<std::unique_ptr<Expr>> and_list;
+        and_list.push_back(std::move(current_expr));
+        for (std::size_t i = 1; i < f->comparisonExpr().size(); i++) {
+            f->comparisonExpr()[i]->accept(this);
+            and_list.push_back(std::move(current_expr));
+        }
+
+        auto property = std::make_unique<ExprAnd>((std::move(and_list)));
+
+    current_path = std::make_unique<SMTAtom>(obj, inverse, std::move(property));
+    auto suffix = ctx->pathSuffix();
+    if (suffix == nullptr) {
+        // no suffix
+        return 0;
+    } else if (suffix->op == nullptr) {
+        // {min, max}
+        std::vector<std::unique_ptr<RegularPathExpr>> seq;
+        unsigned min = std::stoul(suffix->min->getText());
+        unsigned max = std::stoul(suffix->max->getText());
+        unsigned i = 0;
+        for (; i < min; i++) {
+            seq.push_back(current_path->clone());
+        }
+        for (; i < max; i++) {
+            seq.push_back(std::make_unique<PathOptional>(current_path->clone()));
+        }
+        current_path = std::make_unique<PathSequence>(std::move(seq));
+    } else if (suffix->op->getText() == "*") {
+        current_path = std::make_unique<PathKleeneStar>(std::move(current_path));
+    } else if (suffix->op->getText() == "+") {
+        current_path = std::make_unique<PathKleenePlus>(std::move(current_path));
+    } else if (suffix->op->getText() == "?") {
+        if (!current_path->nullable()) {
+            current_path = std::make_unique<PathOptional>(std::move(current_path));
+        }
+        // else we avoid a redundant PathOptional, current_path stays the same
+    }
+
+    return 0;
+}
 
 Any QueryVisitor::visitWhereStatement(MQL_Parser::WhereStatementContext* ctx) {
     ctx->conditionalOrExpr()->accept(this);

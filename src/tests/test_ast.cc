@@ -12,7 +12,7 @@
 #include<vector>
 #include "z3++.h"
 
-std::string query =  "Match (?x) =[:T2]=> (?y) WHERE ?y.start > 20 Return ?x";
+std::string query =  "Match (?x) =[DATA_TEST(:T2, ?p > 0)]=> (?y) WHERE ?y.start > 20 Return ?x";
 int verify_z3_expression(){
     std::cout << "de-Morgan example\n";
 
