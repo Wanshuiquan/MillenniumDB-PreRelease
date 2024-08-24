@@ -12,6 +12,13 @@ public:
 
     explicit ExprAnd(std::vector<std::unique_ptr<Expr>>&& and_list) :
         and_list (std::move(and_list)) { }
+    explicit ExprAnd(const ExprAnd& and_expr) : and_list (std::vector<std::unique_ptr<Expr>>())
+    {
+        for (auto& expr : and_expr.and_list)
+        {
+            and_list.push_back (expr->clone());
+        }
+    }
     [[nodiscard]] std::unique_ptr<Expr> clone() const override {
         std::vector<std::unique_ptr<Expr>> and_list_clone;
         and_list_clone.reserve(and_list.size());

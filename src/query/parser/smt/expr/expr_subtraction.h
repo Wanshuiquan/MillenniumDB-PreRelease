@@ -11,8 +11,12 @@ public:
     ExprSubtraction(std::unique_ptr<Expr> lhs, std::unique_ptr<Expr> rhs) :
         lhs (std::move(lhs)),
         rhs (std::move(rhs)) { }
+    ExprSubtraction( const ExprSubtraction& expr):
+     lhs (expr.lhs.get()), rhs (expr.rhs.get())
+    {
 
-    virtual std::unique_ptr<Expr> clone() const override {
+    }
+    std::unique_ptr<Expr> clone() const override {
         return std::make_unique<ExprSubtraction>(lhs->clone(), rhs->clone());
     }
 

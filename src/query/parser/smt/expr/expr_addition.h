@@ -10,7 +10,12 @@ public:
         lhs (std::move(lhs)),
         rhs (std::move(rhs)) { }
 
-    virtual std::unique_ptr<Expr> clone() const override {
+    ExprAddition( const ExprAddition& expr):
+ lhs (std::unique_ptr<Expr>(expr.lhs.get())), rhs (std::unique_ptr<Expr>(expr.rhs.get()))
+    {
+
+    }
+    std::unique_ptr<Expr> clone() const override {
         return std::make_unique<ExprAddition>(lhs->clone(), rhs->clone());
     }
 

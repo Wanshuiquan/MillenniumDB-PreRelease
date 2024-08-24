@@ -12,25 +12,23 @@
 #include <algorithm>
 #include <variant>
 #include <vector>
-#include "graph_models/quad_model/quad_object_id.h"
-#include "query/var_id.h"
 #include "query/parser/paths/regular_path_expr.h"
-#include "query/parser/expr/mql/bool_expr/expr_and.h"
 #include "query/parser/expr/sparql/binary/expr_and.h"
 #include "query/parser/expr/mql_expr_printer.h"
-#include "query/parser/expr/sparql_expr_printer.h"
+#include "query/parser/smt/smt_exprs.h"
+#include "query/parser/smt/smt_expr_printer.h"
 
 using object_atom = std::variant<std::monostate,std::string, ObjectId>;
 // using formula = std::variant<std::monostate, std::unique_ptr<MQL::ExprAnd>, std::unique_ptr<SPARQL::ExprAnd>>;
-using Formula = std::unique_ptr<MQL::ExprAnd>;
+
 class SMTAtom: public RegularPathExpr{
 public:
     object_atom atom;
     bool inverse;
-    Formula property_checks;
+    std::unique_ptr<SMT::Expr> property_checks;
 
     SMTAtom(object_atom atom, bool inverse,
-              Formula  property_checks) :
+              std::unique_ptr<SMT::Expr>  property_checks) :
          atom    (atom),
          inverse (inverse),
          property_checks (std::move(property_checks)) {
@@ -39,7 +37,7 @@ public:
     SMTAtom(const SMTAtom& other) :
         atom    (other.atom),
         inverse (other.inverse),
-        property_checks(std::make_unique<MQL::ExprAnd>(std::move(other.property_checks.get() -> and_list)) )
+        property_checks(std::unique_ptr<SMT::Expr>(other.property_checks.get()->clone()) )
          {
 
     }
@@ -47,7 +45,7 @@ public:
 
     std::unique_ptr<RegularPathExpr> clone() const override {
 
-        return std::make_unique<SMTAtom>(atom, inverse, std::make_unique<MQL::ExprAnd>(std::move(property_checks.get() -> and_list)));
+        return std::make_unique<SMTAtom>(atom, inverse, std::unique_ptr(property_checks->clone()));
     }
 
     PathType type() const override {
@@ -89,18 +87,16 @@ public:
     }
     std::unique_ptr<RegularPathExpr> invert() const override {
 
-        return std::make_unique<SMTAtom>(atom, !inverse, std::make_unique<MQL::ExprAnd>(std::move(property_checks.get() -> and_list)));
+        return std::make_unique<SMTAtom>(atom, !inverse, std::unique_ptr(property_checks->clone()));
     }
 
      std::string to_string() const override {
              std::vector<std::string> f;
              std::stringstream sstream;
 
-              MQL::ExprPrinter printer(sstream);
+              SMT::SmtPrinter printer(sstream);
 
-              printer.visit(*property_checks);
-
-
+              printer.visit(dynamic_cast<SMT::ExprAnd&>(*property_checks));
              std::string property_string = sstream.str();
              f.push_back(property_string);
 

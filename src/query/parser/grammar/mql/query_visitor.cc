@@ -16,7 +16,7 @@
 #include "query/parser/paths/path_optional.h"
 #include "query/parser/paths/path_sequence.h"
 #include "query/query_context.h"
-
+#include "query/rewriter/mql/to_smt.h"
 using namespace MQL;
 using antlrcpp::Any;
 
@@ -1053,8 +1053,10 @@ Any QueryVisitor::visitPathAtomSmt(MQL_Parser::PathAtomSmtContext* ctx)
         }
 
         auto property = std::make_unique<ExprAnd>((std::move(and_list)));
+        ToSMT rewriter;
+        rewriter.visit(*property);
 
-    current_path = std::make_unique<SMTAtom>(obj, inverse, std::move(property));
+    current_path = std::make_unique<SMTAtom>(obj, inverse, rewriter.get_smt_expr());
     auto suffix = ctx->pathSuffix();
     if (suffix == nullptr) {
         // no suffix

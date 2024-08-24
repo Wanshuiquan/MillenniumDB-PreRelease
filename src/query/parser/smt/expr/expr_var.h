@@ -11,8 +11,8 @@ public:
 
     ExprVar(VarId var) :
         var (var) { }
-
-    virtual std::unique_ptr<Expr> clone() const override {
+    ExprVar(ExprVar& expr) :var(expr.var) { }
+    std::unique_ptr<Expr> clone() const override {
         return std::make_unique<ExprVar>(var);
     }
 

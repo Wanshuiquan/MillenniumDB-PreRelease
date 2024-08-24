@@ -6,6 +6,7 @@
 #include "query/parser/smt/expr/expr_var_property.h"
 #include "query/parser/smt/expr/expr_and.h"
 #include "query/parser/smt/expr/expr_addition.h"
+#include "query/parser/smt/expr/expr_division.h"
 #include "query/parser/smt/expr/expr_constant.h"
 #include "query/parser/smt/expr/expr_mutiplication.h"
 #include "query/parser/smt/expr/expr_subtraction.h"

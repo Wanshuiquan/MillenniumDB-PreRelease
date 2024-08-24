@@ -12,8 +12,8 @@ public:
 
     ExprConstant(ObjectId value) :
         value (value) { }
-
-    virtual std::unique_ptr<Expr> clone() const override {
+    ExprConstant(const ExprConstant &e) :value(e.value){}
+std::unique_ptr<Expr> clone() const override {
         return std::make_unique<ExprConstant>(value);
     }
 

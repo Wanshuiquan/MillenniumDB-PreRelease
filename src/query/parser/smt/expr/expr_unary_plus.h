@@ -9,8 +9,8 @@ public:
 
     ExprUnaryPlus(std::unique_ptr<Expr> expr) :
         expr (std::move(expr)) { }
-
-    virtual std::unique_ptr<Expr> clone() const override {
+    ExprUnaryPlus(const ExprUnaryPlus& expr) : expr (std::unique_ptr<SMT::Expr>(expr.expr.get())) { }
+    std::unique_ptr<Expr> clone() const override {
         return std::make_unique<ExprUnaryPlus>(expr->clone());
     }
 

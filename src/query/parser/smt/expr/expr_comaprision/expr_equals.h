@@ -13,8 +13,12 @@ public:
     ExprEquals(std::unique_ptr<Expr> lhs, std::unique_ptr<Expr> rhs) :
         lhs (std::move(lhs)),
         rhs (std::move(rhs)) { }
+    ExprEquals( const ExprEquals& expr):
+    lhs (expr.lhs.get()), rhs (expr.rhs.get())
+    {
 
-    virtual std::unique_ptr<Expr> clone() const override {
+    }
+    std::unique_ptr<Expr> clone() const override {
         return std::make_unique<ExprEquals>(lhs->clone(), rhs->clone());
     }
 

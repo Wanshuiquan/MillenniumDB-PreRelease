@@ -14,7 +14,12 @@ public:
         lhs (std::move(lhs)),
         rhs (std::move(rhs)) { }
 
-    virtual std::unique_ptr<Expr> clone() const override {
+    ExprNotEquals( const ExprNotEquals& expr):
+ lhs (expr.lhs.get()), rhs (expr.rhs.get())
+    {
+
+    }
+    std::unique_ptr<Expr> clone() const override {
         return std::make_unique<ExprNotEquals>(lhs->clone(), rhs->clone());
     }
 

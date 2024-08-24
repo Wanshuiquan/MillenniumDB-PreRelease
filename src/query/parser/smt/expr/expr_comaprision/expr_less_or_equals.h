@@ -13,8 +13,12 @@ public:
     ExprLessOrEquals(std::unique_ptr<Expr> lhs, std::unique_ptr<Expr> rhs) :
         lhs (std::move(lhs)),
         rhs (std::move(rhs)) { }
+    ExprLessOrEquals( const ExprLessOrEquals& expr):
+     lhs (expr.lhs.get()), rhs (expr.rhs.get())
+    {
 
-    virtual std::unique_ptr<Expr> clone() const override {
+    }
+    std::unique_ptr<Expr> clone() const override {
         return std::make_unique<ExprLessOrEquals>(lhs->clone(), rhs->clone());
     }
 

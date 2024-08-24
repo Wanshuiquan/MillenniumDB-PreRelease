@@ -16,7 +16,7 @@ public:
         var_without_property (var_without_property),
         key                  (key),
         var_with_property    (var_with_property) { }
-
+    ExprVarProperty(ExprVarProperty& exp) : var_without_property(exp.var_without_property), key(exp.key), var_with_property(exp.var_with_property) { }
     std::unique_ptr<Expr> clone() const override {
         return std::make_unique<ExprVarProperty>(
             var_without_property,
