@@ -18,7 +18,7 @@ std::vector<std::string> query = {
     "Match (?x) =[DATA_TEST(:N1 {name == \"Wang\" })|(:N1 {?p > 0})+]=>(?y) Return ?p",
     "Match (?x) =[DATA_TEST(:N1 {name == \"Wang\" })|(:N1 {?p > 0})*]=>(?y) Return ?y",
     "Match (?x) =[DATA_TEST((:N1 {name == \"Wang\" })|(:N1 {?p > 0}))*]=>(?y) Return ?y",
-    "Match (?x) =[DATA_TEST(:N1 {age *2 == ?q })|(:N1 {?p > 0})]=>(?y) Return ?y",
+    "Match (?x) =[DATA_TEST(:N1 {age *2 == ?q })|(:N1 {?p > 0})]=>(?y) Return ?q",
 };
 
 
