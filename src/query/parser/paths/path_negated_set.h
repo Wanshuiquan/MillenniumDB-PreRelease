@@ -12,7 +12,11 @@ public:
 
     PathNegatedSet(std::vector<PathAtom> _negated_set) :
         negated_set(std::move(_negated_set)) { }
+    std::set<VarId> get_var() const
+    {
 
+        return negated_set[0].get_var();
+    }
     PathNegatedSet(const PathNegatedSet& other) {
         for (const auto& atom : other.negated_set) {
             negated_set.push_back(atom);

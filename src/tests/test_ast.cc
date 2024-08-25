@@ -12,7 +12,15 @@
 #include<vector>
 #include "z3++.h"
 
-std::string query =  "Match (?x) =[DATA_TEST(:T2 {age > ?p AND age < ?p + 114154})/(:N1 {name == ?x})]=> (?y)  Return ?x";
+std::vector<std::string> query = {
+    "Match (?x) =[DATA_TEST(:T2 {age > ?p AND age < ?p + 114154})/(:N1 {name == ?c})]=> (?y)  Return ?x",
+    "Match (?x) =[DATA_TEST(:N1 {name == \"Wang\" })|(:N1 {?p > 0})]=>(?y) Return ?y",
+    "Match (?x) =[DATA_TEST(:N1 {name == \"Wang\" })|(:N1 {?p > 0})+]=>(?y) Return ?p",
+    "Match (?x) =[DATA_TEST(:N1 {name == \"Wang\" })|(:N1 {?p > 0})*]=>(?y) Return ?y",
+    "Match (?x) =[DATA_TEST((:N1 {name == \"Wang\" })|(:N1 {?p > 0}))*]=>(?y) Return ?y",
+    "Match (?x) =[DATA_TEST(:N1 {age *2 == ?q })|(:N1 {?p > 0})]=>(?y) Return ?y",
+};
+
 
 // std::string query =  "Match (?x :fuck {age : 20}) Return ?x";
 
@@ -42,13 +50,18 @@ std::ostream& print(std::ostream& os, ObjectId oid){
     os<<oid.get_value();
     return os;
 }
-int try_parser(){
+int try_parser()
+{
     QueryContext::_debug_print = print;
     QueryContext::set_query_ctx(new QueryContext());
     antlr4::MyErrorListener error_listener;
-    auto plan = MQL::QueryParser::get_query_plan(query, &error_listener);
+    for (auto&q : query)
+    {
+        auto plan = MQL::QueryParser::get_query_plan(q, &error_listener);
     
-    std::cout<<*plan<< std::endl;
+        std::cout<<*plan<< std::endl;
+    }
+
     return 0;
 }
 

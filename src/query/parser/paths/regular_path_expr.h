@@ -3,7 +3,7 @@
 #include <memory>
 #include <ostream>
 #include <string>
-
+#include "query/var_id.h"
 #include "query/parser/paths/automaton/rpq_automaton.h"
 #include "query/parser/paths/automaton/rdpq_automaton.h"
 
@@ -108,8 +108,7 @@ public:
 
     // true if the path can be empty
     virtual bool nullable() const = 0;
-
+    virtual std::set<VarId> get_var() const = 0;
     virtual RPQ_NFA get_rpq_base_automaton() const = 0;
-
     virtual RDPQAutomaton get_rdpq_base_automaton() const = 0;
 };

@@ -11,7 +11,10 @@ public:
 
     PathKleenePlus(const PathKleenePlus& other) :
         path (other.path->clone()) { }
-
+    std::set<VarId> get_var()const
+    {
+        return path->get_var();
+    }
     std::unique_ptr<RegularPathExpr> clone() const override {
         return std::make_unique<PathKleenePlus>(*this);
     }

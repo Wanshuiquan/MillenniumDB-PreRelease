@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vector>
-
 #include "query/parser/paths/regular_path_expr.h"
 
 class PathAlternatives : public RegularPathExpr {
@@ -21,7 +20,17 @@ public:
             alternatives.push_back(alternative->clone());
         }
     }
+    std::set<VarId> get_var() const
+    {
+        auto set = std::set<VarId>();
+        for (const auto& seq : alternatives)
+        {
+            auto id = seq->get_var();
+            for (const auto& var : id) set.insert(var);
+        }
+        return set;
 
+    }
     std::unique_ptr<RegularPathExpr> clone() const override {
         std::vector<std::unique_ptr<RegularPathExpr>> alternatives_clone;
         for (const auto& seq : alternatives) {

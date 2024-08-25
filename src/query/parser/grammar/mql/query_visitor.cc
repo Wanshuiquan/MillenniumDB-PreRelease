@@ -825,10 +825,7 @@ Any QueryVisitor::visitPath(MQL_Parser::PathContext* ctx) {
     PathSemantic semantic = PathSemantic::DEFAULT;
     if (ctx->pathType() != nullptr) {
 
-            if (ctx -> pathType() ->DATA_TEST())
-            {
-                semantic = PathSemantic::DATA_TEST;
-            }
+
 
         if (ctx->pathType()->K_ALL()) {
             if (ctx->pathType()->K_SHORTEST()) {
@@ -872,7 +869,12 @@ Any QueryVisitor::visitPath(MQL_Parser::PathContext* ctx) {
                     semantic = PathSemantic::ANY_SIMPLE;
                 } else if (ctx->pathType()->K_TRAILS()) {
                     semantic = PathSemantic::ANY_TRAILS;
-                } else { // WALKS by default
+                }
+                else if (ctx -> pathType() ->DATA_TEST())
+                {
+                    semantic = PathSemantic::DATA_TEST;
+                }
+                else { // WALKS by default
                     semantic = PathSemantic::ANY_WALKS;
                 }
             }

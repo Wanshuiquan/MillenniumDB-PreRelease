@@ -93,6 +93,11 @@ void CheckVarNames::visit(OpBasicGraphPattern& op_basic_graph_pattern) {
             insert_joinable_var(path.from.get_var());
         if (path.to.is_var())
             insert_joinable_var(path.to.get_var());
+        if (path.semantic == PathSemantic::DATA_TEST)
+        {
+            auto vars = path.path ->get_var();
+            insert_joinable_vars(vars);
+        }
         insert_unjoinable_var(path.var);
     }
 }

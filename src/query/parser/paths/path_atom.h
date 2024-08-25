@@ -42,7 +42,10 @@ public:
         }
         return ":" + atom;
     }
-
+    std::set<VarId> get_var()const
+    {
+        return std::set<VarId>();
+    }
     std::ostream& print_to_ostream(std::ostream& os, int indent = 0) const override {
         os << std::string(indent, ' ');
         os << "OpAtom(" << (inverse ? "^:" : ":") << atom << ")\n";

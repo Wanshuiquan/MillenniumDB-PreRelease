@@ -92,7 +92,10 @@ public:
 
         return std::make_unique<SMTAtom>(atom, !inverse, std::unique_ptr(property_checks->clone()));
     }
-
+    std::set<VarId> get_var() const
+    {
+        return property_checks->get_all_vars();
+    }
      std::string to_string() const override {
              std::stringstream sstream;
 

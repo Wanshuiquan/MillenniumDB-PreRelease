@@ -18,7 +18,10 @@ public:
     std::unique_ptr<RegularPathExpr> clone() const override {
         return std::make_unique<PathKleeneStar>(*this);
     }
-
+    std::set<VarId> get_var()const
+    {
+        return path->get_var();
+    }
     PathType type() const override {
         return PathType::PATH_KLEENE_STAR;
     }

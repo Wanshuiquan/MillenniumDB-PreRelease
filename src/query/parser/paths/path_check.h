@@ -12,7 +12,10 @@ public:
 
     PathCheck(std::vector<std::tuple<Operators, ObjectId, ObjectId>>&& property_checks) :
         property_checks (std::move(property_checks)) { }
-
+    std::set<VarId> get_var()const
+    {
+        return std::set<VarId>();
+    }
     std::unique_ptr<RegularPathExpr> clone() const override {
         auto data_checks = std::vector<std::tuple<Operators, ObjectId, ObjectId>>();
         for (size_t i = 0; i < property_checks.size(); i++) {

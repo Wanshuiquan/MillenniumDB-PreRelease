@@ -1,7 +1,6 @@
 #pragma once
 
 #include "query/parser/paths/regular_path_expr.h"
-
 class PathOptional : public RegularPathExpr {
 public:
     std::unique_ptr<RegularPathExpr> path;
@@ -29,7 +28,10 @@ public:
         path->print_to_ostream(os, indent + 2);
         return os;
     }
-
+    std::set<VarId> get_var() const
+    {
+        return path->get_var();
+    }
     bool nullable() const override {
         return true;
     }

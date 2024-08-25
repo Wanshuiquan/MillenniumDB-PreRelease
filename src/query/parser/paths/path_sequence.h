@@ -3,6 +3,7 @@
 #include <vector>
 #include <memory>
 #include <algorithm>
+#include <query/var_id.h>
 
 #include "query/parser/paths/regular_path_expr.h"
 
@@ -27,7 +28,16 @@ public:
         }
         return std::make_unique<PathSequence>(std::move(sequence_clone));
     }
-
+    std::set<VarId> get_var() const
+    {
+        auto set = std::set<VarId>();
+        for (const auto& seq : sequence)
+        {
+            auto id = seq->get_var();
+            for (const auto& var : id) set.insert(var);
+        }
+        return set;
+    }
     PathSequence(const PathSequence& other) :
         is_nullable(other.nullable())
     {
