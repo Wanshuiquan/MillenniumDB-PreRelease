@@ -87,8 +87,9 @@ pathSequence: pathAtom ('/' pathAtom)*;
 
 pathAtom: '^'? TYPE pathSuffix? # pathAtomSimple
 |         '^'? '(' pathAlternatives ')' pathSuffix? # pathAtomAlternatives
-|        '^'?  '(' object ',' conditionalAndExpr ')' pathSuffix?# pathAtomSmt
+|        '^'?  '(' TYPE '{' conditionalAndExpr '}' ')' pathSuffix?# pathAtomSmt
 ;
+
 
 object: TYPE | node;
 
@@ -158,6 +159,7 @@ unaryExpr: K_NOT unaryExpr
 atomicExpr:  VARIABLE KEY? # exprVar
 |            valueExpr # exprValueExpr
 |            '(' conditionalOrExpr ')' # exprParenthesis
+| identifier #idExpr
 ;
 
 valueExpr: UNSIGNED_INTEGER | UNSIGNED_FLOAT | STRING | boolValue | datatypeValue;

@@ -18,23 +18,26 @@
 #include "query/parser/smt/smt_exprs.h"
 #include "query/parser/smt/smt_expr_printer.h"
 
-using object_atom = std::variant<std::monostate,std::string, ObjectId>;
+// using object_atom = std::variant<std::monostate,std::string, ObjectId>;
 // using formula = std::variant<std::monostate, std::unique_ptr<MQL::ExprAnd>, std::unique_ptr<SPARQL::ExprAnd>>;
 
 class SMTAtom: public RegularPathExpr{
 public:
-    object_atom atom;
+
+    std::string atom;
     bool inverse;
     std::unique_ptr<SMT::Expr> property_checks;
 
-    SMTAtom(object_atom atom, bool inverse,
+    SMTAtom(std::string atom, bool inverse,
               std::unique_ptr<SMT::Expr>  property_checks) :
+
          atom    (atom),
          inverse (inverse),
          property_checks (std::move(property_checks)) {
     }
 
     SMTAtom(const SMTAtom& other) :
+
         atom    (other.atom),
         inverse (other.inverse),
         property_checks(std::unique_ptr<SMT::Expr>(other.property_checks.get()->clone()) )
@@ -91,34 +94,18 @@ public:
     }
 
      std::string to_string() const override {
-             std::vector<std::string> f;
              std::stringstream sstream;
 
               SMT::SmtPrinter printer(sstream);
 
               printer.visit(dynamic_cast<SMT::ExprAnd&>(*property_checks));
              std::string property_string = sstream.str();
-             f.push_back(property_string);
 
-         std::string property = boost::algorithm::join(f, "&&");
-         std::string atom_string = "";
-         if (std::holds_alternative<std::monostate>(atom))
-         {
-             atom_string = "";
-         }
-        else if (std::holds_alternative<std::string>(atom))
-        {
-            atom_string = std::get<std::string>(atom);
-        }
-        else if (std::holds_alternative<ObjectId>(atom))
-        {
-            auto atomic = std::get<ObjectId>(atom);
-            atom_string = std::to_string(atomic.get_value());
-        }
+
          if (inverse) {
-             return "^:" + atom_string  + "," + property;
+             return "^"  + atom  + "," + property_string;
          }
-         return ":" + atom_string + "," +  property;
+         return "" +atom + "," +  property_string;
     }
      std::ostream& print_to_ostream(std::ostream& os, int indent = 0) const override {
        os << std::string(indent, ' ');

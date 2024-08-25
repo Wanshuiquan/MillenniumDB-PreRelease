@@ -287,6 +287,10 @@ public:
     return visitChildren(ctx);
   }
 
+  virtual std::any visitIdExpr(MQL_Parser::IdExprContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
   virtual std::any visitValueExpr(MQL_Parser::ValueExprContext *ctx) override {
     return visitChildren(ctx);
   }

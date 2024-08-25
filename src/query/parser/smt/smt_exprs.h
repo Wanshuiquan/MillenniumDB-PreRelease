@@ -18,3 +18,4 @@
 #include "query/parser/smt/expr/expr_comaprision/expr_greater_or_equals.h"
 #include "query/parser/smt/expr/expr_comaprision/expr_less_or_equals.h"
 #include "query/parser/smt/expr/expr_comaprision/expr_less.h"
+#include "query/parser/smt/expr/expr_identifier.h"

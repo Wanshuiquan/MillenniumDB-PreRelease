@@ -10,7 +10,15 @@ void ToSMT::visit(ExprConstant& expr) {
 }
 
 void ToSMT::visit(ExprVar& expr){
-  current_smt_expr =  std::make_unique<SMT::ExprVar>(expr.var);
+  auto name = get_query_ctx().get_var_name(expr.var);
+  if (name.find("id")!=std::string::npos)
+  {
+    current_smt_expr = std::make_unique<SMT::ExprAttr>(expr.var);
+  }
+  else
+  {
+    current_smt_expr =  std::make_unique<SMT::ExprVar>(expr.var);
+  }
 }
 void ToSMT::visit(ExprVarProperty& expr){
   current_smt_expr = std::make_unique<SMT::ExprVarProperty>(expr.var_without_property, expr.key, expr.var_with_property);

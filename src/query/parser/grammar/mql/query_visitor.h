@@ -107,7 +107,7 @@ public:
     virtual std::any visitInsertLabelElement(MQL_Parser::InsertLabelElementContext* ctx) override;
     virtual std::any visitInsertPropertyElement(MQL_Parser::InsertPropertyElementContext* ctx) override;
     virtual std::any visitInsertEdgeElement(MQL_Parser::InsertEdgeElementContext* ctx) override;
-
+    virtual  std::any visitIdExpr(MQL_Parser::IdExprContext* ctx) override;
     virtual std::any visitReturnList(MQL_Parser::ReturnListContext* ctx) override;
     virtual std::any visitReturnItemVar(MQL_Parser::ReturnItemVarContext* ctx) override;
     virtual std::any visitReturnItemAgg(MQL_Parser::ReturnItemAggContext* ctx) override;
@@ -118,7 +118,6 @@ public:
     virtual std::any visitOrderByItemVar(MQL_Parser::OrderByItemVarContext*ctx) override;
     virtual std::any visitOrderByItemAgg(MQL_Parser::OrderByItemAggContext* ctx) override;
     virtual std::any visitOrderByItemCount(MQL_Parser::OrderByItemCountContext* ctx) override;
-
     virtual std::any visitGroupByStatement(MQL_Parser::GroupByStatementContext* ctx) override;
     virtual std::any visitGroupByItem(MQL_Parser::GroupByItemContext* ctx) override;
 

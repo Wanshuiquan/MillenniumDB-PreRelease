@@ -30,6 +30,7 @@ namespace SMT{
         virtual void visit(SMT::ExprLess&)            override;
         virtual void visit(SMT::ExprNotEquals&)      override;
         virtual void visit(SMT::ExprAnd&)             override;
+        virtual void visit(SMT::ExprAttr&) override;
 
     };
 }

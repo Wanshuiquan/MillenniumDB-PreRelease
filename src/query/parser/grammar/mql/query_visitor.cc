@@ -1025,21 +1025,10 @@ Any QueryVisitor::visitPathAtomAlternatives(MQL_Parser::PathAtomAlternativesCont
 Any QueryVisitor::visitPathAtomSmt(MQL_Parser::PathAtomSmtContext* ctx)
 {   // inverse
     bool inverse = (ctx->children[0]->getText() == "^") ^ current_path_inverse;
+
     //object
-    auto object = ctx->object();
-    object_atom obj;
-    if (object ->TYPE() != nullptr)
-    {
-        obj = object_atom(object->TYPE()->getText().erase(0,1));
-    }
-    else if (object ->node() ->fixedNode() != nullptr)
-    {
-        obj = object_atom(QuadObjectId::get_fixed_node_inside(object->node()->getText()));
-    }
-    else if (object ->node() -> varNode() != nullptr)
-    {
-        throw std::runtime_error("not support");
-    }
+    auto object = ctx-> TYPE() ->getText();
+
     // handle formula
     auto f = ctx ->conditionalAndExpr();
     f->comparisonExpr()[0]->accept(this);
@@ -1056,7 +1045,7 @@ Any QueryVisitor::visitPathAtomSmt(MQL_Parser::PathAtomSmtContext* ctx)
         ToSMT rewriter;
         rewriter.visit(*property);
 
-    current_path = std::make_unique<SMTAtom>(obj, inverse, rewriter.get_smt_expr());
+    current_path = std::make_unique<SMTAtom>(object, inverse, rewriter.get_smt_expr());
     auto suffix = ctx->pathSuffix();
     if (suffix == nullptr) {
         // no suffix
@@ -1093,6 +1082,14 @@ Any QueryVisitor::visitWhereStatement(MQL_Parser::WhereStatementContext* ctx) {
     return 0;
 }
 
+Any QueryVisitor::visitIdExpr(MQL_Parser::IdExprContext* ctx)
+{
+    std::string id = ctx->getText();
+    id = "id"+ id;
+    auto var = get_query_ctx().get_or_create_var(id);
+    current_expr = std::make_unique<MQL::ExprVar>(var);
+    return 0;
+}
 
 Any QueryVisitor::visitExprVar(MQL_Parser::ExprVarContext* ctx) {
     auto var_name = ctx->VARIABLE()->getText();

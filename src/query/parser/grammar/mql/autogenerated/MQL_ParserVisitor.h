@@ -155,6 +155,8 @@ public:
 
     virtual std::any visitExprParenthesis(MQL_Parser::ExprParenthesisContext *context) = 0;
 
+    virtual std::any visitIdExpr(MQL_Parser::IdExprContext *context) = 0;
+
     virtual std::any visitValueExpr(MQL_Parser::ValueExprContext *context) = 0;
 
     virtual std::any visitExprTypename(MQL_Parser::ExprTypenameContext *context) = 0;

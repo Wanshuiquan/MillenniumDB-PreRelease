@@ -821,9 +821,10 @@ public:
     PathAtomSmtContext(PathAtomContext *ctx);
 
     antlr4::tree::TerminalNode *L_PAR();
-    ObjectContext *object();
-    antlr4::tree::TerminalNode *COMMA();
+    antlr4::tree::TerminalNode *TYPE();
+    antlr4::tree::TerminalNode *LCURLY_BRACKET();
     ConditionalAndExprContext *conditionalAndExpr();
+    antlr4::tree::TerminalNode *RCURLY_BRACKET();
     antlr4::tree::TerminalNode *R_PAR();
     antlr4::tree::TerminalNode *PATH_NEGATION();
     PathSuffixContext *pathSuffix();
@@ -1230,7 +1231,7 @@ public:
     antlr4::Token *s77 = nullptr;
     std::vector<antlr4::Token *> op;
     antlr4::Token *s78 = nullptr;
-    antlr4::Token *_tset1205 = nullptr;
+    antlr4::Token *_tset1207 = nullptr;
     AdditiveExprContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     std::vector<MultiplicativeExprContext *> multiplicativeExpr();
@@ -1253,7 +1254,7 @@ public:
     std::vector<antlr4::Token *> op;
     antlr4::Token *s71 = nullptr;
     antlr4::Token *s75 = nullptr;
-    antlr4::Token *_tset1224 = nullptr;
+    antlr4::Token *_tset1226 = nullptr;
     MultiplicativeExprContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     std::vector<UnaryExprContext *> unaryExpr();
@@ -1328,6 +1329,15 @@ public:
     antlr4::tree::TerminalNode *L_PAR();
     ConditionalOrExprContext *conditionalOrExpr();
     antlr4::tree::TerminalNode *R_PAR();
+
+    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+  };
+
+  class  IdExprContext : public AtomicExprContext {
+  public:
+    IdExprContext(AtomicExprContext *ctx);
+
+    IdentifierContext *identifier();
 
     virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
   };

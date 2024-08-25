@@ -13,6 +13,12 @@ void SmtPrinter::visit(ExprVar& expr) {
     os << '?' << get_query_ctx().get_var_name(expr.var);
 }
 
+void SmtPrinter::visit(SMT::ExprAttr& expr)
+{
+    std::string var = get_query_ctx().get_var_name(expr.var);
+    os << var.erase(0,2);
+}
+
 
 void SmtPrinter::visit(ExprVarProperty& expr) {
     os << '?' << get_query_ctx().get_var_name(expr.var_with_property);
