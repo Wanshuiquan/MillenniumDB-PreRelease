@@ -54,6 +54,9 @@ public:
         throw LogicException("Data checks not supported in RPQ");
     }
 
+    SMTAutomaton get_smt_base_automaton() const override {
+        throw  std::runtime_error("Not support SMT");
+    }
     // Atomic node data check
     RDPQAutomaton get_rdpq_base_automaton() const override {
         auto automaton = RDPQAutomaton();

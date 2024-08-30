@@ -128,6 +128,7 @@ set(TEST_TARGETS
     scsu-test
     variable_set
         test_ast
+        test_smt_aut
 )
 # Build targets
 foreach(target ${BUILD_TARGETS})

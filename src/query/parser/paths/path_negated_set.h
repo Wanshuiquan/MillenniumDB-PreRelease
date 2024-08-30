@@ -26,6 +26,9 @@ public:
     std::unique_ptr<RegularPathExpr> clone() const override {
         return std::make_unique<PathNegatedSet>(*this);
     }
+    SMTAutomaton get_smt_base_automaton() const override {
+        throw std::runtime_error("Not support negation");
+    }
 
     PathType type() const override {
         return PathType::PATH_NEGATED_SET;

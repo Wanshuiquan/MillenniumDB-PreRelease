@@ -40,7 +40,7 @@ public:
 
         atom    (other.atom),
         inverse (other.inverse),
-        property_checks(std::unique_ptr<SMT::Expr>(other.property_checks.get()->clone()) )
+        property_checks(std::unique_ptr<SMT::Expr>(other.property_checks->clone()) )
          {
 
     }
@@ -88,6 +88,17 @@ public:
         //        automaton.add_transition(RDPQTransition::make_data_transition(2, 3));
         return automaton;
     }
+    SMTAutomaton get_smt_base_automaton() const   {
+        // Create a simple automaton
+        auto automaton = SMTAutomaton();
+        automaton.end_states.insert(1);
+        // cast Expr to ExprAnd
+
+        // Connect states with (atom, smtexpr) as label
+        automaton.add_transition(SMTTransition::make_transition(0, 1, inverse, atom,  property_checks ->to_smt_lib() ));
+        return automaton;
+    }
+
     std::unique_ptr<RegularPathExpr> invert() const override {
 
         return std::make_unique<SMTAtom>(atom, !inverse, std::unique_ptr(property_checks->clone()));

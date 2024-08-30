@@ -19,7 +19,7 @@ public:
     void accept_visitor(ExprVisitor& visitor) override {
         visitor.visit(*this);
     }
-
+    std::string to_smt_lib() const {return get_query_ctx().get_var_name(var);};
     bool has_aggregation() const override { return false; }
 
     std::set<VarId> get_all_vars() const override {

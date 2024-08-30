@@ -51,6 +51,16 @@ public:
         return path_automaton;
     }
 
+    SMTAutomaton get_smt_base_automaton() const override {
+        auto path_automaton = path->get_smt_base_automaton();
+
+        // Connects all end states to start state
+        for (const auto& end_state : path_automaton.end_states) {
+            path_automaton.add_epsilon_transition(end_state, path_automaton.get_start());
+        }
+        return path_automaton;
+    }
+
     RDPQAutomaton get_rdpq_base_automaton() const override {
         // TODO: implement this
         throw std::runtime_error("PathKleenePlus::get_rpq_base_automaton() not implemented");

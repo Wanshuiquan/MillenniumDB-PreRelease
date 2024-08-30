@@ -21,6 +21,7 @@ public:
     bool has_aggregation() const override {
         return expr->has_aggregation();
     }
+    std::string to_smt_lib()const{throw std::runtime_error("Not Support");}
 
     std::set<VarId> get_all_vars() const override {
         return expr->get_all_vars();

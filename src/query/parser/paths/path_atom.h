@@ -63,7 +63,12 @@ public:
     bool nullable() const override {
         return false;
     }
-
+    SMTAutomaton get_smt_base_automaton() const override{
+        auto automaton = SMTAutomaton();
+        automaton.end_states.insert(1);
+        automaton.add_transition((SMTTransition(0, 1, false, atom, "true")));
+        return automaton;
+    }
     RPQ_NFA get_rpq_base_automaton() const override {
         // Create a simple automaton
         auto automaton = RPQ_NFA();

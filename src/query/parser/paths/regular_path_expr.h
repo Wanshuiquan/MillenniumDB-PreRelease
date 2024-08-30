@@ -6,6 +6,7 @@
 #include "query/var_id.h"
 #include "query/parser/paths/automaton/rpq_automaton.h"
 #include "query/parser/paths/automaton/rdpq_automaton.h"
+#include "query/parser/paths/automaton/smt_automaton.h"
 
 enum class PathType {
     PATH_ALTERNATIVES,
@@ -79,6 +80,7 @@ public:
 
     virtual std::unique_ptr<RegularPathExpr> clone() const = 0;
 
+
     virtual PathType type() const = 0;
 
     virtual std::string to_string() const = 0;
@@ -96,6 +98,13 @@ public:
         return automaton;
     }
 
+    SMTAutomaton get_smt_automaton(ObjectId(*str_to_oid)(const std::string&)) const {
+        SMTAutomaton automaton = get_smt_base_automaton();
+        automaton.transform_automaton(str_to_oid);
+        return automaton;
+
+    }
+
     friend std::ostream& operator<<(std::ostream& os, const RegularPathExpr& b) {
         return b.print_to_ostream(os);
     }
@@ -111,4 +120,5 @@ public:
     virtual std::set<VarId> get_var() const = 0;
     virtual RPQ_NFA get_rpq_base_automaton() const = 0;
     virtual RDPQAutomaton get_rdpq_base_automaton() const = 0;
+    virtual  SMTAutomaton get_smt_base_automaton() const  = 0;
 };

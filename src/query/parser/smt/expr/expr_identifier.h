@@ -22,7 +22,11 @@ namespace SMT {
         }
 
         bool has_aggregation() const override { return false; }
-
+        
+        std::string to_smt_lib()const{
+            std::string v =  get_query_ctx().get_var_name(var);
+            return v.erase(0,2);
+        }
         std::set<VarId> get_all_vars() const override {
             return { var };
         }
