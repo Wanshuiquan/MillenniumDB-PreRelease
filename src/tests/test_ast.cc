@@ -14,11 +14,12 @@
 
 std::vector<std::string> query = {
         //An example of query on edge
-        "Match (?x) -[?p:friend{age : 0}]-> (?y)  Return ?x",
+//        "Match (?x) -[?p:friend{age : 0}]-> (?y)  Return ?x",
         // An example of query objects
-        "Match (?x :human {age: 0})  Return ?x",
+//        "Match (?x :human {age: 0})  Return ?x",
         // Para Regex
         "Match (?x) =[DATA_TEST(:T2 {age > ?p AND age < ?p + 114154})/(:N1 {name == ?c})]=> (?y)  Return ?x",
+        "Match (?x) =[DATA_TEST(:N1 {age == ?p})/ (:T1 {true})/ (:T2 {?q == name})/ (:N2 {?p < age + 20})]=> (?y) Return ?x",
     "Match (?x) =[DATA_TEST(:N1 {name == \"Wang\" })|(:N1 {?p > 0})]=>(?y) Return ?y",
     "Match (?x) =[DATA_TEST(:N1 {name == \"Wang\" })|(:N1 {?p > 0})+]=>(?y) Return ?p",
     "Match (?x) =[DATA_TEST(:N1 {name == \"Wang\" })|(:N1 {?p > 0})*]=>(?y) Return ?y",
@@ -64,7 +65,7 @@ int try_parser()
     {
         auto plan = MQL::QueryParser::get_query_plan(q, &error_listener);
     
-        std::cout<<*plan<< std::endl;
+//        std::cout<<*plan<< std::endl;
     }
 
     return 0;

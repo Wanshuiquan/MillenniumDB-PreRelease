@@ -26,7 +26,7 @@ void SmtPrinter::visit(ExprVarProperty& expr) {
 
 
 void SmtPrinter::visit(ExprConstant& expr) {
-    os  << expr.value;
+    os  << expr.value.get_value();
 }
 
 

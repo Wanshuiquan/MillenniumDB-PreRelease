@@ -22,7 +22,17 @@ public:
         visitor.visit(*this);
     }
 
-    std::string to_smt_lib()const {return std::to_string(value.get_value());};
+    std::string to_smt_lib()const {
+        if (value.is_true()){
+            return "true";
+        }
+        else if (value.is_false()){
+            return "false";
+        }
+        else {
+            return std::to_string(value.get_value());
+        }
+    }
     bool has_aggregation() const override { return false; }
 
     std::set<VarId> get_all_vars() const override {

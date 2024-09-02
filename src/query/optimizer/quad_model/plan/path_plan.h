@@ -68,6 +68,9 @@ private:
     RPQ_DFA automaton;
     RPQ_DFA automaton_inverted;
 
+    SMTAutomaton smt_automaton;
+    SMTAutomaton smt_inverted;
+
     bool from_is_better_start_direction() const;
 
     // Construct index provider for this automaton

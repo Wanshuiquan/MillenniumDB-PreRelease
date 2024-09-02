@@ -27,10 +27,10 @@ public:
                 vec.push_back(f->to_smt_lib());
             }
             auto formulas = boost::algorithm::join(vec, "");
-            return "( and" + formulas + ")";
+            return "(assert ( and" + formulas + "))";
         }
         else{
-            return '(' + and_list[0] ->to_smt_lib() +')';
+            return "( assert(" + and_list[0] ->to_smt_lib() + "))";
         }
 
 }
