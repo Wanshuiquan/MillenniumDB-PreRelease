@@ -3,7 +3,7 @@
 #include <functional>
 #include <ostream>
 #include <vector>
-#include <hash_map>
+#include <map>
 
 #include "graph_models/object_id.h"
 #include "query/executor/binding_iter/paths/index_provider/path_index.h"
@@ -41,10 +41,10 @@ struct PathState {
 struct MacroState {
     const PathState* path_state;
     uint32_t automaton_state;
-    std::unordered_map<z3::expr, double> bounds;
+    std::map<z3::expr, double> bounds;
     MacroState(const PathState* path_state,
                 uint32_t         automaton_state,
-                std::unordered_map<z3::expr, double> bound
+                std::map<z3::expr, double> bound
                 ) :
         path_state      (path_state),
         automaton_state (automaton_state) ,

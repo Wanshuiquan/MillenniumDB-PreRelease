@@ -1,5 +1,5 @@
 #include "search_state.h"
-using namespace Path::DataTest;
+using namespace Paths::DataTest;
 
 
 void PathState::print(std::ostream& os,
