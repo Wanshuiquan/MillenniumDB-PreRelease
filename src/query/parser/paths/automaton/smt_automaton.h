@@ -236,6 +236,9 @@ public:
         start = x;
     }
 
+    uint32_t get_start(){
+        return start;
+    }
     void set_final(std::set<uint32_t> x){
         end_states  = std::move(x);
     }

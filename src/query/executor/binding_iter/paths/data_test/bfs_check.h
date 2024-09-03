@@ -69,7 +69,7 @@ namespace Paths {
             // Explore neighbors searching for a solution.
             // returns a pointer to the object added to visited when a solution is found
             // or nullptr when there are no more results
-            const PathState* expand_neighbors(const SearchState& current_state);
+            const PathState* expand_neighbors(const MacroState& current_state);
 
             void accept_visitor(BindingIterVisitor& visitor) override;
 
