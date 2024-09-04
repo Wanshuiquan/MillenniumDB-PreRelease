@@ -22,7 +22,11 @@ void BFSCheck<CYCLIC>::_begin(Binding& _parent_binding) {
     // Add starting states to open and visited
     ObjectId start_object_id = start.is_var() ? (*parent_binding)[start.get_var()] : start.get_OID();
     auto start_node_visited = visited.add(start_object_id, ObjectId(), false, nullptr);
-    open.emplace(start_node_visited, automaton.get_start());
+    auto start_macro_state =  std::make_shared<MacroState>(start_node_visited, automaton.get_start());
+    auto vec =  std::vector<std::shared_ptr<MacroState>>();
+    vec.emplace_back(start_macro_state);
+    open.emplace(vec);
+
 
     // Store ID for end object
     end_object_id = end.is_var() ? (*parent_binding)[end.get_var()] : end.get_OID();
@@ -37,42 +41,50 @@ bool BFSCheck<CYCLIC>::_next() {
         auto& current_state = open.front();
 
         // Return false if node does not exist in the database
-        if (!provider->node_exists(current_state.path_state->node_id.id)) {
-            open.pop();
-            return false;
-        }
-
-        // Starting state is solution
-        if (current_state.path_state->node_id == end_object_id) {
-            if (automaton.is_final_state[automaton.start_state]) {
-                auto path_id = path_manager.set_path(current_state.path_state, path_var);
-                parent_binding->add(path_var, path_id);
-                if (!CYCLIC) {  // Acyclic can only have this trivial solution when start node = end node
-                    queue<SearchState> empty;
-                    open.swap(empty);
-                }
-                return true;
-            } else if (!CYCLIC) {  // Acyclic can't have any more solutions when start node = end node
-                queue<SearchState> empty;
-                open.swap(empty);
+        for (auto& location: current_state)
+        {
+            if (!provider->node_exists(location.path_state->node_id.id)) {
+                open.pop();
                 return false;
             }
+
+            // Starting state is solution
+            if (location.path_state->node_id == end_object_id) {
+
+                if (automaton.end_states.count(automaton.get_start())) {
+                    auto path_id = path_manager.set_path(location.path_state, path_var);
+                    parent_binding->add(path_var, path_id);
+                    if (!CYCLIC) {  // Acyclic can only have this trivial solution when start node = end node
+                        queue<SearchState> empty;
+                        open.swap(empty);
+                    }
+                    return true;
+                } else if (!CYCLIC) {  // Acyclic can't have any more solutions when start node = end node
+                    queue<SearchState> empty;
+                    open.swap(empty);
+                    return false;
+                }
+            }
         }
+
     }
 
-    while (open.size() > 0) {
+    while (open.size() > 0)
+    {
         auto& current_state = open.front();
-        auto reached_final_state = expand_neighbors(current_state);
+        for (auto& location: current_state) {
+            auto reached_final_state = expand_neighbors(location);
 
-        // Enumerate reached solutions
-        if (reached_final_state != nullptr) {
-            auto path_id = path_manager.set_path(reached_final_state, path_var);
-            parent_binding->add(path_var, path_id);
-            return true;
-        } else {
-            // Pop and visit next state
-            assert(iter->at_end());
-            open.pop();
+            // Enumerate reached solutions
+            if (reached_final_state != nullptr) {
+                auto path_id = path_manager.set_path(reached_final_state, path_var);
+                parent_binding->add(path_var, path_id);
+                return true;
+            } else {
+                // Pop and visit next state
+                assert(iter->at_end());
+                open.pop();
+            }
         }
     }
     return false;
@@ -157,7 +169,10 @@ void BFSCheck<CYCLIC>::_reset() {
     // Add starting states to open and visited
     ObjectId start_object_id = start.is_var() ? (*parent_binding)[start.get_var()] : start.get_OID();
     auto start_node_visited = visited.add(start_object_id, ObjectId(), false, nullptr);
-    open.emplace(start_node_visited, automaton.get_start());
+    auto start_macro_state =  std::make_shared<MacroState>(start_node_visited, automaton.get_start());
+    auto vec =  std::vector<std::shared_ptr<MacroState>>();
+    vec.emplace_back(start_macro_state);
+    open.emplace(vec);
 
     // Store ID for end object
     end_object_id = end.is_var() ? (*parent_binding)[end.get_var()] : end.get_OID();

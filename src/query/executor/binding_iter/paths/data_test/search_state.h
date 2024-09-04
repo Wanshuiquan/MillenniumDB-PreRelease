@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <ostream>
+#include <utility>
 #include <vector>
 #include <map>
 
@@ -44,11 +45,11 @@ struct MacroState {
     std::map<z3::expr, double> bounds;
     MacroState(const PathState* path_state,
                 uint32_t         automaton_state,
-                std::map<z3::expr, double> bound
+                std::map<z3::expr, double> bound = std::map<z3::expr, double>()
                 ) :
         path_state      (path_state),
         automaton_state (automaton_state) ,
-        bounds (bound)
+        bounds (std::move(bound))
         { }
 
 };
