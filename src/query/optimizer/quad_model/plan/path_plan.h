@@ -90,6 +90,5 @@ private:
 
     std::unique_ptr<BindingIter> get_check(const SMTAutomaton& automaton, Id start, Id end) const;
     std::unique_ptr<BindingIter> get_enum(const SMTAutomaton& automaton, Id start, VarId end) const;
-    std::unique_ptr<BindingIter> get_unfixed(const SMTAutomaton& automaton, VarId start, VarId end) const;
 };
 } // namespace MQL

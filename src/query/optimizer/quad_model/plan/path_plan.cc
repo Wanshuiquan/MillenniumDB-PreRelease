@@ -377,20 +377,7 @@ std::unique_ptr<BindingIter> PathPlan::get_unfixed(const RPQ_DFA& automaton, Var
     );
 }
 
-std::unique_ptr<BindingIter> PathPlan::get_unfixed(const SMTAutomaton& automaton, VarId start, VarId end) const {
-    auto iter = start == end
-                ? get_check(automaton, start, end)
-                : get_enum(automaton, start, end);
 
-    return std::make_unique<Paths::UnfixedComposite>(
-            path_var,
-            start,
-            end,
-            automaton,
-            get_provider(automaton),
-            std::move(iter)
-    );
-}
 
 
 bool PathPlan::from_is_better_start_direction() const {

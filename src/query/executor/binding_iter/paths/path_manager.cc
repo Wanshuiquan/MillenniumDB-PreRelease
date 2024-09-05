@@ -241,6 +241,11 @@ uint_fast32_t PathManager::get_thread_index() const {
     return get_query_ctx().thread_info.worker_index;
 }
 
+ObjectId PathManager::set_path(const Paths::DataTest::PathState *visited_pointer, VarId path_var) {
+    auto index = get_thread_index();
+    paths[index][path_var.id] = visited_pointer;
+    return ObjectId(ObjectId::MASK_PATH | DATATEST_MASK | path_var.id);}
+
 
 // void PathManager::clear() {
 //     auto index = get_thread_index();

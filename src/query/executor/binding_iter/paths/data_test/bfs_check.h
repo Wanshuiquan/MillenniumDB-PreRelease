@@ -35,7 +35,7 @@ namespace Paths {
             Arena<PathState> visited;
 
             // Queue for BFS
-            std::queue<SearchState> open;
+            std::queue<std::unique_ptr<SearchState>> open;
 
             // Iterator for current node expansion
             std::unique_ptr<EdgeIter> iter;
