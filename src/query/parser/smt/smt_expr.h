@@ -21,6 +21,8 @@ public:
 
     virtual std::set<VarId> get_all_vars() const = 0;
     virtual std::string to_smt_lib()  const =  0; 
+    virtual std::set<VarId> get_all_attrs() const = 0; 
+    virtual std::set<VarId> get_all_parameter() const = 0;
 
     virtual bool has_aggregation() const = 0;
 };

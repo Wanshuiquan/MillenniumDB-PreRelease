@@ -46,6 +46,14 @@ public:
     {
         return std::set<VarId>();
     }
+
+    std::set<VarId> collect_attr() const override{
+        return {}; 
+    }
+
+    std::set<VarId> collect_para() const override{
+        return {}; 
+    }
     std::ostream& print_to_ostream(std::ostream& os, int indent = 0) const override {
         os << std::string(indent, ' ');
         os << "OpAtom(" << (inverse ? "^:" : ":") << atom << ")\n";

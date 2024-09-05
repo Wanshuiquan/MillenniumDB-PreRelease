@@ -18,7 +18,13 @@ public:
     std::unique_ptr<RegularPathExpr> clone() const override {
         return std::make_unique<PathKleenePlus>(*this);
     }
+    std::set<VarId> collect_attr() const override{
+        return path -> collect_attr(); 
+    }
 
+    std::set<VarId> collect_para() const override{
+        return path -> collect_para(); 
+    }
     PathType type() const override {
         return PathType::PATH_KLEENE_PLUS;
     }

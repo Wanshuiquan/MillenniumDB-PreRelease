@@ -30,6 +30,13 @@ namespace SMT {
         std::set<VarId> get_all_vars() const override {
             return { var };
         }
+        
+        std::set<VarId> get_all_attrs() const override {
+        return {var}; 
+    }
+         std::set<VarId> get_all_parameter() const override {
+            return {}; 
+         }
     };
 }
 #endif //EXPR_IDENTIFIER_H

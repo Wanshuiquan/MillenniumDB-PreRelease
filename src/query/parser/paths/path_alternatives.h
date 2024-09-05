@@ -31,6 +31,30 @@ public:
         return set;
 
     }
+
+    std::set<VarId> collect_para() const
+    {
+        auto set = std::set<VarId>();
+        for (const auto& seq : alternatives)
+        {
+            auto id = seq->collect_para();
+            for (const auto& var : id) set.insert(var);
+        }
+        return set;
+
+    }
+
+        std::set<VarId> collect_attr() const
+    {
+        auto set = std::set<VarId>();
+        for (const auto& seq : alternatives)
+        {
+            auto id = seq->collect_attr();
+            for (const auto& var : id) set.insert(var);
+        }
+        return set;
+
+    }
     std::unique_ptr<RegularPathExpr> clone() const override {
         std::vector<std::unique_ptr<RegularPathExpr>> alternatives_clone;
         for (const auto& seq : alternatives) {

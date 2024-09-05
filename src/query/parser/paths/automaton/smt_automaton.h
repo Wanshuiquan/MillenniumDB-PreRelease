@@ -170,6 +170,12 @@ private:
     // Number of states
     uint32_t total_states = 1;
 
+    // the set of attributes 
+    std::set<VarId> attributes; 
+
+    // the set of parameters 
+    std::set<VarId> parameter; 
+
     // ----- Methods to handle automaton transformations -----
 
     // Collapse end states to generate a unique final state
@@ -245,6 +251,14 @@ public:
 
     u_int32_t get_total_state(){
         return total_states;
+    }
+
+    void set_attr(std::set<VarId> attr){
+        attributes = std::move(attr); 
+    }
+
+    void set_para(std::set<VarId> para){
+        parameter = std::move(para); 
     }
 };
 

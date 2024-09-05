@@ -33,7 +33,13 @@ public:
         std::string check = "";
         return "{" + check + "}";
     }
+    std::set<VarId> collect_attr() const override{
+        throw std::runtime_error("");
+    }
 
+    std::set<VarId> collect_para() const override{
+        throw std::runtime_error("");
+    }
     std::ostream& print_to_ostream(std::ostream& os, int indent = 0) const override {
         os << std::string(indent, ' ');
         std::string check = "";

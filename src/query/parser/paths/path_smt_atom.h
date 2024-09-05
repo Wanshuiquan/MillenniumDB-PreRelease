@@ -121,6 +121,13 @@ public:
          }
          return "" +atom + "," +  property_string;
     }
+    std::set<VarId> collect_attr() const override {
+        return property_checks ->get_all_attrs();
+    }
+    
+    std::set<VarId> collect_para() const override {
+        return property_checks ->get_all_parameter();
+    }
      std::ostream& print_to_ostream(std::ostream& os, int indent = 0) const override {
        os << std::string(indent, ' ');
        os << "OpSMTAtom(" <<this -> to_string()<<")\n";

@@ -101,6 +101,8 @@ public:
     SMTAutomaton get_smt_automaton(ObjectId(*str_to_oid)(const std::string&)) const {
         SMTAutomaton automaton = get_smt_base_automaton();
         automaton.transform_automaton(str_to_oid);
+        automaton.set_attr(this -> collect_attr());
+        automaton.set_para(this -> collect_para());
         return automaton;
 
     }
@@ -121,4 +123,7 @@ public:
     virtual RPQ_NFA get_rpq_base_automaton() const = 0;
     virtual RDPQAutomaton get_rdpq_base_automaton() const = 0;
     virtual  SMTAutomaton get_smt_base_automaton() const  = 0;
+    virtual std::set<VarId> collect_para() const = 0; 
+        virtual std::set<VarId> collect_attr() const = 0; 
+
 };

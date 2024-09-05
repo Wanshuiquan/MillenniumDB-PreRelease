@@ -64,5 +64,26 @@ public:
         }
         return res;
     }
+
+    std::set<VarId> get_all_attrs() const override {
+        std::set<VarId> res;
+        for (auto& expr: and_list) {
+            for (auto& var : expr->get_all_attrs()) {
+                res.insert(var);
+            }
+        }
+        return res;
+    }
+
+    
+    std::set<VarId> get_all_parameter() const override {
+        std::set<VarId> res;
+        for (auto& expr: and_list) {
+            for (auto& var : expr->get_all_attrs()) {
+                res.insert(var);
+            }
+        }
+        return res;
+    }
 };
 } // namespace MQL

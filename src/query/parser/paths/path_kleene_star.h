@@ -22,6 +22,14 @@ public:
     {
         return path->get_var();
     }
+
+    std::set<VarId> collect_attr() const override{
+        return path -> collect_attr(); 
+    }
+
+    std::set<VarId> collect_para() const override{
+        return path -> collect_para(); 
+    }
     PathType type() const override {
         return PathType::PATH_KLEENE_STAR;
     }

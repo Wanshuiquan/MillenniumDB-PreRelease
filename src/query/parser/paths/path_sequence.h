@@ -38,6 +38,26 @@ public:
         }
         return set;
     }
+
+    std::set<VarId> collect_attr() const override{
+        auto set = std::set<VarId>();
+        for (const auto& seq : sequence)
+        {
+            auto id = seq->collect_attr();
+            for (const auto& var : id) set.insert(var);
+        }
+        return set;
+    }
+
+    std::set<VarId> collect_para() const override{
+        auto set = std::set<VarId>();
+        for (const auto& seq : sequence)
+        {
+            auto id = seq->collect_para();
+            for (const auto& var : id) set.insert(var);
+        }
+        return set;
+    }
     PathSequence(const PathSequence& other) :
         is_nullable(other.nullable())
     {

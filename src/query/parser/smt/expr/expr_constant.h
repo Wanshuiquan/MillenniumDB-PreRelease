@@ -38,5 +38,11 @@ public:
     std::set<VarId> get_all_vars() const override {
         return { };
     }
+    std::set<VarId> get_all_attrs() const override {
+       return {}; 
+    }
+    std::set<VarId> get_all_parameter() const override {
+        return {}; 
+    }
 };
 } // namespace MQL

@@ -22,9 +22,16 @@ public:
         return expr->has_aggregation();
     }
     std::string to_smt_lib()const{throw std::runtime_error("Not Support");}
-
+    std::set<VarId> get_all_attrs() const override {
+        return expr->get_all_attrs();
+    }
     std::set<VarId> get_all_vars() const override {
         return expr->get_all_vars();
     }
+ std::set<VarId> get_all_parameter() const override {
+                return expr->get_all_parameter();
+
+    }
+    
 };
 } // namespace MQL
