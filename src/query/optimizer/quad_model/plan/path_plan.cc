@@ -26,6 +26,8 @@
 #include "query/executor/binding_iter/paths/any_trails/dfs_check.h"
 #include "query/executor/binding_iter/paths/any_trails/dfs_enum.h"
 #include "query/executor/binding_iter/paths/any_walks/bfs_check.h"
+#include "query/executor/binding_iter/paths/data_test/bfs_check.h"
+
 #include "query/executor/binding_iter/paths/any_walks/bfs_enum.h"
 #include "query/executor/binding_iter/paths/any_walks/dfs_check.h"
 #include "query/executor/binding_iter/paths/any_walks/dfs_enum.h"
@@ -55,11 +57,16 @@ PathPlan::PathPlan(
     path          (path),
     from_assigned (from.is_OID()),
     to_assigned   (to.is_OID()),
-    path_semantic (path_semantic)
-{
-    automaton = path.get_rpq_automaton(&QuadObjectId::get_named_node);
-    auto inverted_path = path.clone()->invert();
-    automaton_inverted = inverted_path->get_rpq_automaton(&QuadObjectId::get_named_node);
+    path_semantic (path_semantic) {
+    if (path_semantic == PathSemantic::DATA_TEST) {
+        smt_automaton = path.get_smt_automaton(&QuadObjectId::get_named_node);
+        auto inverted_path = path.clone()->invert();
+        smt_inverted = inverted_path->get_smt_automaton(&QuadObjectId::get_named_node);
+    } else {
+        automaton = path.get_rpq_automaton(&QuadObjectId::get_named_node);
+        auto inverted_path = path.clone()->invert();
+        automaton_inverted = inverted_path->get_rpq_automaton(&QuadObjectId::get_named_node);
+    }
 }
 
 
@@ -142,6 +149,40 @@ unique_ptr<Paths::IndexProvider> PathPlan::get_provider(const RPQ_DFA& automaton
                                                       &get_query_ctx().thread_info.interruption_requested);
 }
 
+unique_ptr<Paths::IndexProvider> PathPlan::get_provider(const SMTAutomaton& automaton) const {
+    auto t_info = unordered_map<uint64_t, Paths::IndexType>();
+    auto t_inv_info = unordered_map<uint64_t, Paths::IndexType>();
+    for (size_t state = 0; state < automaton.from_to_connections.size(); state++) {
+        for (auto& transition : automaton.from_to_connections[state]) {
+            if (transition.inverse) {
+                // Avoid transitions that are already stored
+                if (t_inv_info.find(transition.type_id.id) != t_inv_info.end()) {
+                    continue;
+                }
+                t_inv_info.insert({transition.type_id.id, Paths::IndexType::BTREE});
+
+            } else {
+                // Avoid transitions that are already stored
+                if (t_info.find(transition.type_id.id) != t_info.end()) {
+                    continue;
+                }
+                t_info.insert({transition.type_id.id, Paths::IndexType::BTREE});
+            }
+        }
+    }
+    return make_unique<Paths::QuadModelIndexProvider>(std::move(t_info),
+                                                      std::move(t_inv_info),
+                                                      &get_query_ctx().thread_info.interruption_requested);
+}
+
+std::unique_ptr<BindingIter> PathPlan::get_check(const SMTAutomaton& automaton, Id start, Id end) const {
+    auto provider = get_provider(automaton);
+    return make_unique<Paths::DataTest::BFSCheck<false>>(path_var, start, end, automaton, std::move(provider));
+}
+
+std::unique_ptr<BindingIter> PathPlan::get_enum(const SMTAutomaton& automaton, Id start, VarId end) const {
+    throw std::runtime_error("");
+}
 
 std::unique_ptr<BindingIter> PathPlan::get_check(const RPQ_DFA& automaton, Id start, Id end) const {
     auto provider = get_provider(automaton);
@@ -333,6 +374,21 @@ std::unique_ptr<BindingIter> PathPlan::get_unfixed(const RPQ_DFA& automaton, Var
         automaton,
         get_provider(automaton),
         std::move(iter)
+    );
+}
+
+std::unique_ptr<BindingIter> PathPlan::get_unfixed(const SMTAutomaton& automaton, VarId start, VarId end) const {
+    auto iter = start == end
+                ? get_check(automaton, start, end)
+                : get_enum(automaton, start, end);
+
+    return std::make_unique<Paths::UnfixedComposite>(
+            path_var,
+            start,
+            end,
+            automaton,
+            get_provider(automaton),
+            std::move(iter)
     );
 }
 
