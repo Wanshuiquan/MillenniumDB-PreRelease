@@ -55,12 +55,12 @@ bool BFSCheck<CYCLIC>::_next() {
                     auto path_id = path_manager.set_path(location -> path_state, path_var);
                     parent_binding->add(path_var, path_id);
                     if (!CYCLIC) {  // Acyclic can only have this trivial solution when start node = end node
-                        queue<SearchState> empty;
+                        queue<std::unique_ptr<SearchState>> empty;
                         open.swap(empty);
                     }
                     return true;
                 } else if (!CYCLIC) {  // Acyclic can't have any more solutions when start node = end node
-                    queue<SearchState> empty;
+                    queue<std::unique_ptr<SearchState>> empty;
                     open.swap(empty);
                     return false;
                 }
@@ -72,8 +72,8 @@ bool BFSCheck<CYCLIC>::_next() {
     while (open.size() > 0)
     {
         auto& current_state = open.front();
-        for (auto& location: current_state) {
-            auto reached_final_state = expand_neighbors(location);
+        for (auto& location: current_state->state_vector) {
+            auto reached_final_state = expand_neighbors(*location);
 
             // Enumerate reached solutions
             if (reached_final_state != nullptr) {
