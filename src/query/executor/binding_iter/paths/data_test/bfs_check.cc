@@ -160,7 +160,7 @@ const PathState* BFSCheck<CYCLIC>::expand_neighbors(const MacroState& current_st
 template <bool CYCLIC>
 void BFSCheck<CYCLIC>::_reset() {
     // Empty open and visited
-    queue<SearchState> empty;
+    queue<unique_ptr<SearchState>> empty;
     open.swap(empty);
     visited.clear();
     first_next = true;
