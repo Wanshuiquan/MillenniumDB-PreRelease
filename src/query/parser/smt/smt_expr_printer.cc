@@ -15,8 +15,7 @@ void SmtPrinter::visit(ExprVar& expr) {
 
 void SmtPrinter::visit(SMT::ExprAttr& expr)
 {
-    std::string var = get_query_ctx().get_var_name(expr.var);
-    os << var.erase(0,2);
+    os << expr.name;
 }
 
 

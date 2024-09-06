@@ -8,6 +8,7 @@
 #include <ostream>
 
 #include "query/var_id.h"
+#include "graph_models/object_id.h"
 #include "query/parser/smt/smt_expr_visitor.h"
 
 namespace SMT {
@@ -21,7 +22,7 @@ public:
 
     virtual std::set<VarId> get_all_vars() const = 0;
     virtual std::string to_smt_lib()  const =  0; 
-    virtual std::set<VarId> get_all_attrs() const = 0; 
+    virtual std::set<std::tuple<std::string, ObjectId>> get_all_attrs() const = 0;
     virtual std::set<VarId> get_all_parameter() const = 0;
 
     virtual bool has_aggregation() const = 0;

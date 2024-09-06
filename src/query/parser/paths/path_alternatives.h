@@ -44,9 +44,9 @@ public:
 
     }
 
-        std::set<VarId> collect_attr() const
+    std::set<std::tuple<std::string, ObjectId>> collect_attr() const
     {
-        auto set = std::set<VarId>();
+        auto set = std::set<std::tuple<std::string, ObjectId>>();
         for (const auto& seq : alternatives)
         {
             auto id = seq->collect_attr();

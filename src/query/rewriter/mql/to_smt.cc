@@ -13,7 +13,9 @@ void ToSMT::visit(ExprVar& expr){
   auto name = get_query_ctx().get_var_name(expr.var);
   if (name.find("id")!=std::string::npos)
   {
-    current_smt_expr = std::make_unique<SMT::ExprAttr>(expr.var);
+      auto attr_name =  name.erase(0,2);
+      auto quad_obj = ObjectId(QuadObjectId::get_string(attr_name));
+      current_smt_expr = std::make_unique<SMT::ExprAttr>(quad_obj, name);
   }
   else
   {

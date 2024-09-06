@@ -10,6 +10,7 @@
 #include "query/parser/expr/expr.h"
 #include "query/parser/op/op_visitor.h"
 #include "query/var_id.h"
+#include "graph_models/quad_model/quad_object_id.h"
 namespace MQL{
     class ToSMT : public ExprVisitor {
     public:

@@ -22,7 +22,8 @@ public:
         return expr->has_aggregation();
     }
     std::string to_smt_lib()const{throw std::runtime_error("Not Support");}
-    std::set<VarId> get_all_attrs() const override {
+
+    std::set<std::tuple<std::string, ObjectId>> get_all_attrs() const override {
         return expr->get_all_attrs();
     }
     std::set<VarId> get_all_vars() const override {

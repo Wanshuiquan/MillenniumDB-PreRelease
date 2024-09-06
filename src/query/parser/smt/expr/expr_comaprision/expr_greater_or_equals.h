@@ -41,13 +41,12 @@ public:
         return res;
     }
 
-           std::set<VarId> get_all_attrs() const override {
-        std::set<VarId> res = lhs->get_all_attrs();
+    std::set<std::tuple<std::string, ObjectId>> get_all_attrs() const override {
+        std::set<std::tuple<std::string, ObjectId>> res = lhs->get_all_attrs();
         auto rhs_vars = rhs->get_all_attrs();
         res.insert(rhs_vars.begin(), rhs_vars.end());
         return res;
     }
-
         std::set<VarId> get_all_parameter() const override {
         std::set<VarId> res = lhs->get_all_parameter();
         auto rhs_vars = rhs->get_all_parameter();

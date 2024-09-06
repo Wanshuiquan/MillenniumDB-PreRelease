@@ -121,7 +121,7 @@ public:
          }
          return "" +atom + "," +  property_string;
     }
-    std::set<VarId> collect_attr() const override {
+    std::set<std::tuple<std::string, ObjectId>> collect_attr() const override {
         return property_checks ->get_all_attrs();
     }
     

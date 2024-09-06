@@ -39,8 +39,8 @@ public:
         return set;
     }
 
-    std::set<VarId> collect_attr() const override{
-        auto set = std::set<VarId>();
+    std::set<std::tuple<std::string, ObjectId>> collect_attr() const override{
+        auto set = std::set<std::tuple<std::string, ObjectId>>();
         for (const auto& seq : sequence)
         {
             auto id = seq->collect_attr();

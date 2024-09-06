@@ -124,6 +124,6 @@ public:
     virtual RDPQAutomaton get_rdpq_base_automaton() const = 0;
     virtual  SMTAutomaton get_smt_base_automaton() const  = 0;
     virtual std::set<VarId> collect_para() const = 0; 
-        virtual std::set<VarId> collect_attr() const = 0; 
+    virtual std::set<std::tuple<std::string, ObjectId>> collect_attr() const = 0;
 
 };

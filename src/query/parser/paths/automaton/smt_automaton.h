@@ -171,7 +171,7 @@ private:
     uint32_t total_states = 1;
 
     // the set of attributes 
-    std::set<VarId> attributes; 
+    std::set<std::tuple<std::string, ObjectId>> attributes;
 
     // the set of parameters 
     std::set<VarId> parameter; 
@@ -253,7 +253,7 @@ public:
         return total_states;
     }
 
-    void set_attr(std::set<VarId> attr){
+    void set_attr(std::set<std::tuple<std::string, ObjectId>> attr){
         attributes = std::move(attr); 
     }
 
