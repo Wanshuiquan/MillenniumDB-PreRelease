@@ -132,6 +132,14 @@ public:
         z3::expr novi_expr = z3::to_expr(context, Z3_substitute(context, formula, 1, var, value ));
         return novi_expr;
     }
+
+    z3::expr normalizition(z3::expr formula){
+        z3::params params(context);
+        params.set("arith_lhs", true);
+        auto t = z3::with(z3::tactic(context,"simplify"), params);
+        auto novi_expr = formula.simplify();
+        return novi_expr;
+    }
 };
 
 #endif //MILLENNIUMDB_SMT_OPERATIONS_H
