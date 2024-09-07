@@ -19,7 +19,7 @@ public:
 
     }
     std::string to_smt_lib() const{
-        return "( ="  + lhs -> to_smt_lib() +  rhs -> to_smt_lib() + ')';
+        return "( = "  + lhs -> to_smt_lib() + "  " + rhs -> to_smt_lib() + " ) ";
 
     }
     std::unique_ptr<Expr> clone() const override {

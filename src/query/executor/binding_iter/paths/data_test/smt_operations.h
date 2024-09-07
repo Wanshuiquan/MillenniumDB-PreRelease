@@ -20,7 +20,7 @@
 
 // Decode Object ID
 using Result = std::variant<double, std::string, bool>;
-Result decode_mask(ObjectId oid) {
+Result inline decode_mask(ObjectId oid) {
     const auto mask        = oid.id & ObjectId::TYPE_MASK;
     const auto unmasked_id = oid.id & ObjectId::VALUE_MASK;
     std::stringstream escaped_os;
@@ -133,12 +133,16 @@ public:
         return novi_expr;
     }
 
-    z3::expr normalizition(z3::expr formula){
+    z3::expr normalizition(z3::expr formula) {
         z3::params params(context);
         params.set("arith_lhs", true);
-        auto t = z3::with(z3::tactic(context,"simplify"), params);
-        auto novi_expr = formula.simplify();
-        return novi_expr;
+        auto t = z3::tactic(context, "normalize-bounds");
+//        auto t = z3::with(z3::tactic(context, "simplify")&z3::tactic(context, "normalize-bounds"), params);
+        z3::goal g(context);
+        g.add(formula);
+        auto res = t(g);
+        z3::goal subgoal = res[0];
+        return subgoal.as_expr().simplify();
     }
 };
 

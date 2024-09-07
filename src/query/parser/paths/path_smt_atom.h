@@ -108,12 +108,8 @@ public:
         return property_checks->get_all_vars();
     }
      std::string to_string() const override {
-             std::stringstream sstream;
 
-              SMT::SmtPrinter printer(sstream);
-
-              printer.visit(dynamic_cast<SMT::ExprAnd&>(*property_checks));
-             std::string property_string = sstream.str();
+             std::string property_string = property_checks ->to_smt_lib();
 
 
          if (inverse) {

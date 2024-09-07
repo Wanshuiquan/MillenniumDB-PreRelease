@@ -86,5 +86,5 @@ int try_parser()
 }
 
 int main(){
-try_convert_int();     return 0;
+try_parser();     return 0;
 }

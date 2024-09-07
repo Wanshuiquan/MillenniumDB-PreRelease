@@ -26,7 +26,7 @@ public:
         visitor.visit(*this);
     }
     std::string to_smt_lib() const {
-        return "( <= "  + lhs -> to_smt_lib() +  rhs -> to_smt_lib() + ')';
+        return "( <= "  + lhs -> to_smt_lib() + "  "+ rhs -> to_smt_lib() + ")";
 
     }
     bool has_aggregation() const override {

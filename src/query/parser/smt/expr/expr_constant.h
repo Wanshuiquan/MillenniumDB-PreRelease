@@ -3,7 +3,8 @@
 #include "graph_models/object_id.h"
 #include "query/query_context.h"
 #include "query/parser/smt/smt_expr.h"
-
+#include "query/executor/query_executor/mql/return_executor.h"
+#include "query/executor/binding_iter/paths/data_test/smt_operations.h"
 
 namespace SMT {
 class ExprConstant : public Expr {
@@ -30,7 +31,13 @@ public:
             return "false";
         }
         else {
-            return std::to_string(value.get_value());
+            std::variant<double, std::string, bool> obj = decode_mask(value);
+            if (std::get_if<std::string>(&obj) != nullptr) {
+                return *std::get_if<std::string>(&obj);
+            }
+            else{
+                return std::to_string(*std::get_if<double>(&obj));
+            }
         }
     }
     bool has_aggregation() const override { return false; }
@@ -39,10 +46,10 @@ public:
         return { };
     }
     std::set<std::tuple<std::string, ObjectId>> get_all_attrs() const override {
-       return {}; 
+       return {};
     }
     std::set<VarId> get_all_parameter() const override {
-        return {}; 
+        return {};
     }
 };
 } // namespace MQL
