@@ -79,7 +79,7 @@ namespace Paths {
 
             bool _next() override;
 
-            void update_value();
+            bool update_value(uint64_t) ;
             void assign_nulls() override {
                 parent_binding->add(path_var, ObjectId::get_null());
             }

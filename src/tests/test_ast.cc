@@ -5,8 +5,9 @@
 #include "query/parser/mql_query_parser.h"
 #include "query/parser/grammar/error_listener.h"
 #include "query/query_context.h"
+#include "graph_models/common/conversions.h"
 
-
+#include <cassert>
 #include <iostream>
 #include <string>
 #include<vector>
@@ -56,6 +57,19 @@ std::ostream& print(std::ostream& os, ObjectId oid){
     os<<oid.get_value();
     return os;
 }
+
+void try_convert_int(){
+    for (int i = 1; i < 1000; i++) {
+        auto lhs = Common::Conversions::pack_int(i);
+        auto rhs = Common::Conversions::pack_int(i * 10);
+         assert( lhs < rhs);
+        auto l =  Common::Conversions::pack_float(i + 0.001);
+        auto r =  Common::Conversions::pack_float(i* 2 + 0.002);
+        assert(l < r);
+
+
+    }
+}
 int try_parser()
 {
     QueryContext::_debug_print = print;
@@ -72,6 +86,5 @@ int try_parser()
 }
 
 int main(){
-    try_parser();
-    return 0;
+try_convert_int();     return 0;
 }

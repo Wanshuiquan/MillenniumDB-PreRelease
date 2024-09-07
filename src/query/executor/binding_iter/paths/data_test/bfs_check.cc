@@ -4,13 +4,14 @@
 //#include <cassert>
 //
 //#include "bfs_check.h"
+//#include "graph_models/quad_model/quad_model.h"
+//#include "storage/index/record.h"
 //
 //#include "query/var_id.h"
 //#include "query/executor/binding_iter/paths/path_manager.h"
+//#include "z3++.h"
 //using namespace std;
 //using namespace Paths::DataTest;
-//
-//
 //
 //
 //template <bool CYCLIC>
@@ -33,6 +34,36 @@
 //}
 //
 //
+//template <bool CYCLIC>
+//bool BFSCheck<CYCLIC>::update_value(uint64_t obj){
+//auto attributes = automaton.get_attr();
+//for (auto& attr:attributes){
+//    auto name = get<0>(attr);
+//    auto attr_id = get<1>(attr).id;
+//
+//    // Search B+Tree for *values* given <obj,key>
+//    array<uint64_t, 3> min_prop_ids;
+//    array<uint64_t, 3> max_prop_ids;
+//    min_prop_ids[0] = obj;
+//    max_prop_ids[0] = obj;
+//    min_prop_ids[1] = attr_id;
+//    max_prop_ids[1] = attr_id;
+//    min_prop_ids[2] = 0;
+//    max_prop_ids[2] = UINT64_MAX;
+//    auto prop_iter = quad_model.object_key_value->get_range(
+//            &get_query_ctx().thread_info.interruption_requested,
+//            Record<3>(min_prop_ids),
+//            Record<3>(max_prop_ids));
+//    auto prop_record = prop_iter.next();
+//    if (prop_record != nullptr){
+//        return false;
+//    }
+//    else {
+//        // query the value for each parameter
+//    }
+//}
+//
+//}
 //template <bool CYCLIC>
 //bool BFSCheck<CYCLIC>::_next() {
 //    // Check if first state is final

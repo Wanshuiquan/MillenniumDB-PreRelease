@@ -129,6 +129,7 @@ set(TEST_TARGETS
     variable_set
         test_ast
         test_smt_aut
+        test_smt_operation
 )
 # Build targets
 foreach(target ${BUILD_TARGETS})
