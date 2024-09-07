@@ -6,8 +6,8 @@
 int main(){
     auto context = SMTContext();
     context.add_obj_var("i");
-
-    context.parse("(assert(> i 1))");
-    std::cout<<     context.parse("(assert(> i 1))");
+    auto f = context.parse("(assert(> i 1))")[0];
+    auto f1 = context.subsitute_obj("i", 1, f);
+    std::cout<< f1;
 
 }

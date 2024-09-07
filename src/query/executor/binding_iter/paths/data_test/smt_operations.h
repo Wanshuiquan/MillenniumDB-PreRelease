@@ -103,11 +103,34 @@ public:
         dels.push_back(context.function(name.c_str(),0,0,REAL));
 
     }
-    void add_obj_val(uint64_t val){context.real_val(val);}
+    void add_obj_val(uint64_t val){
+        context.real_val(val);
+    }
 
-    auto parse (const std::string& formula){
+    z3::ast_vector_tpl<z3::expr> parse (const std::string& formula){
         auto f = context.parse_string(formula.c_str(), sort, dels);
         return f;
+    }
+
+    z3::expr subsitute_obj(std::string name, uint64_t val, z3::expr formula){
+        Z3_ast var[] = {context.real_const(name.c_str())};
+        Z3_ast value[] = {context.real_val(val)};
+        z3::expr novi_expr = z3::to_expr(context, Z3_substitute(context, formula, 1, var, value ));
+        return novi_expr;
+    }
+
+    z3::expr subsitute_real(std::string name, uint64_t val, z3::expr formula){
+        Z3_ast var[] = {context.real_const(name.c_str())};
+        Z3_ast value[] = {context.real_val(val)};
+        z3::expr novi_expr = z3::to_expr(context, Z3_substitute(context, formula, 1, var, value ));
+        return novi_expr;
+    }
+
+    z3::expr subsitute_string(std::string name, std::string val, z3::expr formula){
+        Z3_ast var[] = {context.string_const(name.c_str())};
+        Z3_ast value[] = {context.string_val(val)};
+        z3::expr novi_expr = z3::to_expr(context, Z3_substitute(context, formula, 1, var, value ));
+        return novi_expr;
     }
 };
 
