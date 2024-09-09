@@ -125,28 +125,28 @@ public:
         }
     }
 
-    z3::expr subsitute_obj(std::string name, uint64_t val, z3::expr formula){
+    z3::expr subsitute_obj(const std::string& name, uint64_t val, const z3::expr& formula){
         Z3_ast var[] = {context.real_const(name.c_str())};
         Z3_ast value[] = {context.real_val(val)};
         z3::expr novi_expr = z3::to_expr(context, Z3_substitute(context, formula, 1, var, value ));
         return novi_expr;
     }
 
-    z3::expr subsitute_real(std::string name, uint64_t val, z3::expr formula){
+    z3::expr subsitute_real(const std::string& name, uint64_t val, const z3::expr& formula){
         Z3_ast var[] = {context.real_const(name.c_str())};
         Z3_ast value[] = {context.real_val(val)};
         z3::expr novi_expr = z3::to_expr(context, Z3_substitute(context, formula, 1, var, value ));
         return novi_expr;
     }
 
-    z3::expr subsitute_string(std::string name, std::string val, z3::expr formula){
+    z3::expr subsitute_string(const std::string& name, const std::string& val, const z3::expr& formula){
         Z3_ast var[] = {context.string_const(name.c_str())};
         Z3_ast value[] = {context.string_val(val)};
         z3::expr novi_expr = z3::to_expr(context, Z3_substitute(context, formula, 1, var, value ));
         return novi_expr;
     }
 
-    z3::expr normalizition(z3::expr formula) {
+    z3::expr normalizition(const z3::expr& formula) {
         z3::params params(context);
         params.set("arith_lhs", true);
         params.set("arith_ineq_lhs", true);
@@ -158,7 +158,7 @@ public:
         return subgoal.as_expr().simplify();
     }
 
-    std::tuple<Bound, z3::expr, z3::expr> get_bound(z3::expr formula){
+    std::tuple<Bound, z3::expr, z3::expr> get_bound(const z3::expr& formula){
        if (formula.is_app()){
            z3::expr lhs = formula.arg(0);
            z3::expr rhs = formula.arg(1);
