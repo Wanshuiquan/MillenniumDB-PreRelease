@@ -18,6 +18,11 @@
 #include "storage/tmp_manager.h"
 #include "z3++.h"
 
+enum Bound {
+    Ge,
+    Le,
+    EQ,
+};
 // Decode Object ID
 using Result = std::variant<double, std::string, bool>;
 Result inline decode_mask(ObjectId oid) {
@@ -108,8 +113,16 @@ public:
     }
 
     z3::ast_vector_tpl<z3::expr> parse (const std::string& formula){
-        auto f = context.parse_string(formula.c_str(), sort, dels);
-        return f;
+        auto f = context.parse_string(formula.c_str(), sort, dels)[0];
+        if (f.is_and()) {
+            auto res = f.args();
+            return res;
+        }
+        else {
+            auto vec = z3::ast_vector_tpl<z3::expr>(context);
+            vec.push_back(f);
+            return vec;
+        }
     }
 
     z3::expr subsitute_obj(std::string name, uint64_t val, z3::expr formula){
@@ -136,14 +149,41 @@ public:
     z3::expr normalizition(z3::expr formula) {
         z3::params params(context);
         params.set("arith_lhs", true);
-        auto t = z3::tactic(context, "normalize-bounds");
-//        auto t = z3::with(z3::tactic(context, "simplify")&z3::tactic(context, "normalize-bounds"), params);
+        params.set("arith_ineq_lhs", true);
+        z3::tactic t = z3::with(z3::tactic(context, "simplify"),params);
         z3::goal g(context);
         g.add(formula);
         auto res = t(g);
         z3::goal subgoal = res[0];
         return subgoal.as_expr().simplify();
     }
+
+    std::tuple<Bound, z3::expr, z3::expr> get_bound(z3::expr formula){
+       if (formula.is_app()){
+           z3::expr lhs = formula.arg(0);
+           z3::expr rhs = formula.arg(1);
+           switch (formula.decl().decl_kind()) {
+               case Z3_OP_EQ: return {Bound::EQ, lhs, rhs};
+               case Z3_OP_GE: return {Bound::Ge, lhs, rhs};
+               case Z3_OP_LE: return {Bound::Le, lhs, rhs};
+               default: throw std::logic_error("Not support");
+           }
+       }
+       else{
+           throw std::logic_error("Should be app formulas");
+       }
+    }
+
+    void print_bound(std::tuple<Bound, z3::expr, z3::expr> bound, std::ostream& os){
+        auto lhs = std::get<1>(bound);
+        auto rhs = std::get<2>(bound);
+        switch (std::get<0>(bound)) {
+            case Bound::EQ: os<< "EQ" <<" " << lhs <<  " "<< rhs << std::endl; break;
+            case Bound::Le: os << "Le" << " " << lhs << " " << rhs << std::endl; break;
+            case Bound::Ge: os << "Ge" << " " << lhs << " "<< rhs << std::endl; break;
+        }
+    }
+
 };
 
 #endif //MILLENNIUMDB_SMT_OPERATIONS_H

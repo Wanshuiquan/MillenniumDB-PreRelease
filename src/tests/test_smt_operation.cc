@@ -8,8 +8,14 @@ int main(){
     context.add_obj_var("i");
     context.add_obj_var("j");
 
-    auto f = context.parse("(assert(>= i (+ j 0.000)))")[0];
-    auto f1 = context.subsitute_obj("i", 22, f);
-    std::cout<< context.normalizition(f1);
+    auto vec = context.parse("(assert  (and (>= j 1) (>= i (+ j 0.012))))");
+    auto vec1 = context.parse("(assert   (>= i (+ j 0.000)))");
+
+    for (const z3::expr& formula:  vec){
+        auto f1 = context.subsitute_obj("i", 22, formula);
+        auto normal_form =  context.normalizition(f1);
+        auto bound = context.get_bound(normal_form);
+        context.print_bound(bound, std::cout);
+    }
 
 }
