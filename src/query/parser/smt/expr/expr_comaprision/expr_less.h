@@ -23,7 +23,7 @@ public:
     }
 
     std::string to_smt_lib() const {
-        auto add_epsilon = "  (+ 0.0000001  " + lhs -> to_smt_lib() + " ) ";
+        auto add_epsilon = "  (+ epsilon   " + lhs -> to_smt_lib() + " ) ";
         return "( <= "  + add_epsilon +  rhs ->to_smt_lib() + " ) ";
     }
     void accept_visitor(ExprVisitor& visitor) override {

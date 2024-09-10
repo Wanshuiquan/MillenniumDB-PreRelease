@@ -23,7 +23,7 @@ public:
     }
 
     std::string to_smt_lib() const {
-        auto add_epsilon = "  (+ 0.0000001   " + rhs -> to_smt_lib() + " ) ";
+        auto add_epsilon = "  (+ epsilon   " + rhs -> to_smt_lib() + " ) ";
         return "( >=  "  + lhs -> to_smt_lib() +  add_epsilon + ')';
 
     }

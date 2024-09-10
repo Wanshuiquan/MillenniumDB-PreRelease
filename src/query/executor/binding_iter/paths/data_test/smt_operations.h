@@ -24,6 +24,26 @@ enum Bound {
     EQ,
 };
 // Decode Object ID
+double_t inline decoding_mask(ObjectId oid){
+    const auto mask        = oid.id & ObjectId::TYPE_MASK;
+    const auto unmasked_id = oid.id & ObjectId::VALUE_MASK;
+    switch (mask) {
+
+        case ObjectId::MASK_NEGATIVE_INT:
+        case ObjectId::MASK_POSITIVE_INT: {
+            int64_t i = Common::Conversions::unpack_int(oid);
+            return (double_t) i;
+        }
+        case ObjectId::MASK_FLOAT: {
+            double_t f = Common::Conversions::unpack_float(oid);
+            return f;
+        }
+
+
+        default:
+            return (double_t) unmasked_id;
+    }
+}
 using Result = std::variant<double, std::string, bool>;
 Result inline decode_mask(ObjectId oid) {
     const auto mask        = oid.id & ObjectId::TYPE_MASK;
@@ -71,18 +91,23 @@ Result inline decode_mask(ObjectId oid) {
 }
 
 class SMTContext{
-private:
+public:
+
     z3::context context = z3::context();
     // The definition of Sorts
     z3::sort_vector sort = z3::sort_vector(context);
     z3::sort STRING = context.string_sort();
     z3::sort REAL = context.real_sort();
     z3::sort BOOL = context.bool_sort();
+    // the definition of epsilon
+    z3::expr epsilon = context.real_const("epsilon");
+    z3::expr bound_epsilon = epsilon > 0;
     //The definition of func vector
     z3::func_decl_vector dels = z3::func_decl_vector(context);
 
-public:
-    SMTContext(){}
+    SMTContext(){
+        dels.push_back(epsilon.decl());
+    }
     void add_bool_var(const std::string& name){
         dels.push_back(context.function(name.c_str(),0,0,BOOL));
     }
@@ -90,7 +115,6 @@ public:
         context.bool_val(val);
 
     }
-
     void add_real_var(const std::string& name) {
         dels.push_back(context.function(name.c_str(), 0, 0, REAL));
     }
@@ -112,8 +136,12 @@ public:
         context.real_val(val);
     }
 
-    z3::ast_vector_tpl<z3::expr> parse (const std::string& formula){
+    z3::expr parse (const std::string& formula){
         auto f = context.parse_string(formula.c_str(), sort, dels)[0];
+        return f;
+    }
+
+    z3::ast_vector_tpl<z3::expr> decompose(const z3::expr f){
         if (f.is_and()) {
             auto res = f.args();
             return res;
@@ -124,7 +152,6 @@ public:
             return vec;
         }
     }
-
     z3::expr subsitute_obj(const std::string& name, uint64_t val, const z3::expr& formula){
         Z3_ast var[] = {context.real_const(name.c_str())};
         Z3_ast value[] = {context.real_val(val)};
@@ -132,9 +159,9 @@ public:
         return novi_expr;
     }
 
-    z3::expr subsitute_real(const std::string& name, uint64_t val, const z3::expr& formula){
+    z3::expr subsitute_real(const std::string& name, double_t val, const z3::expr& formula){
         Z3_ast var[] = {context.real_const(name.c_str())};
-        Z3_ast value[] = {context.real_val(val)};
+        Z3_ast value[] = {context.real_val(std::to_string(val).c_str())};
         z3::expr novi_expr = z3::to_expr(context, Z3_substitute(context, formula, 1, var, value ));
         return novi_expr;
     }

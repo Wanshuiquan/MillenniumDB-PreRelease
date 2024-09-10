@@ -257,6 +257,12 @@ public:
         attributes = std::move(attr); 
     }
 
+        // the set of attributes 
+    std::set<std::tuple<std::string, ObjectId>> get_attributes() {return attributes;};
+
+    // the set of parameters 
+    std::set<VarId> get_parameters(){return parameter;}; 
+
     void set_para(std::set<VarId> para){
         parameter = std::move(para); 
     }
