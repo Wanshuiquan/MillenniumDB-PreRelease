@@ -739,6 +739,9 @@ void BindingIterPrinter::visit(Paths::UnfixedComposite& binding_iter) {
     binding_iter.child_iter->accept_visitor(*this);
 }
 
+void BindingIterPrinter::visit(Paths::DataTest::BFSCheck& binding_iter){
+   throw std::runtime_error("Not implement yet");
+};
 
 void BindingIterPrinter::visit(Paths::AllShortest::BFSCheck& binding_iter) {
     std::stringstream ss;

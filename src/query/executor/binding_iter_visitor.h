@@ -102,6 +102,9 @@ namespace Paths {
         class DFSCheck;
         class DFSEnum;
     }
+    namespace DataTest{
+        class BFSCheck;
+    }
     namespace Any {
         class BFSCheck;
         template <bool> class BFSEnum;
@@ -178,6 +181,7 @@ public:
     virtual void visit(HashJoin::Generic::InMemory::SemiJoin&) = 0;
     virtual void visit(HashJoin::MaterializeIter&)             = 0;
 
+    virtual void visit(Paths::DataTest::BFSCheck&) = 0;
     virtual void visit(Paths::UnfixedComposite&)                   = 0;
     virtual void visit(Paths::AllShortest::BFSCheck&)              = 0;
     virtual void visit(Paths::AllShortest::BFSEnum<false>&)        = 0;

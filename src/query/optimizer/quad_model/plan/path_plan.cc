@@ -177,7 +177,7 @@ unique_ptr<Paths::IndexProvider> PathPlan::get_provider(const SMTAutomaton& auto
 
 std::unique_ptr<BindingIter> PathPlan::get_check(const SMTAutomaton& automaton, Id start, Id end) const {
     auto provider = get_provider(automaton);
-    return make_unique<Paths::DataTest::BFSCheck<false>>(path_var, start, end, automaton, std::move(provider));
+    return make_unique<Paths::DataTest::BFSCheck>(path_var, start, end, automaton, std::move(provider));
 }
 
 std::unique_ptr<BindingIter> PathPlan::get_enum(const SMTAutomaton& automaton, Id start, VarId end) const {

@@ -8,11 +8,9 @@
 
 #include "graph_models/object_id.h"
 #include "query/executor/binding_iter/paths/index_provider/path_index.h"
-#include "z3++.h"
+#include "query/parser/smt/smt_exprs.h"
 
-
-namespace Paths {
-    namespace DataTest{
+    namespace Paths::DataTest{
 
         // Represents a path in a recursive manner (prev_state points to previous path state)
 struct PathState {
@@ -42,23 +40,27 @@ struct PathState {
 struct MacroState {
     const PathState* path_state;
     uint32_t automaton_state;
-    std::map<z3::expr, double> bounds;
+    std::map<std::string, double> upper_bounds;
+    std::map<std::string, double> lower_bounds;
+    std::map<std::string, double> eq_vals;
+    std::set<z3::expr> collected_expr;
     MacroState(const PathState* path_state,
-                uint32_t         automaton_state,
-                std::map<z3::expr, double> bound = std::map<z3::expr, double>()
-                ) :
+                uint32_t   automaton_state
+
+    ) :
         path_state      (path_state),
-        automaton_state (automaton_state) ,
-        bounds (std::move(bound))
-        { }
+        automaton_state (automaton_state)
+        {
+
+        }
+        int update_bound(std::tuple<Bound, z3::expr, z3::expr>);
 
 };
 
 struct SearchState {
     std::vector<std::shared_ptr<MacroState>> state_vector;
-    SearchState(
-            const std::vector<std::shared_ptr<MacroState>> vec
-            ): state_vector(std::move(vec)) {}
+    explicit SearchState(
+            const std::vector<std::shared_ptr<MacroState>>& vec
+            ): state_vector(vec) {}
 };
     }
-}

@@ -4,7 +4,7 @@
 #include "query/query_context.h"
 #include "query/parser/smt/smt_expr.h"
 #include "query/executor/query_executor/mql/return_executor.h"
-#include "query/executor/binding_iter/paths/data_test/smt_operations.h"
+#include "query/parser/smt/smt_operations.h"
 
 namespace SMT {
 class ExprConstant : public Expr {

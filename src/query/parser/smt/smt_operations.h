@@ -111,29 +111,31 @@ public:
     void add_bool_var(const std::string& name){
         dels.push_back(context.function(name.c_str(),0,0,BOOL));
     }
-    void add_bool_val(bool val) {
-        context.bool_val(val);
+    z3::expr add_bool_val(bool val) {
+        return context.bool_val(val);
 
     }
     void add_real_var(const std::string& name) {
         dels.push_back(context.function(name.c_str(), 0, 0, REAL));
     }
-    void add_real_val(double_t val){
-        context.real_val(std::to_string(val).c_str());
+    z3::expr add_real_val(double_t val){
+        return context.real_val(std::to_string(val).c_str());
     }
 
     void add_string_var(const std::string& name){
         dels.push_back(context.function(name.c_str(),0,0,STRING));
 
     }
-    void add_string_val(const std::string& val){context.string_val(val.c_str());}
+    z3::expr add_string_val(const std::string& val){
+        return context.string_val(val.c_str());
+    }
 
     void add_obj_var(const std::string&  name){
         dels.push_back(context.function(name.c_str(),0,0,REAL));
 
     }
-    void add_obj_val(uint64_t val){
-        context.real_val(val);
+    z3::expr add_obj_val(uint64_t val){
+        return context.real_val(val);
     }
 
     z3::expr parse (const std::string& formula){

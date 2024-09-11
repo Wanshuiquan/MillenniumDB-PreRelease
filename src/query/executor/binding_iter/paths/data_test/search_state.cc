@@ -35,4 +35,49 @@ void PathState::print(std::ostream& os,
         }
     }
 }
+int MacroState::update_bound(std::tuple<Bound, z3::expr, z3::expr> bound) {
+    auto type = std::get<0>(bound);
+    auto key = std::get<1>(bound);
+    std::string key_str = key.to_string();
+    auto value =  std::get<2>(bound);
+    if (collected_expr.count(key) == 0){
+        collected_expr.emplace(key);
+    }
+    switch (type) {
+        case Ge:{
+            if (upper_bounds.find(key_str) == upper_bounds.end()){
+                    upper_bounds[key_str] = value.as_double();
+            }
+            else{
+                double old_bound = upper_bounds[key_str];
+                double new_bound = value;
+                if (new_bound < old_bound) upper_bounds[key_str] = new_bound;
+            }
+            return 1;
+        }
+        case Le:{
+            if (lower_bounds.find(key_str) == lower_bounds.end()){
+                lower_bounds[key_str] = value.as_double();
+            }
+            else{
+                double old_bound = lower_bounds[key_str];
+                double new_bound = value;
+                if (new_bound > old_bound) lower_bounds[key_str] = new_bound;
+            }
+            return 1;
+        }
+        case EQ:{
+            if (lower_bounds.find(key_str) == eq_vals.end()){
+                eq_vals[key_str] = value.as_double();
+            }
+            else{
+                double old_bound = lower_bounds[key_str];
+                double new_bound = value;
+                if (new_bound != old_bound) return 0;
+            }
+            return 1;
+        }
+    }
+
+}
 

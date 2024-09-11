@@ -11,8 +11,7 @@
 using namespace std;
 using namespace Paths::DataTest;
 
-template<bool CYCLIC>
-void BFSCheck<CYCLIC>::update_value(uint64_t obj) {
+void BFSCheck::update_value(uint64_t obj) {
     for (const auto& ele: attributes){
         auto key = ele.first;
         ObjectId key_id = get<1>(key);
@@ -22,8 +21,7 @@ void BFSCheck<CYCLIC>::update_value(uint64_t obj) {
     }
 }
 
-template<bool CYCLIC>
-bool BFSCheck<CYCLIC>::eval_check(uint64_t obj, MacroState& macroState, std::string formula) {
+bool BFSCheck::eval_check(uint64_t obj, MacroState& macroState,  std::string  formula) {
     // Initialize context
     SMTContext context;
     for (const auto& ele: attributes){
@@ -47,75 +45,81 @@ bool BFSCheck<CYCLIC>::eval_check(uint64_t obj, MacroState& macroState, std::str
     // decompose
     auto vector = context.decompose(property);
     z3::ast_vector_tpl<z3::expr> new_vec = z3::ast_vector_tpl<z3::expr>(context.context);
-    // normalize
 
     for (const auto& f: vector){
+        // normalize formula into t ~ constant
         auto normal_form = context.normalizition(f);
+        // get and update the bound
         auto bound = context.get_bound(normal_form);
+        auto update_flag = macroState.update_bound(bound);
+        // update the wrong value
+        if (update_flag == 0){
+            return false;
+        }
+
+        //check the sat for the current bound
+        z3::solver s(context.context);
+        s.add(context.bound_epsilon);
+        for (const auto& parameter: macroState.collected_expr){
+            std::string key_str = parameter.to_string();
+            if (macroState.upper_bounds.find(key_str) != macroState.upper_bounds.end()){
+                double val = macroState.upper_bounds[key_str];
+                s.add(parameter <= context.add_real_val(val));
+            }
+            else if (macroState.lower_bounds.find(key_str) != macroState.lower_bounds.end()){
+                double val = macroState.lower_bounds[key_str];
+                s.add(parameter >= context.add_real_val(val));
+            } else if (macroState.eq_vals.find(key_str) != macroState.eq_vals.end()){
+                double val = macroState.eq_vals[key_str];
+                s.add(parameter == context.add_real_val(val));
+            }
+        }
+
+        switch (s.check()) {
+            case z3::sat: return  true;
+            case z3::unsat: return false;
+            case z3::unknown: return false;
+        }
     }
-
-
-
 }
-template <bool CYCLIC>
-void BFSCheck<CYCLIC>::_begin(Binding& _parent_binding) {
+
+
+void BFSCheck::_begin(Binding& _parent_binding) {
     parent_binding = &_parent_binding;
     first_next = true;
     iter = make_unique<NullIndexIterator>();
 
-    // Add starting states to open and visited
+    // Init start object id
     ObjectId start_object_id = start.is_var() ? (*parent_binding)[start.get_var()] : start.get_OID();
-    auto start_node_visited = visited.add(start_object_id, ObjectId(), false, nullptr);
-    auto start_macro_state =  std::make_shared<MacroState>(start_node_visited, automaton.get_start());
-    auto vec =  std::vector<std::shared_ptr<MacroState>>();
-    vec.emplace_back(start_macro_state);
-    open.emplace(make_unique<SearchState>(std::move(vec)));
-
 
     // Store ID for end object
     end_object_id = end.is_var() ? (*parent_binding)[end.get_var()] : end.get_OID();
-}
+    // init the start node
+    auto start_path_state = visited.add(start_object_id, ObjectId(), false, nullptr);
+    auto start_macro_state =  std::make_shared<MacroState>(start_path_state, automaton.get_start());
+    auto vec =  std::vector<std::shared_ptr<MacroState>>();
 
-
-template <bool CYCLIC>
-bool BFSCheck<CYCLIC>::update_value(uint64_t obj){
-auto attributes = automaton.get_attr();
-for (auto& attr:attributes){
-    auto name = get<0>(attr);
-    auto attr_id = get<1>(attr).id;
-
-    // Search B+Tree for *values* given <obj,key>
-    array<uint64_t, 3> min_prop_ids;
-    array<uint64_t, 3> max_prop_ids;
-    min_prop_ids[0] = obj;
-    max_prop_ids[0] = obj;
-    min_prop_ids[1] = attr_id;
-    max_prop_ids[1] = attr_id;
-    min_prop_ids[2] = 0;
-    max_prop_ids[2] = UINT64_MAX;
-    auto prop_iter = quad_model.object_key_value->get_range(
-            &get_query_ctx().thread_info.interruption_requested,
-            Record<3>(min_prop_ids),
-            Record<3>(max_prop_ids));
-    auto prop_record = prop_iter.next();
-    if (prop_record != nullptr){
-        return false;
+    for (auto& t: automaton.from_to_connections[automaton.get_start()]){
+        bool check_succeeded = eval_check(start_object_id.id, *start_macro_state, t.property_checks);
+        if (check_succeeded){
+            start_macro_state->automaton_state = t.to;
+            vec.emplace_back(std::move(start_macro_state));
+        }
     }
-    else {
-        // query the value for each parameter
-    }
-}
+    open.emplace(std::move(vec));
+
 
 }
-template <bool CYCLIC>
-bool BFSCheck<CYCLIC>::_next() {
+
+
+bool BFSCheck::_next() {
     // Check if first state is final
     if (first_next) {
         first_next = false;
         auto& current_state = open.front();
 
         // Return false if node does not exist in the database
-        for (auto& location: current_state. state_vector)
+        for (auto& location: current_state.state_vector)
         {
             if (!provider->node_exists(location -> path_state->node_id.id)) {
                 open.pop();
@@ -125,19 +129,7 @@ bool BFSCheck<CYCLIC>::_next() {
             // Starting state is solution
             if (location -> path_state->node_id == end_object_id) {
 
-                if (automaton.end_states.count(automaton.get_start())) {
-                    auto path_id = path_manager.set_path(location -> path_state, path_var);
-                    parent_binding->add(path_var, path_id);
-                    if (!CYCLIC) {  // Acyclic can only have this trivial solution when start node = end node
-                        queue<SearchState> empty;
-                        open.swap(empty);
-                    }
-                    return true;
-                } else if (!CYCLIC) {  // Acyclic can't have any more solutions when start node = end node
-                    queue<SearchState> empty;
-                    open.swap(empty);
-                    return false;
-                }
+
             }
         }
 
@@ -165,8 +157,7 @@ bool BFSCheck<CYCLIC>::_next() {
 }
 
 
-template <bool CYCLIC>
-const PathState* BFSCheck<CYCLIC>::expand_neighbors(const MacroState& current_state) {
+const PathState* BFSCheck::expand_neighbors(const MacroState& current_state) {
     // Check if this is the first time that current_state is explored
     if (iter->at_end()) {
         current_transition = 0;
@@ -185,19 +176,7 @@ const PathState* BFSCheck<CYCLIC>::expand_neighbors(const MacroState& current_st
         // Iterate over records until a final state is reached
         while (iter->next()) {
             // Reconstruct path and check if it's simple, discard paths that are not simple
-            if (!is_simple_path(current_state.path_state, ObjectId(iter->get_reached_node()))) {
-                // If path can be cyclic, return solution only when the new node is the starting node and is also final
-                if (CYCLIC && automaton.is_final_state[transition.to]) {
-                    ObjectId start_object_id = start.is_var() ? (*parent_binding)[start.get_var()] : start.get_OID();
-                    // This case only happens if the starting node and end node are the same
-                    if (start_object_id == end_object_id && ObjectId(iter->get_reached_node()) == start_object_id) {
-                        return visited.add(ObjectId(iter->get_reached_node()),
-                                           transition.type_id,
-                                           transition.inverse,
-                                           current_state.path_state);
-                    }
-                }
-                continue;
+
             }
 
             // Special Cases: End node has been reached
@@ -231,8 +210,7 @@ const PathState* BFSCheck<CYCLIC>::expand_neighbors(const MacroState& current_st
 }
 
 
-template <bool CYCLIC>
-void BFSCheck<CYCLIC>::_reset() {
+void BFSCheck::_reset() {
     // Empty open and visited
     queue<SearchState> empty;
     open.swap(empty);
@@ -253,12 +231,8 @@ void BFSCheck<CYCLIC>::_reset() {
 }
 
 
-template <bool CYCLIC>
-void BFSCheck<CYCLIC>::accept_visitor(BindingIterVisitor& visitor) {
+void BFSCheck::accept_visitor(BindingIterVisitor& visitor) {
     visitor.visit(*this);
 }
 
-
-template class Paths::DataTest::BFSCheck<true>;
-template class Paths::DataTest::BFSCheck<false>;
 

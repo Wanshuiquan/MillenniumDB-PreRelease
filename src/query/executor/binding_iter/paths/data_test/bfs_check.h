@@ -20,7 +20,6 @@ namespace Paths {
             String,
             Real
         };
-        template <bool CYCLIC>
 
         class BFSCheck: public BindingIter {
             // Attributes determined in the constructor

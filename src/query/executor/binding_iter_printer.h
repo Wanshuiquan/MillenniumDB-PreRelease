@@ -80,6 +80,8 @@ public:
     virtual void visit(HashJoin::Generic::InMemory::SemiJoin&) override;
     virtual void visit(HashJoin::MaterializeIter&)             override;
 
+    virtual void visit(Paths::DataTest::BFSCheck&) override;
+
     virtual void visit(Paths::UnfixedComposite&)                   override;
     virtual void visit(Paths::AllShortest::BFSCheck&)              override;
     virtual void visit(Paths::AllShortest::BFSEnum<false>&)        override;
