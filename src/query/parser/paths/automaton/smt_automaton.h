@@ -215,7 +215,9 @@ public:
     // Access attribute methods
     inline uint32_t get_start() const noexcept { return start; }
     inline uint32_t get_total_states() const noexcept  { return total_states; }
-    inline uint32_t get_final_state() const noexcept  { return final_state; }
+    inline bool decide_accept(uint64_t state) const noexcept {
+        return (end_states.find(state)!= end_states.end());
+    }
     inline std::set<std::tuple<std::string, ObjectId>> get_attr() const noexcept {return attributes;}
     // Print the automaton
     void print(std::ostream& os) const;

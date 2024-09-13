@@ -11,6 +11,53 @@
 using namespace std;
 using namespace Paths::DataTest;
 
+uint64_t BFSCheck::query_property(uint64_t obj_id, uint64_t key_id) const  {
+    // Search B+Tree for *values* given <obj,key>
+    std::array<uint64_t, 3> min_prop_ids {};
+    std::array<uint64_t, 3> max_prop_ids {};
+    min_prop_ids[0] = obj_id;
+    max_prop_ids[0] = obj_id;
+    min_prop_ids[1] = key_id;
+    max_prop_ids[1] = key_id;
+    min_prop_ids[2] = 0;
+    max_prop_ids[2] = UINT64_MAX;
+    auto prop_iter = quad_model.object_key_value->get_range(
+            &get_query_ctx().thread_info.interruption_requested,
+            Record<3>(min_prop_ids),
+            Record<3>(max_prop_ids));
+    auto prop_record = prop_iter.next();
+    assert(prop_record != nullptr);
+    auto record_value_id = (*prop_record)[2];
+    return record_value_id;
+}
+
+BptIter<2> BFSCheck::query_label(uint64_t obj_id) const {
+    std::array<uint64_t ,2> min_prop_ids{};
+    std::array<uint64_t, 2> max_prop_ids{};
+    max_prop_ids[0] = obj_id;
+    min_prop_ids[0] = obj_id;
+    max_prop_ids[1] = UINT64_MAX,
+            min_prop_ids[1] = 0;
+    auto prop_iter = quad_model.node_label->get_range(
+            &get_query_ctx().thread_info.interruption_requested,
+            Record<2>(min_prop_ids),
+            Record<2>(max_prop_ids));
+    return prop_iter;
+}
+
+bool BFSCheck::match_label(uint64_t obj_id, uint64_t label_id) {
+    auto labels_iter = query_label(obj_id);
+    auto label_record = labels_iter.next();
+    while(label_record != nullptr){
+        if ((*label_record)[1] == label_id) {
+            return true;
+        }
+        else {
+            label_record = labels_iter.next();
+        }
+    }
+    return false;
+}
 void BFSCheck::update_value(uint64_t obj) {
     for (const auto& ele: attributes){
         auto key = ele.first;
@@ -21,7 +68,9 @@ void BFSCheck::update_value(uint64_t obj) {
     }
 }
 
-bool BFSCheck::eval_check(uint64_t obj, MacroState& macroState,  std::string  formula) {
+bool BFSCheck::eval_check(uint64_t obj, MacroState& macroState, std::string formula) {
+    // update_value
+    update_value(obj);
     // Initialize context
     SMTContext context;
     for (const auto& ele: attributes){
@@ -100,119 +149,128 @@ void BFSCheck::_begin(Binding& _parent_binding) {
     auto vec =  std::vector<std::shared_ptr<MacroState>>();
 
     for (auto& t: automaton.from_to_connections[automaton.get_start()]){
+        // check_property
         bool check_succeeded = eval_check(start_object_id.id, *start_macro_state, t.property_checks);
-        if (check_succeeded){
+        //check_label
+        uint64_t label_id = QuadObjectId::get_string(t.type).id;
+        bool label_matched = match_label(start_object_id.id, label_id);
+        if (check_succeeded&&label_matched){
             start_macro_state->automaton_state = t.to;
             vec.emplace_back(std::move(start_macro_state));
         }
     }
-    open.emplace(std::move(vec));
+//    open.emplace(std::move(vec));
 
 
 }
 
+std::tuple<bool, bool> BFSCheck::progress(Paths::DataTest::MacroState &macroState, std::vector<std::shared_ptr<MacroState>>& state_vec) {
+    for (auto& transition_edge : automaton.from_to_connections[macroState.automaton_state]){
+        set_iter(macroState, transition_edge);
+        if (iter == nullptr){
+            return {false, false};
+        }
+        // progress with edge
+        uint64_t edge_id = iter ->get_edge();
+        uint64_t target_id = iter -> get_reached_node();
+        //edge type has checked, so we only check the properties
+        if (eval_check(edge_id, macroState, transition_edge.property_checks)){
+            macroState.automaton_state = transition_edge.to;
+            if (true){
+
+            }
+            for (auto& transition_node : automaton.from_to_connections[macroState.automaton_state]){
+                bool matched_label;
+            }
+        }
+        state_vec.emplace_back(std::make_shared<MacroState>(macroState));
+    }
+return {true, true};
+}
 
 bool BFSCheck::_next() {
     // Check if first state is final
     if (first_next) {
-        first_next = false;
-        auto& current_state = open.front();
+        const auto& current_state = open.front();
+        // if the state vector is empty, we do not have to explore
+        if (current_state->state_vector.empty()) return false;
 
-        // Return false if node does not exist in the database
-        for (auto& location: current_state.state_vector)
+        // iterate over each macro state
+        for (auto& location: current_state -> state_vector)
         {
-            if (!provider->node_exists(location -> path_state->node_id.id)) {
+
+            auto node_iter = quad_model.nodes ->get_range(&get_query_ctx().thread_info.interruption_requested,
+                                                          Record<1>({location->path_state->node_id.id}),
+                                                          Record<1>({location->path_state->node_id.id}));
+
+            // node does not exists
+            if (node_iter.next() == nullptr){
                 open.pop();
                 return false;
             }
-
             // Starting state is solution
-            if (location -> path_state->node_id == end_object_id) {
-
+            if (location -> path_state->node_id == end_object_id && automaton.decide_accept(location -> automaton_state)) {
+                auto path_id = path_manager.set_path(location->path_state, path_var);
+                parent_binding->add(path_var, path_id);
+                queue<const SearchState*> empty;
+                open.swap(empty);
+                return true;
 
             }
+
+
         }
 
     }
 
-    while (open.size() > 0)
+    // iterate
+    while (!open.empty())
     {
+        // get a new state vector
         auto& current_state = open.front();
-        for (auto& location: current_state.state_vector) {
-            auto reached_final_state = expand_neighbors(*location);
 
-            // Enumerate reached solutions
-            if (reached_final_state != nullptr) {
-                auto path_id = path_manager.set_path(reached_final_state, path_var);
-                parent_binding->add(path_var, path_id);
-                return true;
-            } else {
-                // Pop and visit next state
-                assert(iter->at_end());
-                open.pop();
+        // we make a edge transition, and then we make a node transition
+        auto res = std::vector<std::shared_ptr<MacroState>>();
+
+        for (auto& location: current_state -> state_vector) {
+            //iterate over transitions
+            for (auto& transition : automaton.from_to_connections[location->automaton_state]) {
+                set_iter(*location, transition);
+                // we step by v - e -> v1 and we check the property
+                auto edge_id =  iter->get_edge();
+                auto target_id = iter->get_reached_node();
+                if (eval_check(edge_id, *location, transition.property_checks)){
+                    location ->automaton_state = transition.to;
+                    for (auto& _node_trans : automaton.from_to_connections[location->automaton_state]){
+                        bool label_matched = match_label(target_id, QuadObjectId::get_string(_node_trans.type).id);
+                        bool check_properties = eval_check(target_id, *location, transition.property_checks);
+
+                    }
+                }
+
             }
+//
+//            if (reached_final_state != nullptr) {
+//                auto path_id = path_manager.set_path(reached_final_state, path_var);
+//                parent_binding->add(path_var, path_id);
+//                return true;
+//            } else {
+//                // Pop and visit next state
+//                assert(iter->at_end());
+//                open.pop();
+//            }
         }
     }
     return false;
 }
 
 
-const PathState* BFSCheck::expand_neighbors(const MacroState& current_state) {
-    // Check if this is the first time that current_state is explored
-    if (iter->at_end()) {
-        current_transition = 0;
-        // Check if automaton state has transitions
-        if (automaton.from_to_connections[current_state.automaton_state].size() == 0) {
-            return nullptr;
-        }
-        set_iter(current_state);
-    }
 
-    // Iterate over the remaining transitions of current_state
-    // Don't start from the beginning, resume where it left thanks to current_transition and iter (pipeline)
-    while (current_transition < automaton.from_to_connections[current_state.automaton_state].size()) {
-        auto& transition = automaton.from_to_connections[current_state.automaton_state][current_transition];
-
-        // Iterate over records until a final state is reached
-        while (iter->next()) {
-            // Reconstruct path and check if it's simple, discard paths that are not simple
-
-            }
-
-            // Special Cases: End node has been reached
-            if (ObjectId(iter->get_reached_node()) == end_object_id) {
-                // Return only if it's a solution, never expand
-                if (automaton.is_final_state[transition.to]) {
-                    return visited.add(ObjectId(iter->get_reached_node()),
-                                       transition.type_id,
-                                       transition.inverse,
-                                       current_state.path_state);
-                }
-                continue;
-            }
-
-            // Add new path state to visited
-            auto new_visited_ptr = visited.add(ObjectId(iter->get_reached_node()),
-                                               transition.type_id,
-                                               transition.inverse,
-                                               current_state.path_state);
-            // Add new state to open
-            open.emplace(new_visited_ptr, transition.to);
-        }
-
-        // Construct new iter with the next transition (if there exists one)
-        current_transition++;
-        if (current_transition < automaton.from_to_connections[current_state.automaton_state].size()) {
-            set_iter(current_state);
-        }
-    }
-    return nullptr;
-}
 
 
 void BFSCheck::_reset() {
     // Empty open and visited
-    queue<SearchState> empty;
+    queue<const SearchState*> empty;
     open.swap(empty);
     visited.clear();
     first_next = true;

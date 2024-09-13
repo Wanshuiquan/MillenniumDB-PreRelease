@@ -35,6 +35,9 @@ void PathState::print(std::ostream& os,
         }
     }
 }
+
+
+
 int MacroState::update_bound(std::tuple<Bound, z3::expr, z3::expr> bound) {
     auto type = std::get<0>(bound);
     auto key = std::get<1>(bound);

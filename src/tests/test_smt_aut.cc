@@ -187,8 +187,13 @@ SMT::ExprAnd get_formula(){
 }
 bool simple_kleene_plus() {
     std::unique_ptr<RegularPathExpr> tmp;
-    tmp = std::make_unique<SMTAtom>("a", false, std::make_unique<SMT::ExprAnd>(get_formula()));
-    tmp = std::make_unique<PathKleenePlus>(std::move(tmp));
+    std::unique_ptr<RegularPathExpr> tmp1 = std::make_unique<SMTAtom>("b", false, std::make_unique<SMT::ExprAnd>(get_formula())) ;
+
+    std::unique_ptr<RegularPathExpr> tmp2 = std::make_unique<SMTAtom>("a", false, std::make_unique<SMT::ExprAnd>(get_formula()));
+    auto vec = std::vector<std::unique_ptr<RegularPathExpr>>();
+    vec.push_back(std::move(tmp1));
+    vec.push_back(std::move(tmp2));
+    tmp = std::make_unique<PathAlternatives>(std::move(vec));
     auto f = get_formula();
     SMTAutomaton dfa          = tmp->get_smt_automaton(&get_unique_object_id);
     auto transition1 = std::tuple(0, 1, "a", "true");

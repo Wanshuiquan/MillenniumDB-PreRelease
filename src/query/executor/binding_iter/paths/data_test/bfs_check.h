@@ -41,7 +41,7 @@ namespace Paths {
             Arena<PathState> visited;
 
             // Queue for BFS
-            std::queue<SearchState> open;
+            std::queue<const SearchState*> open;
 
             // Iterator for current node expansion
             std::unique_ptr<EdgeIter> iter;
@@ -102,30 +102,20 @@ namespace Paths {
                 parent_binding->add(path_var, ObjectId::get_null());
             }
 
-            inline uint64_t query_property (uint64_t obj_id, uint64_t key_id) const {
-                // Search B+Tree for *values* given <obj,key>
-                std::array<uint64_t, 3> min_prop_ids;
-                std::array<uint64_t, 3> max_prop_ids;
-                min_prop_ids[0] = obj_id;
-                max_prop_ids[0] = obj_id;
-                min_prop_ids[1] = key_id;
-                max_prop_ids[1] = key_id;
-                min_prop_ids[2] = 0;
-                max_prop_ids[2] = UINT64_MAX;
-                auto prop_iter = quad_model.object_key_value->get_range(
-                        &get_query_ctx().thread_info.interruption_requested,
-                        Record<3>(min_prop_ids),
-                        Record<3>(max_prop_ids));
-                auto prop_record = prop_iter.next();
-                assert(prop_record != nullptr);
-                auto record_value_id = (*prop_record)[2];
-                return record_value_id;
-            }
-            // Set iterator for current node + transition
-            inline void set_iter(const MacroState& s) {
-                // Get current transition object from automaton
-                auto& transition = automaton.from_to_connections[s.automaton_state][current_transition];
+            uint64_t query_property (uint64_t obj_id, uint64_t key_id) const;
+            // THE RETURNED ITER IS THE SET OF LABELS W.R.T. THE OBJECT
+            BptIter<2> query_label(uint64_t obj_id) const;
+            bool match_label(uint64_t obj_id, uint64_t label_id);
+            // progress a macros state over an edge
+            // <Reach Final, Progress Successful>
+            std::tuple<bool, bool> progress(MacroState& macroState, std::vector<std::shared_ptr<MacroState>>&);
+            // step an edge object w.r.t. a macro state
+            bool check_edge(uint64_t edge_id, SMTTransition& transition, MacroState& macroState);
+            // step an node object w.r.t. a macro state
+            bool check_node(uint64_t node_id, SMTTransition& transition, MacroState& macroState);
 
+            // Set iterator for current node + transition
+            inline void set_iter(const MacroState& s, const SMTTransition&transition) {
                 // Get iterator from custom index
                 iter = provider->get_iter(transition.type_id.id, transition.inverse, s.path_state->node_id.id);
                 idx_searches++;
