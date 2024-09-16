@@ -1,9 +1,9 @@
 //
-// Created by lhy on 9/2/24.
+// Created by lhy on 9/16/24.
 //
 
-#ifndef MILLENNIUMDB_BFS_CHECK_H
-#define MILLENNIUMDB_BFS_CHECK_H
+#ifndef MILLENNIUMDB_BFS_ENUM_H
+#define MILLENNIUMDB_BFS_ENUM_H
 #pragma  once
 #include <queue>
 #include "query/executor/binding_iter.h"
@@ -15,14 +15,11 @@
 
 namespace Paths {
     namespace DataTest{
-
-
-
-        class BFSCheck: public BindingIter {
+        class BFSEnum: public BindingIter{
             // Attributes determined in the constructor
             VarId         path_var;
             Id            start;
-            Id            end;
+            VarId            end;
             const SMTAutomaton automaton;
             std::unique_ptr<IndexProvider> provider;
 
@@ -62,24 +59,23 @@ namespace Paths {
             // Statistics
             uint_fast32_t idx_searches = 0;
 
-            BFSCheck(
-                    VarId                          path_var,
-                    Id                             start,
-                    Id                             end,
-                    SMTAutomaton                    automaton,
-                    std::unique_ptr<IndexProvider>  provider
+            BFSEnum( VarId        path_var,
+                     Id             start,
+                     VarId              end,
+                SMTAutomaton        automaton,
+                std::unique_ptr<IndexProvider>  provider
             ) :
-                    path_var      (path_var),
-                    start         (start),
-                    end           (end),
-                    automaton     (automaton),
-                    provider      (std::move(provider)) {
-                    for (auto& ele: automaton.get_attributes()){
-                        attributes.emplace(ele, 0);
-                    }
-                    for (auto& ele: automaton.get_parameters()){
-                        vars.emplace(ele, 0);
-                    }
+            path_var      (path_var),
+            start         (start),
+            end           (end),
+            automaton     (automaton),
+            provider      (std::move(provider)) {
+                for (auto& ele: automaton.get_attributes()){
+                    attributes.emplace(ele, 0);
+                }
+                for (auto& ele: automaton.get_parameters()){
+                    vars.emplace(ele, 0);
+                }
             }
 
             // Explore neighbors searching for a solution.
@@ -96,10 +92,11 @@ namespace Paths {
             bool _next() override;
             bool eval_check(uint64_t obj, MacroState&, std::string );
             void update_value(uint64_t);
+
             void assign_nulls() override {
+                parent_binding->add(end, ObjectId::get_null());
                 parent_binding->add(path_var, ObjectId::get_null());
             }
-
             uint64_t query_property (uint64_t obj_id, uint64_t key_id) const;
             // THE RETURNED ITER IS THE SET OF LABELS W.R.T. THE OBJECT
             static BptIter<2> query_label(uint64_t obj_id) ;
@@ -116,11 +113,9 @@ namespace Paths {
                 idx_searches++;
             }
 
-
         };
     }
 }
 
 
-
-#endif //MILLENNIUMDB_BFS_CHECK_H
+#endif //MILLENNIUMDB_BFS_ENUM_H

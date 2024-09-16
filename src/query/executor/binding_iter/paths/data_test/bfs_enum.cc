@@ -3,7 +3,7 @@
 //
 #include <cassert>
 
-#include "bfs_check.h"
+#include "bfs_enum.h"
 
 #include "query/var_id.h"
 #include "query/executor/binding_iter/paths/path_manager.h"
@@ -11,7 +11,7 @@
 using namespace std;
 using namespace Paths::DataTest;
 
-uint64_t BFSCheck::query_property(uint64_t obj_id, uint64_t key_id) const  {
+uint64_t BFSEnum::query_property(uint64_t obj_id, uint64_t key_id) const  {
     // Search B+Tree for *values* given <obj,key>
     std::array<uint64_t, 3> min_prop_ids {};
     std::array<uint64_t, 3> max_prop_ids {};
@@ -31,7 +31,7 @@ uint64_t BFSCheck::query_property(uint64_t obj_id, uint64_t key_id) const  {
     return record_value_id;
 }
 
-BptIter<2> BFSCheck::query_label(uint64_t obj_id) {
+BptIter<2> BFSEnum::query_label(uint64_t obj_id) {
     std::array<uint64_t ,2> min_prop_ids{};
     std::array<uint64_t, 2> max_prop_ids{};
     max_prop_ids[0] = obj_id;
@@ -45,7 +45,7 @@ BptIter<2> BFSCheck::query_label(uint64_t obj_id) {
     return prop_iter;
 }
 
-bool BFSCheck::match_label(uint64_t obj_id, uint64_t label_id) {
+bool BFSEnum::match_label(uint64_t obj_id, uint64_t label_id) {
     auto labels_iter = query_label(obj_id);
     auto label_record = labels_iter.next();
     while(label_record != nullptr){
@@ -58,7 +58,7 @@ bool BFSCheck::match_label(uint64_t obj_id, uint64_t label_id) {
     }
     return false;
 }
-void BFSCheck::update_value(uint64_t obj) {
+void BFSEnum::update_value(uint64_t obj) {
     for (const auto& ele: attributes){
         auto key = ele.first;
         ObjectId key_id = get<1>(key);
@@ -68,7 +68,7 @@ void BFSCheck::update_value(uint64_t obj) {
     }
 }
 
-bool BFSCheck::eval_check(uint64_t obj, MacroState& macroState, std::string formula) {
+bool BFSEnum::eval_check(uint64_t obj, MacroState& macroState, std::string formula) {
     // update_value
     update_value(obj);
     // Initialize context
@@ -86,11 +86,11 @@ bool BFSCheck::eval_check(uint64_t obj, MacroState& macroState, std::string form
     auto property = context.parse(formula);
     //subsitution
     for (const auto& ele: attributes) {
-            auto attr = ele.first;
-            std::string name = std::get<0>(attr);
-            double_t value = ele.second;
-            property = context.subsitute_real(name, value, property);
-        }
+        auto attr = ele.first;
+        std::string name = std::get<0>(attr);
+        double_t value = ele.second;
+        property = context.subsitute_real(name, value, property);
+    }
     // decompose
     auto vector = context.decompose(property);
     z3::ast_vector_tpl<z3::expr> new_vec = z3::ast_vector_tpl<z3::expr>(context.context);
@@ -133,7 +133,7 @@ bool BFSCheck::eval_check(uint64_t obj, MacroState& macroState, std::string form
 }
 
 
-void BFSCheck::_begin(Binding& _parent_binding) {
+void BFSEnum::_begin(Binding& _parent_binding) {
     parent_binding = &_parent_binding;
     first_next = true;
     iter = make_unique<NullIndexIterator>();
@@ -142,7 +142,6 @@ void BFSCheck::_begin(Binding& _parent_binding) {
     ObjectId start_object_id = start.is_var() ? (*parent_binding)[start.get_var()] : start.get_OID();
 
     // Store ID for end object
-    end_object_id = end.is_var() ? (*parent_binding)[end.get_var()] : end.get_OID();
     // init the start node
     auto start_path_state = visited.add(start_object_id, ObjectId::get_null(), ObjectId::get_null() , false, nullptr);
     auto* start_macro_state =  new MacroState(start_path_state, automaton.get_start());
@@ -163,7 +162,7 @@ void BFSCheck::_begin(Binding& _parent_binding) {
     // insert the init state vector to the state
 }
 
-const PathState* BFSCheck::progress(Paths::DataTest::MacroState &macroState) {
+const PathState* BFSEnum::progress(Paths::DataTest::MacroState &macroState) {
     // stop if automaton state has not outgoing transitions
     if (automaton.from_to_connections[macroState.automaton_state].empty()) {
         return nullptr;
@@ -237,8 +236,8 @@ const PathState* BFSCheck::progress(Paths::DataTest::MacroState &macroState) {
 
     }
 }
-bool BFSCheck::_next() {
-    // Check if first state is final
+bool BFSEnum::_next() {
+    // Enum if first state is final
     if (first_next) {
         const auto& current_state = open.front();
 
@@ -248,18 +247,18 @@ bool BFSCheck::_next() {
 
         auto node_iter = provider ->node_exists(current_state.path_state->node_id.id);
         if (!node_iter){
-                open.pop();
-                return false;
-            }
+            open.pop();
+            return false;
+        }
         // start state is the solution
         if (current_state. path_state->node_id == end_object_id && automaton.decide_accept(current_state. automaton_state)) {
-                auto path_id = path_manager.set_path(current_state.path_state, path_var);
-                parent_binding->add(path_var, path_id);
-                queue<MacroState> empty;
-                open.swap(empty);
-                return true;
+            auto path_id = path_manager.set_path(current_state.path_state, path_var);
+            parent_binding->add(path_var, path_id);
+            queue<MacroState> empty;
+            open.swap(empty);
+            return true;
 
-            }
+        }
 
 
 
@@ -290,7 +289,7 @@ bool BFSCheck::_next() {
 
 
 
-void BFSCheck::_reset() {
+void BFSEnum::_reset() {
     // Empty open and visited
     queue<MacroState> empty;
     open.swap(empty);
@@ -323,13 +322,11 @@ void BFSCheck::_reset() {
         }
     }
     // insert the init state vector to the state
-    // Store ID for end object
-    end_object_id = end.is_var() ? (*parent_binding)[end.get_var()] : end.get_OID();
 }
 
-
-void BFSCheck::accept_visitor(BindingIterVisitor& visitor) {
-    visitor.visit(*this);
-}
-
+//
+//void BFSEnum::accept_visitor(BindingIterVisitor& visitor) {
+//    visitor.visit(this);
+//}
+//
 

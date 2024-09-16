@@ -16,6 +16,7 @@
 struct PathState {
     ObjectId node_id;
     ObjectId type_id;
+    ObjectId edge_id;
     bool inverse_dir;
     const PathState* prev_state;
 
@@ -23,10 +24,12 @@ struct PathState {
 
     PathState(ObjectId         object_id,
               ObjectId         type_id,
+              ObjectId          edge_id,
               bool             inverse_dir,
               const PathState* prev_state) :
         node_id     (object_id),
         type_id     (type_id),
+        edge_id      (edge_id),
         inverse_dir (inverse_dir),
         prev_state  (prev_state) { }
 
@@ -44,23 +47,49 @@ struct MacroState {
     std::map<std::string, double> lower_bounds;
     std::map<std::string, double> eq_vals;
     std::set<z3::expr> collected_expr;
+
+    
     MacroState(const PathState* path_state,
-                uint32_t   automaton_state
+                uint32_t   automaton_state,
+                std::map<std::string, double> upper_bounds,
+                std::map<std::string, double> lower_bounds,
+                std::map<std::string, double> eq_vals,
+                std::set<z3::expr> collected_expr
 
     ) :
         path_state      (path_state),
-        automaton_state (automaton_state)
+        automaton_state (automaton_state),
+        upper_bounds (std::move(upper_bounds)),
+        lower_bounds(std::move(lower_bounds)),
+        eq_vals (std::move(eq_vals)),
+        collected_expr(std::move(collected_expr))
         {
 
         }
+    MacroState(const PathState* path_state,
+               uint32_t   automaton_state
+
+    ) :
+            path_state      (path_state),
+            automaton_state (automaton_state)
+    {
+
+    }
+    MacroState(const MacroState& macro
+
+    ) :
+            path_state      (macro.path_state),
+            automaton_state (macro.automaton_state),
+            upper_bounds (macro.upper_bounds),
+            lower_bounds(macro.lower_bounds),
+            eq_vals (macro.eq_vals),
+            collected_expr(macro.collected_expr)
+    {
+
+    }
         int update_bound(std::tuple<Bound, z3::expr, z3::expr>);
 
 };
 
-struct SearchState {
-    std::vector<std::shared_ptr<MacroState>> state_vector;
-    explicit SearchState(
-            const std::vector<std::shared_ptr<MacroState>>& vec
-            ): state_vector(vec) {}
-};
+
     }
