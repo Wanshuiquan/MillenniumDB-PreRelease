@@ -739,9 +739,6 @@ void BindingIterPrinter::visit(Paths::UnfixedComposite& binding_iter) {
     binding_iter.child_iter->accept_visitor(*this);
 }
 
-void BindingIterPrinter::visit(Paths::DataTest::BFSCheck& binding_iter){
-   throw std::runtime_error("Not implement yet");
-};
 
 void BindingIterPrinter::visit(Paths::AllShortest::BFSCheck& binding_iter) {
     std::stringstream ss;
@@ -1153,4 +1150,18 @@ void BindingIterPrinter::visit(LSH::ProjectTensorSimilarity& binding_iter) {
     }
     os << ")\n";
     binding_iter.child_iter->accept_visitor(*this);
+}
+
+void BindingIterPrinter::visit(Paths::DataTest::BFSCheck& binding_iter){
+    throw std::runtime_error("Not implement yet");
+};
+
+void BindingIterPrinter::visit(Paths::DataTest::BFSEnum &) {
+    throw std::runtime_error("Not implement yet");
+
+}
+
+void BindingIterPrinter::visit(Paths::SMTUnfixedComposite &) {
+    throw std::runtime_error("Not implement yet");
+
 }

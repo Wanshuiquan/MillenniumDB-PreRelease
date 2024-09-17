@@ -11,7 +11,8 @@
 using namespace std;
 using namespace Paths::DataTest;
 
-uint64_t BFSEnum::query_property(uint64_t obj_id, uint64_t key_id) const  {
+
+uint64_t BFSEnum::query_property(uint64_t obj_id, uint64_t key_id)  {
     // Search B+Tree for *values* given <obj,key>
     std::array<uint64_t, 3> min_prop_ids {};
     std::array<uint64_t, 3> max_prop_ids {};
@@ -162,7 +163,7 @@ void BFSEnum::_begin(Binding& _parent_binding) {
     // insert the init state vector to the state
 }
 
-const PathState* BFSEnum::progress(Paths::DataTest::MacroState &macroState) {
+const PathState* BFSEnum::expand_neighbors(Paths::DataTest::MacroState &macroState) {
     // stop if automaton state has not outgoing transitions
     if (automaton.from_to_connections[macroState.automaton_state].empty()) {
         return nullptr;
@@ -254,6 +255,8 @@ bool BFSEnum::_next() {
         if (current_state. path_state->node_id == end_object_id && automaton.decide_accept(current_state. automaton_state)) {
             auto path_id = path_manager.set_path(current_state.path_state, path_var);
             parent_binding->add(path_var, path_id);
+            parent_binding->add(end, current_state.path_state->node_id);
+
             queue<MacroState> empty;
             open.swap(empty);
             return true;
@@ -275,6 +278,8 @@ bool BFSEnum::_next() {
         if (reached_final_state != nullptr) {
             auto path_id = path_manager.set_path(reached_final_state, path_var);
             parent_binding->add(path_var, path_id);
+            parent_binding->add(end, reached_final_state->node_id);
+
             return true;
         } else {
             // Pop and visit next state
@@ -324,9 +329,10 @@ void BFSEnum::_reset() {
     // insert the init state vector to the state
 }
 
-//
-//void BFSEnum::accept_visitor(BindingIterVisitor& visitor) {
-//    visitor.visit(this);
-//}
-//
+void BFSEnum::accept_visitor(BindingIterVisitor &visitor) {
+    visitor.visit(*this);
+
+}
+
+
 

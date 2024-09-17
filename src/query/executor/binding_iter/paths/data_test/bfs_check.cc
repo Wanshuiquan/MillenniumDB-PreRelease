@@ -163,7 +163,7 @@ void BFSCheck::_begin(Binding& _parent_binding) {
     // insert the init state vector to the state
 }
 
-const PathState* BFSCheck::progress(Paths::DataTest::MacroState &macroState) {
+const PathState* BFSCheck::expand_neighbors(MacroState& macroState){
     // stop if automaton state has not outgoing transitions
     if (automaton.from_to_connections[macroState.automaton_state].empty()) {
         return nullptr;

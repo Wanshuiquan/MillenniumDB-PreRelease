@@ -27,6 +27,7 @@
 #include "query/executor/binding_iter/paths/any_trails/dfs_enum.h"
 #include "query/executor/binding_iter/paths/any_walks/bfs_check.h"
 #include "query/executor/binding_iter/paths/data_test/bfs_check.h"
+#include "query/executor/binding_iter/paths/data_test/bfs_enum.h"
 
 #include "query/executor/binding_iter/paths/any_walks/bfs_enum.h"
 #include "query/executor/binding_iter/paths/any_walks/dfs_check.h"
@@ -181,8 +182,8 @@ std::unique_ptr<BindingIter> PathPlan::get_check(const SMTAutomaton& automaton, 
 }
 
 std::unique_ptr<BindingIter> PathPlan::get_enum(const SMTAutomaton& automaton, Id start, VarId end) const {
-    throw std::runtime_error("");
-}
+    auto provider = get_provider(automaton);
+    return make_unique<Paths::DataTest::BFSEnum>(path_var, start, end, automaton, std::move(provider));}
 
 std::unique_ptr<BindingIter> PathPlan::get_check(const RPQ_DFA& automaton, Id start, Id end) const {
     auto provider = get_provider(automaton);
@@ -378,7 +379,20 @@ std::unique_ptr<BindingIter> PathPlan::get_unfixed(const RPQ_DFA& automaton, Var
 }
 
 
+std::unique_ptr<BindingIter> PathPlan::get_unfixed(const SMTAutomaton& automaton, VarId start, VarId end) const {
+    auto iter = start == end
+                ? get_check(automaton, start, end)
+                : get_enum(automaton, start, end);
 
+    return std::make_unique<Paths::SMTUnfixedComposite>(
+            path_var,
+            start,
+            end,
+            automaton,
+            get_provider(automaton),
+            std::move(iter)
+    );
+}
 
 bool PathPlan::from_is_better_start_direction() const {
     if (automaton.total_states == 1 || automaton.is_final_state[0]) {
@@ -410,20 +424,65 @@ bool PathPlan::from_is_better_start_direction() const {
         return true;
     }
 }
+bool PathPlan::from_is_better_start_direction_smt() const {
+    if (smt_automaton.get_total_states() == 1 || smt_automaton.decide_accept(0)) {
+        return true;
+    }
+
+    double cost_normal_dir = 0;
+    double cost_inverse_dir = 0;
+
+    for (auto& transition : smt_automaton.from_to_connections[0]) {
+        auto predicate_id = transition.type_id.id;
+        auto it = quad_model.catalog().type2total_count.find(predicate_id);
+        if (it != quad_model.catalog().type2total_count.end()) {
+            cost_normal_dir += it->second;
+        }
+    }
+
+    for (auto& transition : smt_inverted.from_to_connections[0]) {
+        auto predicate_id = transition.type_id.id;
+        auto it = quad_model.catalog().type2total_count.find(predicate_id);
+        if (it != quad_model.catalog().type2total_count.end()) {
+            cost_inverse_dir += it->second;
+        }
+    }
+
+    if (cost_inverse_dir < cost_normal_dir) {
+        return false;
+    } else {
+        return true;
+    }
+}
 
 unique_ptr<BindingIter> PathPlan::get_binding_iter() const {
     bool right_to_left = direction == OpPath::Direction::RIGHT_TO_LEFT;
     if (from_assigned) {
         if (to_assigned) {
-            auto star_at_from = from_is_better_start_direction();
-            begin_at_left[path_var.id] = star_at_from != right_to_left;
-            const RPQ_DFA& best_automaton = star_at_from ? automaton : automaton_inverted;
-            Id start = star_at_from ? from : to;
-            Id end   = star_at_from ? to   : from;
-            return get_check(best_automaton, start, end);
+            if (path_semantic == PathSemantic::DATA_TEST){
+                auto star_at_from = from_is_better_start_direction_smt();
+                begin_at_left[path_var.id] = star_at_from != right_to_left;
+                const  SMTAutomaton&best_automaton = star_at_from ? smt_automaton : smt_inverted;
+                Id start = star_at_from ? from : to;
+                Id end = star_at_from ? to : from;
+                return get_check(best_automaton, start, end);
+            }
+            else {
+                auto star_at_from = from_is_better_start_direction();
+                begin_at_left[path_var.id] = star_at_from != right_to_left;
+                const RPQ_DFA &best_automaton = star_at_from ? automaton : automaton_inverted;
+                Id start = star_at_from ? from : to;
+                Id end = star_at_from ? to : from;
+                return get_check(best_automaton, start, end);
+            }
         } else {
             begin_at_left[path_var.id] = !right_to_left;
-            return get_enum(automaton, from, to.get_var());
+            if (path_semantic == PathSemantic::DATA_TEST){
+                return get_enum(smt_automaton, from, to.get_var());
+            }
+            else {
+                return get_enum(automaton, from, to.get_var());
+            }
         }
     } else {
         if (to_assigned) {
@@ -431,12 +490,23 @@ unique_ptr<BindingIter> PathPlan::get_binding_iter() const {
             begin_at_left[path_var.id] = right_to_left;
             return get_enum(automaton_inverted, to, from.get_var());
         } else {
-            auto star_at_from = from_is_better_start_direction();
-            begin_at_left[path_var.id] =  star_at_from != right_to_left;
-            const RPQ_DFA& best_automaton = star_at_from ? automaton : automaton_inverted;
-            Id start = star_at_from ? from : to;
-            Id end   = star_at_from ? to   : from;
-            return get_unfixed(best_automaton, start.get_var(), end.get_var());
+            if (path_semantic == PathSemantic::DATA_TEST){
+                auto star_at_from = from_is_better_start_direction_smt();
+                begin_at_left[path_var.id] = star_at_from != right_to_left;
+                const SMTAutomaton &best_automaton = star_at_from ? smt_automaton : smt_inverted;
+                Id start = star_at_from ? from : to;
+                Id end = star_at_from ? to : from;
+                return get_unfixed(best_automaton, start.get_var(), end.get_var());
+
+            }
+            else {
+                auto star_at_from = from_is_better_start_direction();
+                begin_at_left[path_var.id] = star_at_from != right_to_left;
+                const RPQ_DFA &best_automaton = star_at_from ? automaton : automaton_inverted;
+                Id start = star_at_from ? from : to;
+                Id end = star_at_from ? to : from;
+                return get_unfixed(best_automaton, start.get_var(), end.get_var());
+            }
         }
     }
 }

@@ -44,6 +44,9 @@
 #include "query/executor/binding_iter/paths/all_shortest_trails/bfs_enum.h"
 #include "query/executor/binding_iter/paths/all_shortest_walks/bfs_check.h"
 #include "query/executor/binding_iter/paths/all_shortest_walks/bfs_enum.h"
+#include "query/executor/binding_iter/paths/data_test/bfs_check.h"
+#include "query/executor/binding_iter/paths/data_test/bfs_enum.h"
+
 #include "query/executor/binding_iter/paths/all_simple/bfs_check.h"
 #include "query/executor/binding_iter/paths/all_simple/bfs_enum.h"
 #include "query/executor/binding_iter/paths/all_simple/dfs_check.h"
@@ -71,3 +74,5 @@
 #include "query/executor/binding_iter/paths/experimental/dijkstra_check.h"
 #include "query/executor/binding_iter/paths/experimental/dijkstra_enum.h"
 #include "query/executor/binding_iter/paths/unfixed_composite.h"
+
+

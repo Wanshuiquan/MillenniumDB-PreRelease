@@ -76,6 +76,7 @@ private:
     SMTAutomaton smt_inverted;
 
     bool from_is_better_start_direction() const;
+    bool from_is_better_start_direction_smt() const;
 
     // Construct index provider for this automaton
     std::unique_ptr<Paths::IndexProvider> get_provider(const RPQ_DFA& automaton) const;
@@ -83,7 +84,7 @@ private:
     std::unique_ptr<BindingIter> get_check(const RPQ_DFA& automaton, Id start, Id end) const;
     std::unique_ptr<BindingIter> get_enum(const RPQ_DFA& automaton, Id start, VarId end) const;
     std::unique_ptr<BindingIter> get_unfixed(const RPQ_DFA& automaton, VarId start, VarId end) const;
-
+    std::unique_ptr<BindingIter> get_unfixed(const SMTAutomaton& automaton, VarId start, VarId end) const;
     //Construct index provider for SMT Automaton
 
      std::unique_ptr<Paths::IndexProvider> get_provider(const SMTAutomaton& automaton) const;

@@ -12,6 +12,7 @@
 #include <ostream>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "query/var_id.h"
@@ -54,7 +55,7 @@ public:
     to (to),
     inverse (inverse),
     type (std::move(type)),
-    property_checks(property)
+    property_checks(std::move(property))
     {
 
     }
@@ -72,11 +73,11 @@ public:
     }
     //clone function
     SMTTransition clone() const {
-        return SMTTransition(from, to, inverse, type, property_checks);
+        return {from, to, inverse, type, property_checks};
     }
 
     // Transition equality
-    bool operator==(SMTTransition other) {
+    bool operator==(const SMTTransition& other) const {
         // Data check transitions
         auto data = from == other.from && to == other.to && property_checks == other.property_checks;
         auto is_inverse = inverse == other.inverse;
@@ -106,7 +107,7 @@ public:
                                                std::string
                                                property_checks )
     {
-        return SMTTransition(from, to, false, "", property_checks);
+        return {from, to, false, "", std::move(property_checks)};
     }
 
     // Edge transition constructor
@@ -129,7 +130,7 @@ public:
                                               property_checks)
     {
 
-               return {from, to, inverse, type, property_checks};
+               return {from, to, inverse, type, std::move(property_checks)};
 
     }
 };

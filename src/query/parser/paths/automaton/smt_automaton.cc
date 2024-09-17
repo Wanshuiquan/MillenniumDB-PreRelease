@@ -34,6 +34,7 @@ void SMTAutomaton::print(std::ostream& os) const {
     os << "}\n";
     os << "start state: " << start << "\n";
     os << "final state: " << final_state << "\n" << std::endl;
+    os << "total_states" << total_states << std::endl;
 }
 
 

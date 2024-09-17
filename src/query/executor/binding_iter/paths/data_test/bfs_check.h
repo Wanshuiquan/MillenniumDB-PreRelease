@@ -13,8 +13,8 @@
 #include "storage/index/record.h"
 #include "graph_models/quad_model/quad_model.h"
 
-namespace Paths {
-    namespace DataTest{
+
+    namespace Paths::DataTest{
 
 
 
@@ -85,7 +85,7 @@ namespace Paths {
             // Explore neighbors searching for a solution.
             // returns a pointer to the object added to visited when a solution is found
             // or nullptr when there are no more results
-            const PathState* expand_neighbors(const MacroState& current_state);
+            const PathState* expand_neighbors(MacroState& );
 
             void accept_visitor(BindingIterVisitor& visitor) override;
 
@@ -104,8 +104,7 @@ namespace Paths {
             // THE RETURNED ITER IS THE SET OF LABELS W.R.T. THE OBJECT
             static BptIter<2> query_label(uint64_t obj_id) ;
             bool match_label(uint64_t obj_id, uint64_t label_id);
-            // progress a macros state over an edge
-            const PathState* progress(MacroState& macroState);
+
 
 
             // Set iterator for current node + transition
@@ -119,7 +118,7 @@ namespace Paths {
 
         };
     }
-}
+
 
 
 

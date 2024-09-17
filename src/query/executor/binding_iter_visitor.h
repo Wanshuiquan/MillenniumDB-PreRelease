@@ -74,6 +74,7 @@ namespace HashJoin {
 
 namespace Paths {
     class UnfixedComposite;
+    class SMTUnfixedComposite;
     namespace AllShortest {
         class BFSCheck;
         template <bool> class BFSEnum;
@@ -104,6 +105,7 @@ namespace Paths {
     }
     namespace DataTest{
         class BFSCheck;
+        class BFSEnum;
     }
     namespace Any {
         class BFSCheck;
@@ -182,7 +184,11 @@ public:
     virtual void visit(HashJoin::MaterializeIter&)             = 0;
 
     virtual void visit(Paths::DataTest::BFSCheck&) = 0;
+    virtual void visit(Paths::DataTest::BFSEnum&) = 0;
+
     virtual void visit(Paths::UnfixedComposite&)                   = 0;
+    virtual void visit(Paths::SMTUnfixedComposite&)                   = 0;
+
     virtual void visit(Paths::AllShortest::BFSCheck&)              = 0;
     virtual void visit(Paths::AllShortest::BFSEnum<false>&)        = 0;
     virtual void visit(Paths::AllShortest::BFSEnum<true>&)         = 0;

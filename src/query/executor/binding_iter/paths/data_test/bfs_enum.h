@@ -13,8 +13,8 @@
 #include "storage/index/record.h"
 #include "graph_models/quad_model/quad_model.h"
 
-namespace Paths {
-    namespace DataTest{
+
+    namespace Paths::DataTest{
         class BFSEnum: public BindingIter{
             // Attributes determined in the constructor
             VarId         path_var;
@@ -59,11 +59,11 @@ namespace Paths {
             // Statistics
             uint_fast32_t idx_searches = 0;
 
-            BFSEnum( VarId        path_var,
-                     Id             start,
-                     VarId              end,
-                SMTAutomaton        automaton,
-                std::unique_ptr<IndexProvider>  provider
+            BFSEnum(    VarId        path_var,
+                       const  Id&             start,
+                         VarId              end,
+                        SMTAutomaton        automaton,
+                        std::unique_ptr<IndexProvider>  provider
             ) :
             path_var      (path_var),
             start         (start),
@@ -78,12 +78,12 @@ namespace Paths {
                 }
             }
 
+            void accept_visitor(BindingIterVisitor& visitor) override;
             // Explore neighbors searching for a solution.
             // returns a pointer to the object added to visited when a solution is found
             // or nullptr when there are no more results
-            const PathState* expand_neighbors(const MacroState& current_state);
+            const PathState* expand_neighbors(MacroState&);
 
-            void accept_visitor(BindingIterVisitor& visitor) override;
 
             void _begin(Binding& parent_binding) override;
 
@@ -97,12 +97,11 @@ namespace Paths {
                 parent_binding->add(end, ObjectId::get_null());
                 parent_binding->add(path_var, ObjectId::get_null());
             }
-            uint64_t query_property (uint64_t obj_id, uint64_t key_id) const;
+            static uint64_t query_property (uint64_t obj_id, uint64_t key_id) ;
             // THE RETURNED ITER IS THE SET OF LABELS W.R.T. THE OBJECT
             static BptIter<2> query_label(uint64_t obj_id) ;
-            bool match_label(uint64_t obj_id, uint64_t label_id);
+            static bool match_label(uint64_t obj_id, uint64_t label_id);
             // progress a macros state over an edge
-            const PathState* progress(MacroState& macroState);
 
 
             // Set iterator for current node + transition
@@ -115,7 +114,7 @@ namespace Paths {
 
         };
     }
-}
+
 
 
 #endif //MILLENNIUMDB_BFS_ENUM_H
