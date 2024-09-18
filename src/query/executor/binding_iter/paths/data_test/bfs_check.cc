@@ -94,7 +94,8 @@ bool BFSCheck::eval_check(uint64_t obj, MacroState& macroState, std::string form
     // decompose
     auto vector = context.decompose(property);
     z3::ast_vector_tpl<z3::expr> new_vec = z3::ast_vector_tpl<z3::expr>(context.context);
-
+    z3::solver s(context.context);
+    s.add(context.bound_epsilon);
     for (const auto& f: vector){
         // normalize formula into t ~ constant
         auto normal_form = context.normalizition(f);
@@ -107,8 +108,7 @@ bool BFSCheck::eval_check(uint64_t obj, MacroState& macroState, std::string form
         }
 
         //check the sat for the current bound
-        z3::solver s(context.context);
-        s.add(context.bound_epsilon);
+
         for (const auto& parameter: macroState.collected_expr){
             std::string key_str = parameter.to_string();
             if (macroState.upper_bounds.find(key_str) != macroState.upper_bounds.end()){
@@ -124,11 +124,12 @@ bool BFSCheck::eval_check(uint64_t obj, MacroState& macroState, std::string form
             }
         }
 
-        switch (s.check()) {
-            case z3::sat: return  true;
-            case z3::unsat: return false;
-            case z3::unknown: return false;
-        }
+
+    }
+    switch (s.check()) {
+        case z3::sat: return  true;
+        case z3::unsat: return false;
+        case z3::unknown: return false;
     }
 }
 
@@ -233,9 +234,8 @@ const PathState* BFSCheck::expand_neighbors(MacroState& macroState){
             }
 
         }
-        return nullptr;
-
     }
+    return nullptr;
 }
 bool BFSCheck::_next() {
     // Check if first state is final

@@ -80,6 +80,7 @@ int MacroState::update_bound(std::tuple<Bound, z3::expr, z3::expr> bound) {
             }
             return 1;
         }
+        default: return 0;
     }
 
 }

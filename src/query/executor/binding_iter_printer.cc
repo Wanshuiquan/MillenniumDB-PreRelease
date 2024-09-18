@@ -1153,15 +1153,23 @@ void BindingIterPrinter::visit(LSH::ProjectTensorSimilarity& binding_iter) {
 }
 
 void BindingIterPrinter::visit(Paths::DataTest::BFSCheck& binding_iter){
-    throw std::runtime_error("Not implement yet");
+    std::stringstream ss;
+    ss << "idx_searches: " << binding_iter.idx_searches;
+    auto helper = BindingIterPrinterHelper("Paths::DataTest::Check", *this, binding_iter, ss.str());
+    os << ")\n";
 };
 
-void BindingIterPrinter::visit(Paths::DataTest::BFSEnum &) {
-    throw std::runtime_error("Not implement yet");
+void BindingIterPrinter::visit(Paths::DataTest::BFSEnum &binding_iter) {
+    std::stringstream ss;
+    ss << "idx_searches: " << binding_iter.idx_searches;
+    auto helper = BindingIterPrinterHelper("Paths::DataTest::Check", *this, binding_iter, ss.str());
+    os << ")\n";
 
 }
 
-void BindingIterPrinter::visit(Paths::SMTUnfixedComposite &) {
-    throw std::runtime_error("Not implement yet");
-
+void BindingIterPrinter::visit(Paths::SMTUnfixedComposite &binding_iter) {
+    std::stringstream ss;
+    ss << "idx_searches: " << binding_iter.idx_searches;
+    auto helper = BindingIterPrinterHelper("Paths::DataTest::Check", *this, binding_iter, ss.str());
+    os << ")\n";
 }
