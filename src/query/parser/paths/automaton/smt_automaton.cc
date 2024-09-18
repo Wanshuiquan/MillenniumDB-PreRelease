@@ -113,7 +113,13 @@ void SMTAutomaton::transform_automaton(ObjectId(*f)(const std::string&)) {
     // Set transition ids
     for (size_t i = 0; i < from_to_connections.size(); i++) {
         for (auto& t : from_to_connections[i]) {
+        if(t.type.c_str()[0] == ':') {
+            t.type_id = f(t.type.erase(0, 1));
+        }
+        else{
             t.type_id = f(t.type);
+
+        }
         }
     }
 }

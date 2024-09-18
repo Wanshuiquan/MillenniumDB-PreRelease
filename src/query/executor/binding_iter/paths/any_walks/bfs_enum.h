@@ -3,7 +3,7 @@
 #include <memory>
 #include <queue>
 #include <type_traits>
-
+#include <iostream>
 #include "query/executor/binding_iter.h"
 #include "query/executor/binding_iter/paths/any_walks/search_state.h"
 #include "query/executor/binding_iter/paths/index_provider/path_index.h"

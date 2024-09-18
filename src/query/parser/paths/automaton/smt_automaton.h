@@ -44,7 +44,7 @@ public:
     // if is data transition type will be ""
     std::string type;
 
-    ObjectId type_id = ObjectId::get_null();
+    ObjectId type_id;
 
     // List of property checks for the transition
     std::string property_checks;
@@ -59,21 +59,31 @@ public:
     {
 
     }
+    // constructor
+    SMTTransition(uint_fast32_t from, uint_fast32_t to, bool inverse, std::string type, ObjectId type_id,std::string property):
+            from (from),
+            to (to),
+            inverse (inverse),
+            type (std::move(type)),
+            type_id(type_id),
+            property_checks(std::move(property))
+    {
 
+    }
     //copy constructor
     SMTTransition(const SMTTransition& other) :
             from (other.from),
             to (other.to),
             inverse (other.inverse),
             type (other.type),
-
+            type_id(other.type_id),
             property_checks(other.property_checks)
     {
 
     }
     //clone function
     SMTTransition clone() const {
-        return {from, to, inverse, type, property_checks};
+        return {from, to, inverse, type, type_id, property_checks};
     }
 
     // Transition equality

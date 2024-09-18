@@ -87,11 +87,11 @@ pathSequence: pathAtom ('/' pathAtom)*;
 
 pathAtom: '^'? TYPE pathSuffix? # pathAtomSimple
 |         '^'? '(' pathAlternatives ')' pathSuffix? # pathAtomAlternatives
-|        '^'?  '(' TYPE '{' conditionalAndExpr '}' ')' pathSuffix?# pathAtomSmt
+|        '^'?  '(' object '{' conditionalAndExpr '}' ')' pathSuffix?# pathAtomSmt
 ;
 
+object: TYPE | identifier;
 
-object: TYPE | node;
 
 pathSuffix: op='*'
 |           op='+'

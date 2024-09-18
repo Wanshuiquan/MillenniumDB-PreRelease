@@ -99,6 +99,13 @@ bool BFSCheck::eval_check(uint64_t obj, MacroState& macroState, std::string form
     for (const auto& f: vector){
         // normalize formula into t ~ constant
         auto normal_form = context.normalizition(f);
+        // if the formula is normalized as constant
+        if (f.is_true()){
+            continue;
+        }
+        else if (f.is_false()){
+            return false;
+        }
         // get and update the bound
         auto bound = context.get_bound(normal_form);
         auto update_flag = macroState.update_bound(bound);
@@ -166,15 +173,18 @@ void BFSCheck::_begin(Binding& _parent_binding) {
 
 const PathState* BFSCheck::expand_neighbors(MacroState& macroState){
     // stop if automaton state has not outgoing transitions
-    if (automaton.from_to_connections[macroState.automaton_state].empty()) {
-        return nullptr;
+    if (iter->at_end()) {
+        current_transition = 0;
+        // Check if automaton state has transitions
+        if (automaton.from_to_connections[macroState.automaton_state].empty()) {
+            return nullptr;
+        }
+        set_iter(macroState);
     }
-    current_transition = 0;
-    set_iter(macroState);
 
     while (current_transition < automaton.from_to_connections[macroState.automaton_state].size()) {
         auto &transition_edge = automaton.from_to_connections[macroState.automaton_state][current_transition];
-        if (iter->at_end()) {
+        while (iter->next()) {
             // set the iter, we only set iter with edge transitions
             set_iter(macroState);
             // get the edge of edge and target
@@ -208,13 +218,13 @@ const PathState* BFSCheck::expand_neighbors(MacroState& macroState){
                         macroState.path_state
                 );
                 if (matched_label && check_value) {
-                    if (even && macroState.automaton_state != transition_edge.to) {
-                        macroState.automaton_state = transition_edge.to;
+                    if (even && macroState.automaton_state != transition_node.to) {
+                        macroState.automaton_state = transition_node.to;
                         even = !even;
                     } else {
                         return nullptr;
                     }
-                    if (automaton.decide_accept(macroState.automaton_state) && target_id == end_object_id.id) {
+                    if (automaton.decide_accept(macroState.automaton_state)) {
                         return new_visited_ptr;
                     } else {
                         open.emplace(
@@ -228,12 +238,13 @@ const PathState* BFSCheck::expand_neighbors(MacroState& macroState){
                     }
                 }
             }
-            current_transition++;
-            if (current_transition < automaton.from_to_connections[macroState.automaton_state].size()) {
-                set_iter(macroState);
-            }
 
         }
+        current_transition++;
+        if (current_transition < automaton.from_to_connections[macroState.automaton_state].size()) {
+            set_iter(macroState);
+        }
+
     }
     return nullptr;
 }
@@ -279,7 +290,6 @@ bool BFSCheck::_next() {
             return true;
         } else {
             // Pop and visit next state
-            assert(iter->at_end());
             open.pop();
         }
     }

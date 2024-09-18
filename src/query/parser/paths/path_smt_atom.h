@@ -95,7 +95,8 @@ public:
         // cast Expr to ExprAnd
 
         // Connect states with (atom, smtexpr) as label
-        automaton.add_transition(SMTTransition::make_transition(0, 1, inverse, atom,  property_checks ->to_smt_lib() ));
+        auto formula = property_checks ->to_smt_lib();
+        automaton.add_transition(SMTTransition::make_transition(0, 1, inverse, atom,  formula ));
         return automaton;
     }
 

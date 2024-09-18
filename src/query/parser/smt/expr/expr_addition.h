@@ -18,7 +18,7 @@ public:
     std::unique_ptr<Expr> clone() const override {
         return std::make_unique<ExprAddition>(lhs->clone(), rhs->clone());
     }
-    std::string to_smt_lib() const {
+    std::string to_smt_lib() const override{
                 return "( + "  + lhs -> to_smt_lib()  + "   "+  rhs -> to_smt_lib() + ")";
 
     }

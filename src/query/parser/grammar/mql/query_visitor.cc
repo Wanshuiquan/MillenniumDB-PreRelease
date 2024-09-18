@@ -1029,7 +1029,7 @@ Any QueryVisitor::visitPathAtomSmt(MQL_Parser::PathAtomSmtContext* ctx)
     bool inverse = (ctx->children[0]->getText() == "^") ^ current_path_inverse;
 
     //object
-    auto object = ctx-> TYPE() ->getText();
+    auto object = ctx-> object() -> getText();
 
     // handle formula
     auto f = ctx ->conditionalAndExpr();

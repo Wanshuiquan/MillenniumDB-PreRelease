@@ -27,9 +27,13 @@ uint64_t BFSEnum::query_property(uint64_t obj_id, uint64_t key_id)  {
             Record<3>(min_prop_ids),
             Record<3>(max_prop_ids));
     auto prop_record = prop_iter.next();
-    assert(prop_record != nullptr);
-    auto record_value_id = (*prop_record)[2];
-    return record_value_id;
+    if (prop_record == nullptr){
+        return 0;
+    }
+    else {
+        auto record_value_id = (*prop_record)[2];
+        return record_value_id;
+    }
 }
 
 BptIter<2> BFSEnum::query_label(uint64_t obj_id) {
@@ -50,6 +54,8 @@ bool BFSEnum::match_label(uint64_t obj_id, uint64_t label_id) {
     auto labels_iter = query_label(obj_id);
     auto label_record = labels_iter.next();
     while(label_record != nullptr){
+        auto val = get<std::string>(decode_mask(ObjectId((*label_record)[1])));
+        std::cout << "type is" << val << std::endl;
         if ((*label_record)[1] == label_id) {
             return true;
         }
@@ -84,6 +90,7 @@ bool BFSEnum::eval_check(uint64_t obj, MacroState& macroState, std::string formu
         context.add_real_var(get_query_ctx().get_var_name(var));
     }
     //Parse Formula
+
     auto property = context.parse(formula);
     //subsitution
     for (const auto& ele: attributes) {
@@ -101,6 +108,13 @@ bool BFSEnum::eval_check(uint64_t obj, MacroState& macroState, std::string formu
     for (const auto& f: vector){
         // normalize formula into t ~ constant
         auto normal_form = context.normalizition(f);
+        // if the formula is normalized as constant
+        if (f.is_true()){
+            continue;
+        }
+        else if (f.is_false()){
+            return false;
+        }
         // get and update the bound
         auto bound = context.get_bound(normal_form);
         auto update_flag = macroState.update_bound(bound);
@@ -146,7 +160,7 @@ void BFSEnum::_begin(Binding& _parent_binding) {
 
     // Store ID for end object
     // init the start node
-    auto start_path_state = visited.add(start_object_id, ObjectId::get_null(), ObjectId::get_null() , false, nullptr);
+    auto* start_path_state = visited.add(start_object_id, ObjectId(), ObjectId() , false, nullptr);
     auto* start_macro_state =  new MacroState(start_path_state, automaton.get_start());
 
     // explore from the init state
@@ -167,25 +181,28 @@ void BFSEnum::_begin(Binding& _parent_binding) {
 
 const PathState* BFSEnum::expand_neighbors(Paths::DataTest::MacroState &macroState) {
     // stop if automaton state has not outgoing transitions
-    if (automaton.from_to_connections[macroState.automaton_state].empty()) {
-        return nullptr;
+    // Check if this is the first time that current_state is explored
+    if (iter->at_end()) {
+        current_transition = 0;
+        // Check if automaton state has transitions
+        if (automaton.from_to_connections[macroState.automaton_state].empty()) {
+            return nullptr;
+        }
+        set_iter(macroState);
     }
-    current_transition = 0;
-    set_iter(macroState);
 
     while (current_transition < automaton.from_to_connections[macroState.automaton_state].size()) {
         auto &transition_edge = automaton.from_to_connections[macroState.automaton_state][current_transition];
-        if (iter->at_end()) {
-            // set the iter, we only set iter with edge transitions
-            set_iter(macroState);
+        while (iter->next()) {
             // get the edge of edge and target
-            uint64_t edge_id = iter->get_edge();
             uint64_t target_id = iter->get_reached_node();
+
+            uint64_t edge_id = iter->get_edge();
             // progress with edges
             // edges type has checked, so we only check the properties
             // we do not progress if it is not sat with the edge transition, or the transition is not
-            if ((!even) || (!eval_check(edge_id, macroState, transition_edge.property_checks))) {
-                return nullptr;
+            if ((even) || (!eval_check(edge_id, macroState, transition_edge.property_checks))) {
+                continue;
             }
 
             // the odd states and the even states should be disjoint
@@ -193,7 +210,7 @@ const PathState* BFSEnum::expand_neighbors(Paths::DataTest::MacroState &macroSta
                 macroState.automaton_state = transition_edge.to;
                 even = !even;
             } else {
-                return nullptr;
+                continue;
             }
 
             // else we explore a successor transition as a node transition
@@ -203,19 +220,19 @@ const PathState* BFSEnum::expand_neighbors(Paths::DataTest::MacroState &macroSta
                 bool check_value = eval_check(target_id, macroState, transition_node.property_checks);
                 const PathState *new_visited_ptr = visited.add(
                         ObjectId(target_id),
-                        QuadObjectId::get_edge(transition_edge.type),
+                        transition_edge.type_id,
                         ObjectId(edge_id),
                         transition_edge.inverse,
                         macroState.path_state
                 );
                 if (matched_label && check_value) {
-                    if (even && macroState.automaton_state != transition_edge.to) {
-                        macroState.automaton_state = transition_edge.to;
+                    if (even && macroState.automaton_state != transition_node.to) {
+                        macroState.automaton_state = transition_node.to;
                         even = !even;
                     } else {
-                        return nullptr;
+                        continue;
                     }
-                    if (automaton.decide_accept(macroState.automaton_state) && target_id == end_object_id.id) {
+                    if (automaton.decide_accept(macroState.automaton_state)) {
                         return new_visited_ptr;
                     } else {
                         open.emplace(
@@ -229,11 +246,12 @@ const PathState* BFSEnum::expand_neighbors(Paths::DataTest::MacroState &macroSta
                     }
                 }
             }
-            current_transition++;
-            if (current_transition < automaton.from_to_connections[macroState.automaton_state].size()) {
-                set_iter(macroState);
-            }
 
+
+        }
+        current_transition++;
+        if (current_transition < automaton.from_to_connections[macroState.automaton_state].size()) {
+            set_iter(macroState);
         }
 
     }
@@ -241,6 +259,7 @@ const PathState* BFSEnum::expand_neighbors(Paths::DataTest::MacroState &macroSta
 
 }
 bool BFSEnum::_next() {
+    if (open.empty()) return false;
     // Enum if first state is final
     if (first_next) {
         const auto& current_state = open.front();
@@ -286,7 +305,6 @@ bool BFSEnum::_next() {
             return true;
         } else {
             // Pop and visit next state
-            assert(iter->at_end());
             open.pop();
         }
     }

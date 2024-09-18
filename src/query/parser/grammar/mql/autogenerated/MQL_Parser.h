@@ -821,7 +821,7 @@ public:
     PathAtomSmtContext(PathAtomContext *ctx);
 
     antlr4::tree::TerminalNode *L_PAR();
-    antlr4::tree::TerminalNode *TYPE();
+    ObjectContext *object();
     antlr4::tree::TerminalNode *LCURLY_BRACKET();
     ConditionalAndExprContext *conditionalAndExpr();
     antlr4::tree::TerminalNode *RCURLY_BRACKET();
@@ -863,7 +863,7 @@ public:
     ObjectContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     antlr4::tree::TerminalNode *TYPE();
-    NodeContext *node();
+    IdentifierContext *identifier();
 
 
     virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;

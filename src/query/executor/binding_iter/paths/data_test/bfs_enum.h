@@ -108,7 +108,8 @@
             inline void set_iter(const MacroState& s) {
                 // Get iterator from custom index
                 auto& transition = automaton.from_to_connections[s.automaton_state][current_transition];
-                iter = provider->get_iter(transition.type_id.id, transition.inverse, s.path_state->node_id.id);
+                auto id = QuadObjectId::get_named_node(transition.type);
+                iter = provider->get_iter(id.id, transition.inverse, s.path_state->node_id.id);
                 idx_searches++;
             }
 

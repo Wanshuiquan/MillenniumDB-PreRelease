@@ -30,7 +30,7 @@ public:
             return "(assert ( and" + formulas + "))";
         }
         else{
-            return "( assert(" + and_list[0] ->to_smt_lib() + "))";
+            return "( assert " + and_list[0] ->to_smt_lib() + " )";
         }
 
 }

@@ -110,6 +110,7 @@ set(BUILD_TARGETS
     mdb-import
     mdb-import-tensors
     mdb-index-tensors
+        mdb-query-mql
     # mdb-scsu
     # mdb-text-search
 )

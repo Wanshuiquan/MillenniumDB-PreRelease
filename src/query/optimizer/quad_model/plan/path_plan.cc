@@ -487,8 +487,13 @@ unique_ptr<BindingIter> PathPlan::get_binding_iter() const {
     } else {
         if (to_assigned) {
             // enum starting on to
-            begin_at_left[path_var.id] = right_to_left;
-            return get_enum(automaton_inverted, to, from.get_var());
+            if (path_semantic == PathSemantic::DATA_TEST){
+                begin_at_left[path_var.id] = right_to_left;
+                return get_enum(smt_inverted, to, from.get_var());
+            }else {
+                begin_at_left[path_var.id] = right_to_left;
+                return get_enum(automaton_inverted, to, from.get_var());
+            }
         } else {
             if (path_semantic == PathSemantic::DATA_TEST){
                 auto star_at_from = from_is_better_start_direction_smt();

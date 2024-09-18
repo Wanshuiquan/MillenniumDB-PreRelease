@@ -23,7 +23,7 @@ public:
         visitor.visit(*this);
     }
 
-    std::string to_smt_lib()const {
+    std::string to_smt_lib() const override {
         if (value.is_true()){
             return "true";
         }
