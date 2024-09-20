@@ -11,67 +11,23 @@
 using namespace std;
 using namespace Paths::DataTest;
 
-
-uint64_t BFSEnum::query_property(uint64_t obj_id, uint64_t key_id)  {
-    // Search B+Tree for *values* given <obj,key>
-    std::array<uint64_t, 3> min_prop_ids {};
-    std::array<uint64_t, 3> max_prop_ids {};
-    min_prop_ids[0] = obj_id;
-    max_prop_ids[0] = obj_id;
-    min_prop_ids[1] = key_id;
-    max_prop_ids[1] = key_id;
-    min_prop_ids[2] = 0;
-    max_prop_ids[2] = UINT64_MAX;
-    auto prop_iter = quad_model.object_key_value->get_range(
-            &get_query_ctx().thread_info.interruption_requested,
-            Record<3>(min_prop_ids),
-            Record<3>(max_prop_ids));
-    auto prop_record = prop_iter.next();
-    if (prop_record == nullptr){
-        return 0;
-    }
-    else {
-        auto record_value_id = (*prop_record)[2];
-        return record_value_id;
-    }
-}
-
-BptIter<2> BFSEnum::query_label(uint64_t obj_id) {
-    std::array<uint64_t ,2> min_prop_ids{};
-    std::array<uint64_t, 2> max_prop_ids{};
-    max_prop_ids[0] = obj_id;
-    min_prop_ids[0] = obj_id;
-    max_prop_ids[1] = UINT64_MAX,
-            min_prop_ids[1] = 0;
-    auto prop_iter = quad_model.node_label->get_range(
-            &get_query_ctx().thread_info.interruption_requested,
-            Record<2>(min_prop_ids),
-            Record<2>(max_prop_ids));
-    return prop_iter;
-}
-
-bool BFSEnum::match_label(uint64_t obj_id, uint64_t label_id) {
-    auto labels_iter = query_label(obj_id);
-    auto label_record = labels_iter.next();
-    while(label_record != nullptr){
-        auto val = get<std::string>(decode_mask(ObjectId((*label_record)[1])));
-        std::cout << "type is" << val << std::endl;
-        if ((*label_record)[1] == label_id) {
-            return true;
-        }
-        else {
-            label_record = labels_iter.next();
-        }
-    }
-    return false;
-}
+// we can deduce the type from here
 void BFSEnum::update_value(uint64_t obj) {
     for (const auto& ele: attributes){
-        auto key = ele.first;
+        auto key = ele;
         ObjectId key_id = get<1>(key);
-        uint64_t value_id = query_property(obj, key_id.id);
-        double_t new_value = decoding_mask(ObjectId(value_id));
-        attributes[key] = new_value;
+        auto res = query_property(obj, key_id.id);
+        if (res.has_value()){
+            uint64_t value_id = res.value();
+            Result new_value = decode_mask(ObjectId(value_id));
+            if (std::holds_alternative<std::string>(new_value)){
+                string_attributes[key] = std::get<std::string>(new_value);
+            }
+            else {
+                real_attributes[key] = std::get<std::double_t>(new_value);
+            }
+        }
+
     }
 }
 
@@ -79,71 +35,90 @@ bool BFSEnum::eval_check(uint64_t obj, MacroState& macroState, std::string formu
     // update_value
     update_value(obj);
     // Initialize context
-    SMTContext context;
-    for (const auto& ele: attributes){
+    for (const auto& ele: string_attributes){
         auto attr =  ele.first;
         std::string name = std::get<0>(attr);
-        context.add_real_var(name);
+        get_smt_ctx().add_string_var(name);
+    }
+    for (const auto& ele: real_attributes){
+        auto attr =  ele.first;
+        std::string name = std::get<0>(attr);
+        get_smt_ctx().add_real_var(name);
     }
     for (const auto& ele: vars){
         auto var =  ele.first;
-        context.add_real_var(get_query_ctx().get_var_name(var));
+        get_smt_ctx().add_real_var(get_query_ctx().get_var_name(var));
     }
     //Parse Formula
 
-    auto property = context.parse(formula);
+    auto property = get_smt_ctx().parse(formula);
     //subsitution
-    for (const auto& ele: attributes) {
+    for (const auto& ele: string_attributes) {
+        auto attr = ele.first;
+        std::string name = std::get<0>(attr);
+        std::string value = ele.second;
+        property = get_smt_ctx().subsitute_string(name, value, property);
+    }
+
+    for (const auto& ele: real_attributes) {
         auto attr = ele.first;
         std::string name = std::get<0>(attr);
         double_t value = ele.second;
-        property = context.subsitute_real(name, value, property);
+        property = get_smt_ctx().subsitute_real(name, value, property);
     }
     // decompose
-    auto vector = context.decompose(property);
-    z3::ast_vector_tpl<z3::expr> new_vec = z3::ast_vector_tpl<z3::expr>(context.context);
+    auto vector = get_smt_ctx().decompose(property);
+    z3::ast_vector_tpl<z3::expr> new_vec = z3::ast_vector_tpl<z3::expr>(get_smt_ctx().context);
 
-    z3::solver s(context.context);
-    s.add(context.bound_epsilon);
-    for (const auto& f: vector){
+    z3::solver s(get_smt_ctx().context);
+    s.add(get_smt_ctx().bound_epsilon);
+    for (const auto& f: vector) {
         // normalize formula into t ~ constant
-        auto normal_form = context.normalizition(f);
+        auto normal_form = get_smt_ctx().normalizition(f);
         // if the formula is normalized as constant
-        if (f.is_true()){
+        if (normal_form.is_true()) {
             continue;
-        }
-        else if (f.is_false()){
+        } else if (normal_form.is_false()) {
             return false;
         }
         // get and update the bound
-        auto bound = context.get_bound(normal_form);
+        auto bound = get_smt_ctx().get_bound(normal_form);
         auto update_flag = macroState.update_bound(bound);
         // update the wrong value
-        if (update_flag == 0){
+        if (update_flag == 0) {
             return false;
         }
 
         //check the sat for the current bound
 
-        for (const auto& parameter: macroState.collected_expr){
-            std::string key_str = parameter.to_string();
-            if (macroState.upper_bounds.find(key_str) != macroState.upper_bounds.end()){
+        for (const auto &para: macroState.collected_expr) {
+            const std::string &key_str = para.to_string();
+            auto parameter = para;
+            if (macroState.upper_bounds.find(key_str) != macroState.upper_bounds.end()) {
                 double val = macroState.upper_bounds[key_str];
-                s.add(parameter <= context.add_real_val(val));
-            }
-            else if (macroState.lower_bounds.find(key_str) != macroState.lower_bounds.end()){
+                s.add(parameter <= get_smt_ctx().add_real_val(val));
+            } else if (macroState.lower_bounds.find(key_str) != macroState.lower_bounds.end()) {
                 double val = macroState.lower_bounds[key_str];
-                s.add(parameter >= context.add_real_val(val));
-            } else if (macroState.eq_vals.find(key_str) != macroState.eq_vals.end()){
+                s.add(parameter >= get_smt_ctx().add_real_val(val));
+            } else if (macroState.eq_vals.find(key_str) != macroState.eq_vals.end()) {
                 double val = macroState.eq_vals[key_str];
-                s.add(parameter == context.add_real_val(val));
+                s.add(parameter == get_smt_ctx().add_real_val(val));
             }
         }
 
-
     }
+
     switch (s.check()) {
-        case z3::sat: return  true;
+        case z3::sat: {
+            auto model = s.get_model();
+            for (const auto &ele:vars){
+                std::string name = get_query_ctx().get_var_name(ele.first);
+                z3::expr v = get_smt_ctx().get_var(name);
+                auto val = model.eval(v).as_double();
+                vars[ele.first] = val;
+            }
+            return true;
+        }
         case z3::unsat: return false;
         case z3::unknown: return false;
     }
@@ -170,9 +145,8 @@ void BFSEnum::_begin(Binding& _parent_binding) {
         //check_label
         uint64_t label_id = QuadObjectId::get_string(t.type).id;
         bool label_matched = match_label(start_object_id.id, label_id);
-        if (check_succeeded&&label_matched&&even){
+        if (check_succeeded&&label_matched){
             // the next transition should be an edge transition
-            even = false;
             open.emplace(start_macro_state->path_state, t.to, start_macro_state->upper_bounds, start_macro_state->lower_bounds, start_macro_state->eq_vals, start_macro_state->collected_expr);
         }
     }
@@ -201,17 +175,14 @@ const PathState* BFSEnum::expand_neighbors(Paths::DataTest::MacroState &macroSta
             // progress with edges
             // edges type has checked, so we only check the properties
             // we do not progress if it is not sat with the edge transition, or the transition is not
-            if ((even) || (!eval_check(edge_id, macroState, transition_edge.property_checks))) {
+            if ((!eval_check(edge_id, macroState, transition_edge.property_checks))) {
                 continue;
             }
 
             // the odd states and the even states should be disjoint
-            if (macroState.automaton_state != transition_edge.to) {
-                macroState.automaton_state = transition_edge.to;
-                even = !even;
-            } else {
-                continue;
-            }
+
+            macroState.automaton_state = transition_edge.to;
+
 
             // else we explore a successor transition as a node transition
             for (auto &transition_node: automaton.from_to_connections[macroState.automaton_state]) {
@@ -226,12 +197,9 @@ const PathState* BFSEnum::expand_neighbors(Paths::DataTest::MacroState &macroSta
                         macroState.path_state
                 );
                 if (matched_label && check_value) {
-                    if (even && macroState.automaton_state != transition_node.to) {
-                        macroState.automaton_state = transition_node.to;
-                        even = !even;
-                    } else {
-                        continue;
-                    }
+
+                    macroState.automaton_state = transition_node.to;
+
                     if (automaton.decide_accept(macroState.automaton_state)) {
                         return new_visited_ptr;
                     } else {
@@ -278,7 +246,9 @@ bool BFSEnum::_next() {
             auto path_id = path_manager.set_path(current_state.path_state, path_var);
             parent_binding->add(path_var, path_id);
             parent_binding->add(end, current_state.path_state->node_id);
-
+            for (const auto& ele: vars){
+                parent_binding->add(ele.first, QuadObjectId::get_value(to_string(ele.second)));
+            }
             queue<MacroState> empty;
             open.swap(empty);
             return true;
@@ -301,7 +271,9 @@ bool BFSEnum::_next() {
             auto path_id = path_manager.set_path(reached_final_state, path_var);
             parent_binding->add(path_var, path_id);
             parent_binding->add(end, reached_final_state->node_id);
-
+            for (const auto& ele: vars){
+                parent_binding->add(ele.first, QuadObjectId::get_value(to_string(ele.second)));
+            }
             return true;
         } else {
             // Pop and visit next state
@@ -336,7 +308,7 @@ void BFSEnum::_reset() {
         //check_label
         uint64_t label_id = QuadObjectId::get_string(t.type).id;
         bool label_matched = match_label(start_object_id.id, label_id);
-        if (check_succeeded&&label_matched&&even){
+        if (check_succeeded&&label_matched){
             // the next transition should be an edge transition
             even = false;
             open.emplace(start_macro_state->path_state,

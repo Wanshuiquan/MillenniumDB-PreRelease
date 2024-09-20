@@ -5,7 +5,6 @@
 #include <utility>
 #include <vector>
 #include <map>
-
 #include "graph_models/object_id.h"
 #include "query/executor/binding_iter/paths/index_provider/path_index.h"
 #include "query/parser/smt/smt_exprs.h"
@@ -46,7 +45,7 @@ struct MacroState {
     std::map<std::string, double> upper_bounds;
     std::map<std::string, double> lower_bounds;
     std::map<std::string, double> eq_vals;
-    std::set<z3::expr> collected_expr;
+    z3::ast_vector_tpl<z3::expr> collected_expr = z3::ast_vector_tpl<z3::expr>(get_smt_ctx() .context);
 
     
     MacroState(const PathState* path_state,
@@ -54,7 +53,7 @@ struct MacroState {
                 std::map<std::string, double> upper_bounds,
                 std::map<std::string, double> lower_bounds,
                 std::map<std::string, double> eq_vals,
-                std::set<z3::expr> collected_expr
+               const z3::ast_vector_tpl<z3::expr>& collected_expr
 
     ) :
         path_state      (path_state),
@@ -62,7 +61,7 @@ struct MacroState {
         upper_bounds (std::move(upper_bounds)),
         lower_bounds(std::move(lower_bounds)),
         eq_vals (std::move(eq_vals)),
-        collected_expr(std::move(collected_expr))
+        collected_expr(collected_expr)
         {
 
         }

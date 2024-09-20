@@ -37,6 +37,12 @@ void PathManager::begin(std::vector<bool>&& _begin_at_left) {
     begin_at_left[index] = std::move(_begin_at_left);
 }
 
+ObjectId PathManager::set_path(const Paths::DataTest::PathState *visited_pointer, VarId path_var) {
+    auto index = get_thread_index();
+    paths[index][path_var.id] = visited_pointer;
+    return ObjectId(ObjectId::MASK_PATH | DATATEST_MASK | path_var.id);
+}
+
 
 ObjectId PathManager::set_path(const Paths::Any::SearchState* visited_pointer, VarId path_var) {
     auto index = get_thread_index();
@@ -231,6 +237,11 @@ void PathManager::print(std::ostream& os,
         state->print(os, print_node, print_edge, begin_at_left[index][decoded_id]);
         break;
     }
+    case DATATEST_MASK:{
+        auto state = reinterpret_cast<const Paths::DataTest::PathState*>(paths[index][decoded_id]);
+        state->print(os, print_node, print_edge, begin_at_left[index][decoded_id]);
+        break;
+    }
     default:
         break;
     }
@@ -241,10 +252,7 @@ uint_fast32_t PathManager::get_thread_index() const {
     return get_query_ctx().thread_info.worker_index;
 }
 
-ObjectId PathManager::set_path(const Paths::DataTest::PathState *visited_pointer, VarId path_var) {
-    auto index = get_thread_index();
-    paths[index][path_var.id] = visited_pointer;
-    return ObjectId(ObjectId::MASK_PATH | DATATEST_MASK | path_var.id);}
+
 
 
 // void PathManager::clear() {

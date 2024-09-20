@@ -117,7 +117,7 @@ void SMTAutomaton::transform_automaton(ObjectId(*f)(const std::string&)) {
             t.type_id = f(t.type.erase(0, 1));
         }
         else{
-            t.type_id = f(t.type);
+            t.type_id = QuadObjectId::get_string(t.type);
 
         }
         }

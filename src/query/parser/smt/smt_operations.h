@@ -18,6 +18,10 @@
 #include "storage/tmp_manager.h"
 #include "z3++.h"
 
+enum Ty{
+    Str,
+    Real
+};
 enum Bound {
     Ge,
     Le,
@@ -90,6 +94,7 @@ Result inline decode_mask(ObjectId oid) {
     }
 }
 
+
 class SMTContext{
 public:
 
@@ -105,6 +110,12 @@ public:
     //The definition of func vector
     z3::func_decl_vector dels = z3::func_decl_vector(context);
 
+    //store vars
+    z3::ast_vector_tpl<z3::expr> var_vec = z3::ast_vector_tpl<z3::expr>(context);
+    std::map<std::string, int> vars;
+    std::map<std::string, Ty> type;
+
+    int index = 0;
     SMTContext(){
         dels.push_back(epsilon.decl());
     }
@@ -116,15 +127,28 @@ public:
 
     }
     void add_real_var(const std::string& name) {
-        dels.push_back(context.function(name.c_str(), 0, 0, REAL));
+        auto var = context.real_const(name.c_str());
+        if (vars.find(name) == vars.end()) {
+            dels.push_back(var.decl());
+            var_vec.push_back(var);
+
+            vars.emplace(name, index);
+            index = index + 1;
+        }
     }
     z3::expr add_real_val(double_t val){
         return context.real_val(std::to_string(val).c_str());
     }
 
     void add_string_var(const std::string& name){
-        dels.push_back(context.function(name.c_str(),0,0,STRING));
+        auto var = context.string_const(name.c_str());
+        if (vars.find(name) == vars.end()) {
+            dels.push_back(var.decl());
+            var_vec.push_back(var);
 
+            vars.emplace(name, index);
+            index = index + 1;
+        }
     }
     z3::expr add_string_val(const std::string& val){
         return context.string_val(val.c_str());
@@ -132,8 +156,8 @@ public:
 
     void add_obj_var(const std::string&  name){
         dels.push_back(context.function(name.c_str(),0,0,REAL));
-
     }
+
     z3::expr add_obj_val(uint64_t val){
         return context.real_val(val);
     }
@@ -143,7 +167,7 @@ public:
         return f;
     }
 
-    z3::ast_vector_tpl<z3::expr> decompose(const z3::expr f){
+    z3::ast_vector_tpl<z3::expr> decompose(const z3::expr& f){
         if (f.is_and()) {
             auto res = f.args();
             return res;
@@ -157,19 +181,25 @@ public:
     z3::expr subsitute_obj(const std::string& name, uint64_t val, const z3::expr& formula){
         Z3_ast var[] = {context.real_const(name.c_str())};
         Z3_ast value[] = {context.real_val(val)};
+
         z3::expr novi_expr = z3::to_expr(context, Z3_substitute(context, formula, 1, var, value ));
         return novi_expr;
     }
 
     z3::expr subsitute_real(const std::string& name, double_t val, const z3::expr& formula){
-        Z3_ast var[] = {context.real_const(name.c_str())};
+        int ind = vars[name];
+        auto v = var_vec[ind];
+        Z3_ast var[] = {v};
         Z3_ast value[] = {context.real_val(std::to_string(val).c_str())};
         z3::expr novi_expr = z3::to_expr(context, Z3_substitute(context, formula, 1, var, value ));
         return novi_expr;
     }
 
     z3::expr subsitute_string(const std::string& name, const std::string& val, const z3::expr& formula){
-        Z3_ast var[] = {context.string_const(name.c_str())};
+        int ind = vars[name];
+        std::cout << var_vec.size() << std::endl;
+        auto v = var_vec[ind];
+        Z3_ast var[] = {v};
         Z3_ast value[] = {context.string_val(val)};
         z3::expr novi_expr = z3::to_expr(context, Z3_substitute(context, formula, 1, var, value ));
         return novi_expr;
@@ -213,6 +243,16 @@ public:
         }
     }
 
+  z3::expr get_var(const std::string & name){
+        int ind = vars[name];
+        return var_vec[ind];
+    }
+
 };
 
+inline SMTContext* ctx = new SMTContext();
+
+inline SMTContext& get_smt_ctx(){
+    return *ctx;
+}
 #endif //MILLENNIUMDB_SMT_OPERATIONS_H

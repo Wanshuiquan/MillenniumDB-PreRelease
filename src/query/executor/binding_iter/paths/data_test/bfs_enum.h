@@ -12,7 +12,7 @@
 #include "misc/arena.h"
 #include "storage/index/record.h"
 #include "graph_models/quad_model/quad_model.h"
-
+#include "query_data.h"
 
     namespace Paths::DataTest{
         class BFSEnum: public BindingIter{
@@ -50,7 +50,10 @@
             // variables
             std::map<VarId, double_t> vars;
             // attributes
-            std::map<std::tuple<std::string, ObjectId>, double_t> attributes;
+            // attributes
+            std::set<std::tuple<std::string, ObjectId>> attributes;
+            std::map<std::tuple<std::string, ObjectId>, double_t> real_attributes;
+            std::map<std::tuple<std::string, ObjectId>, std::string> string_attributes;
             // odd progress is relate to an edge and even progress is relate to a node
             bool even= true;
 
@@ -71,7 +74,7 @@
             automaton     (automaton),
             provider      (std::move(provider)) {
                 for (auto& ele: automaton.get_attributes()){
-                    attributes.emplace(ele, 0);
+                    attributes.emplace(ele);
                 }
                 for (auto& ele: automaton.get_parameters()){
                     vars.emplace(ele, 0);
@@ -97,11 +100,7 @@
                 parent_binding->add(end, ObjectId::get_null());
                 parent_binding->add(path_var, ObjectId::get_null());
             }
-            static uint64_t query_property (uint64_t obj_id, uint64_t key_id) ;
-            // THE RETURNED ITER IS THE SET OF LABELS W.R.T. THE OBJECT
-            static BptIter<2> query_label(uint64_t obj_id) ;
-            static bool match_label(uint64_t obj_id, uint64_t label_id);
-            // progress a macros state over an edge
+
 
 
             // Set iterator for current node + transition

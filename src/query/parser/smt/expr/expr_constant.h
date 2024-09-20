@@ -32,8 +32,9 @@ public:
         }
         else {
             std::variant<double, std::string, bool> obj = decode_mask(value);
-            if (std::get_if<std::string>(&obj) != nullptr) {
-                return *std::get_if<std::string>(&obj);
+            auto str_val = std::get_if<std::string>(&obj);
+            if (str_val != nullptr) {
+                return "\"" + *str_val + "\"";
             }
             else{
                 return std::to_string(*std::get_if<double>(&obj));

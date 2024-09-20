@@ -97,7 +97,7 @@ class SMTUnfixedComposite : public BindingIter {
         uint64_t last_start = ObjectId::get_null().id;
 
         // iterator for starting nodes
-        std::unique_ptr<EdgeIter> iter;
+        BptIter<2> iter;
 
         // index of the start transition for the current iter
         uint32_t current_start_transition = 0;

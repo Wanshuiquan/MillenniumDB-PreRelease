@@ -43,9 +43,9 @@ int MacroState::update_bound(std::tuple<Bound, z3::expr, z3::expr> bound) {
     auto key = std::get<1>(bound);
     std::string key_str = key.to_string();
     auto value =  std::get<2>(bound);
-    if (collected_expr.count(key) == 0){
-        collected_expr.emplace(key);
-    }
+
+    collected_expr.push_back(key);
+
     switch (type) {
         case Ge:{
             if (upper_bounds.find(key_str) == upper_bounds.end()){
