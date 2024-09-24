@@ -11,7 +11,7 @@ from testing.types import ExecutionStats
 from tqdm import tqdm
 
 
-def run_all_tests(server_executable: Path, create_db_executable: Path, query_executable: Path):
+def run_all_tests(server_executable: Path, create_db_executable: Path):
     stats = ExecutionStats("All Tests")
 
     test_suites = get_test_suites()
@@ -27,7 +27,6 @@ def run_all_tests(server_executable: Path, create_db_executable: Path, query_exe
             test_suite=test_suite,
             server_executable=server_executable,
             create_db_executable=create_db_executable,
-            query_executable=query_executable,
             progress_bar=progress_bar,
             client_only=False,
         )
@@ -47,9 +46,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "--create-db-executable", type=str, help="Custom create-db executable", default=options.CREATE_DB_EXECUTABLE
     )
-    parser.add_argument(
-        "--query-executable", type=str, help="Custom query executable", default=options.QUERY_EXECUTABLE
-    )
     args = parser.parse_args()
 
-    sys.exit(run_all_tests(args.server_executable, args.create_db_executable, args.query_executable))
+    sys.exit(run_all_tests(args.server_executable, args.create_db_executable))

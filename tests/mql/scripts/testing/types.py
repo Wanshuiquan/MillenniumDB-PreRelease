@@ -84,11 +84,11 @@ class BadTest(Test):
 
 class QueryTest(Test):
     def __init__(
-        self,
-        *,
-        query: Path,
-        expected: Path,
-        data: Path,
+            self,
+            *,
+            query: Path,
+            expected: Path,
+            data: Path,
     ):
         super().__init__(query, data)
         self.expected = expected

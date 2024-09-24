@@ -136,12 +136,12 @@ def execute_bad_test(server: Popen[bytes] | None, test: BadTest, stats: Executio
 
 
 def execute_tests(
-    *,
-    server_executable: Path,
-    create_db_executable: Path,
-    test_suite: TestSuite,
-    client_only: bool = False,
-    progress_bar: tqdm | None = None,  # type:ignore
+        *,
+        server_executable: Path,
+        create_db_executable: Path,
+        test_suite: TestSuite,
+        client_only: bool = False,
+        progress_bar: tqdm | None = None,  # type:ignore
 ):
     """
     If client_only is True, then no database will be created and no server will be started.

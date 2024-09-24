@@ -53,3 +53,7 @@ TEST_SUITES: list[str] = [
 
 # Tests with the following query files fill be ignored
 IGNORED_TESTS: set[str] = set()
+
+
+def QUERY_EXECUTABLE():
+    return None
