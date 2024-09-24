@@ -38,6 +38,7 @@ void PathState::print(std::ostream& os,
 
 
 
+
 int MacroState::update_bound(std::tuple<Bound, z3::expr, z3::expr> bound) {
     auto type = std::get<0>(bound);
     auto key = std::get<1>(bound);
@@ -47,38 +48,38 @@ int MacroState::update_bound(std::tuple<Bound, z3::expr, z3::expr> bound) {
     collected_expr.push_back(key);
 
     switch (type) {
-        case Ge:{
+        case Le:{
             if (upper_bounds.find(key_str) == upper_bounds.end()){
                     upper_bounds[key_str] = value.as_double();
             }
             else{
                 double old_bound = upper_bounds[key_str];
-                double new_bound = value;
+                double new_bound = value.as_double();
                 if (new_bound < old_bound) upper_bounds[key_str] = new_bound;
             }
             return 1;
         }
-        case Le:{
+        case Ge:{
             if (lower_bounds.find(key_str) == lower_bounds.end()){
                 lower_bounds[key_str] = value.as_double();
             }
             else{
                 double old_bound = lower_bounds[key_str];
-                double new_bound = value;
+                double new_bound = value.as_double();
                 if (new_bound > old_bound) lower_bounds[key_str] = new_bound;
             }
             return 1;
         }
         case EQ:{
-            if (lower_bounds.find(key_str) == eq_vals.end()){
+            if (eq_vals.find(key_str) == eq_vals.end()){
                 eq_vals[key_str] = value.as_double();
+                return 1;
             }
             else{
-                double old_bound = lower_bounds[key_str];
-                double new_bound = value;
-                if (new_bound != old_bound) return 0;
+                double old_bound = eq_vals[key_str];
+                double new_bound = value.as_double();
+                return int(new_bound == old_bound);
             }
-            return 1;
         }
         default: return 0;
     }

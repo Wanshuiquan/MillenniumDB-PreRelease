@@ -1,0 +1,2 @@
+MATCH (P2) =[DATA_TEST(person {true})/(:owns {true})/(vehicle {type == "car"})]=> (?n)
+RETURN ?n

@@ -101,11 +101,13 @@ public:
     SMTAutomaton get_smt_automaton(ObjectId(*str_to_oid)(const std::string&)) const {
         SMTAutomaton automaton = get_smt_base_automaton();
         automaton.transform_automaton(str_to_oid);
+        automaton.print(std::cout);
         automaton.set_attr(this -> collect_attr());
         automaton.set_para(this -> collect_para());
         return automaton;
 
     }
+
 
     friend std::ostream& operator<<(std::ostream& os, const RegularPathExpr& b) {
         return b.print_to_ostream(os);

@@ -75,6 +75,7 @@ bool BFSEnum::eval_check(uint64_t obj, MacroState& macroState, std::string formu
     for (const auto& f: vector) {
         // normalize formula into t ~ constant
         auto normal_form = get_smt_ctx().normalizition(f);
+        auto _debug_normal_form = normal_form.to_string();
         // if the formula is normalized as constant
         if (normal_form.is_true()) {
             continue;
@@ -88,7 +89,7 @@ bool BFSEnum::eval_check(uint64_t obj, MacroState& macroState, std::string formu
         if (update_flag == 0) {
             return false;
         }
-
+    }
         //check the sat for the current bound
 
         for (const auto &para: macroState.collected_expr) {
@@ -97,16 +98,20 @@ bool BFSEnum::eval_check(uint64_t obj, MacroState& macroState, std::string formu
             if (macroState.upper_bounds.find(key_str) != macroState.upper_bounds.end()) {
                 double val = macroState.upper_bounds[key_str];
                 s.add(parameter <= get_smt_ctx().add_real_val(val));
-            } else if (macroState.lower_bounds.find(key_str) != macroState.lower_bounds.end()) {
+            }
+
+            if (macroState.lower_bounds.find(key_str) != macroState.lower_bounds.end()) {
                 double val = macroState.lower_bounds[key_str];
                 s.add(parameter >= get_smt_ctx().add_real_val(val));
-            } else if (macroState.eq_vals.find(key_str) != macroState.eq_vals.end()) {
+            }
+
+            if (macroState.eq_vals.find(key_str) != macroState.eq_vals.end()) {
                 double val = macroState.eq_vals[key_str];
                 s.add(parameter == get_smt_ctx().add_real_val(val));
             }
         }
 
-    }
+
 
     switch (s.check()) {
         case z3::sat: {
@@ -146,9 +151,13 @@ void BFSEnum::_begin(Binding& _parent_binding) {
         uint64_t label_id = QuadObjectId::get_string(t.type).id;
         bool label_matched = match_label(start_object_id.id, label_id);
         if (check_succeeded&&label_matched){
-            // the next transition should be an edge transition
-            open.emplace(start_macro_state->path_state, t.to, start_macro_state->upper_bounds, start_macro_state->lower_bounds, start_macro_state->eq_vals, start_macro_state->collected_expr);
-        }
+            auto new_state = visited_product_graph.emplace(start_macro_state->path_state,
+                                                           t.to,
+                                                           start_macro_state->upper_bounds,
+                                                           start_macro_state->lower_bounds,
+                                                           start_macro_state->eq_vals,
+                                                           start_macro_state->collected_expr);
+            open.push(new_state.first.operator->());        }
     }
     // insert the init state vector to the state
 }
@@ -179,38 +188,37 @@ const PathState* BFSEnum::expand_neighbors(Paths::DataTest::MacroState &macroSta
                 continue;
             }
 
-            // the odd states and the even states should be disjoint
 
-            macroState.automaton_state = transition_edge.to;
+
 
 
             // else we explore a successor transition as a node transition
-            for (auto &transition_node: automaton.from_to_connections[macroState.automaton_state]) {
+            for (auto &transition_node: automaton.from_to_connections[transition_edge.to]) {
                 auto label_id = QuadObjectId::get_string(transition_node.type);
                 bool matched_label = match_label(target_id, label_id.id);
                 bool check_value = eval_check(target_id, macroState, transition_node.property_checks);
-                const PathState *new_visited_ptr = visited.add(
-                        ObjectId(target_id),
-                        transition_edge.type_id,
-                        ObjectId(edge_id),
-                        transition_edge.inverse,
-                        macroState.path_state
-                );
+
                 if (matched_label && check_value) {
-
-                    macroState.automaton_state = transition_node.to;
-
-                    if (automaton.decide_accept(macroState.automaton_state)) {
-                        return new_visited_ptr;
-                    } else {
-                        open.emplace(
-                                new_visited_ptr,
-                                transition_edge.to,
-                                macroState.upper_bounds,
-                                macroState.lower_bounds,
-                                macroState.eq_vals,
-                                macroState.collected_expr
-                        );
+                    PathState* new_ptr  = visited.add(
+                            ObjectId(target_id),
+                            transition_edge.type_id,
+                            ObjectId(edge_id),
+                            transition_edge.inverse,
+                            macroState.path_state
+                    );
+                    auto new_state = visited_product_graph.emplace(
+                            new_ptr,
+                            transition_node.to,
+                            macroState.upper_bounds,
+                            macroState.lower_bounds,
+                            macroState.eq_vals,
+                            macroState.collected_expr
+                    );
+                    if (new_state.second){
+                        open.emplace(new_state.first.operator->());
+                    }
+                    if (automaton.decide_accept(transition_node.to)) {
+                        return new_ptr;
                     }
                 }
             }
@@ -236,20 +244,20 @@ bool BFSEnum::_next() {
 
 
 
-        auto node_iter = provider ->node_exists(current_state.path_state->node_id.id);
+        auto node_iter = provider ->node_exists(current_state-> path_state->node_id.id);
         if (!node_iter){
             open.pop();
             return false;
         }
         // start state is the solution
-        if (current_state. path_state->node_id == end_object_id && automaton.decide_accept(current_state. automaton_state)) {
-            auto path_id = path_manager.set_path(current_state.path_state, path_var);
+        if (current_state-> path_state->node_id == end_object_id && automaton.decide_accept(current_state-> automaton_state)) {
+            auto path_id = path_manager.set_path(current_state -> path_state, path_var);
             parent_binding->add(path_var, path_id);
-            parent_binding->add(end, current_state.path_state->node_id);
+            parent_binding->add(end, current_state -> path_state->node_id);
             for (const auto& ele: vars){
                 parent_binding->add(ele.first, QuadObjectId::get_value(to_string(ele.second)));
             }
-            queue<MacroState> empty;
+            queue<MacroState*> empty;
             open.swap(empty);
             return true;
 
@@ -264,7 +272,7 @@ bool BFSEnum::_next() {
     while (!open.empty()) {
         // get a new state vector
         auto &current_state = open.front();
-        auto reached_final_state = expand_neighbors(current_state);
+        auto reached_final_state = expand_neighbors(*current_state);
 
         // Enumerate reached solutions
         if (reached_final_state != nullptr) {
@@ -289,9 +297,11 @@ bool BFSEnum::_next() {
 
 void BFSEnum::_reset() {
     // Empty open and visited
-    queue<MacroState> empty;
+    queue<MacroState*> empty;
     open.swap(empty);
     visited.clear();
+    visited_product_graph.clear();
+
     first_next = true;
     iter = make_unique<NullIndexIterator>();
 
@@ -310,13 +320,11 @@ void BFSEnum::_reset() {
         bool label_matched = match_label(start_object_id.id, label_id);
         if (check_succeeded&&label_matched){
             // the next transition should be an edge transition
-            even = false;
-            open.emplace(start_macro_state->path_state,
-                         t.to,
-                         start_macro_state->upper_bounds,
-                         start_macro_state->lower_bounds,
-                         start_macro_state->eq_vals,
-                         start_macro_state->collected_expr);
+            start_macro_state->automaton_state = t.to;
+            auto state = visited_product_graph.insert(*start_macro_state);
+            if (state.second){
+                open.emplace(state.first.operator->());
+            }
         }
     }
     // insert the init state vector to the state

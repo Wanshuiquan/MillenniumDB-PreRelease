@@ -1,2 +1,2 @@
-MATCH (P1) =[DATA_TEST(person {true})/(:owns {true})/(vehicle {true})]=> (?n)
-RETURN ?n
+MATCH (N1) =[?e :e1/(:e23|:e24)/:ex1]=> (?n)
+RETURN ?n,?e

@@ -69,24 +69,23 @@ bool BFSCheck::eval_check(uint64_t obj, MacroState& macroState, std::string form
     z3::ast_vector_tpl<z3::expr> new_vec = z3::ast_vector_tpl<z3::expr>(get_smt_ctx().context);
     z3::solver s(get_smt_ctx().context);
     s.add(get_smt_ctx().bound_epsilon);
-    for (const auto& f: vector){
+    for (const auto& f: vector) {
         // normalize formula into t ~ constant
         auto normal_form = get_smt_ctx().normalizition(f);
         // if the formula is normalized as constant
-        if (f.is_true()){
+        if (f.is_true()) {
             continue;
-        }
-        else if (f.is_false()){
+        } else if (f.is_false()) {
             return false;
         }
         // get and update the bound
         auto bound = get_smt_ctx().get_bound(normal_form);
         auto update_flag = macroState.update_bound(bound);
         // update the wrong value
-        if (update_flag == 0){
+        if (update_flag == 0) {
             return false;
         }
-
+    }
         //check the sat for the current bound
 
         for (const auto& para: macroState.collected_expr){
@@ -96,17 +95,17 @@ bool BFSCheck::eval_check(uint64_t obj, MacroState& macroState, std::string form
                 double val = macroState.upper_bounds[key_str];
                 s.add(parameter <= get_smt_ctx().add_real_val(val));
             }
-            else if (macroState.lower_bounds.find(key_str) != macroState.lower_bounds.end()){
+             if (macroState.lower_bounds.find(key_str) != macroState.lower_bounds.end()){
                 double val = macroState.lower_bounds[key_str];
                 s.add(parameter >= get_smt_ctx().add_real_val(val));
-            } else if (macroState.eq_vals.find(key_str) != macroState.eq_vals.end()){
+            }  if (macroState.eq_vals.find(key_str) != macroState.eq_vals.end()){
                 double val = macroState.eq_vals[key_str];
                 s.add(parameter == get_smt_ctx().add_real_val(val));
             }
         }
 
 
-    }
+
     switch (s.check()) {
         case z3::sat: {
             auto model = s.get_model();
@@ -137,7 +136,7 @@ void BFSCheck::_begin(Binding& _parent_binding) {
     end_object_id = end.is_var() ? (*parent_binding)[end.get_var()] : end.get_OID();
     // init the start node
     auto start_path_state = visited.add(start_object_id, ObjectId::get_null(), ObjectId::get_null() , false, nullptr);
-    auto* start_macro_state =  new MacroState(start_path_state, automaton.get_start());
+    auto start_macro_state =  new MacroState(start_path_state, automaton.get_start());
 
     // explore from the init state
     for (auto& t: automaton.from_to_connections[automaton.get_start()]){
@@ -147,9 +146,15 @@ void BFSCheck::_begin(Binding& _parent_binding) {
         uint64_t label_id = QuadObjectId::get_string(t.type).id;
         bool label_matched = match_label(start_object_id.id, label_id);
         if (check_succeeded&&label_matched){
-            // the next transition should be an edge transition
-            even = false;
-            open.emplace(start_macro_state->path_state, t.to, start_macro_state->upper_bounds, start_macro_state->lower_bounds, start_macro_state->eq_vals, start_macro_state->collected_expr);
+            start_macro_state->automaton_state = t.to;
+            auto new_state = visited_product_graph.emplace(start_macro_state->path_state,
+                                                           t.to,
+                                                           start_macro_state->upper_bounds,
+                                                           start_macro_state->lower_bounds,
+                                                           start_macro_state->eq_vals,
+                                                           start_macro_state->collected_expr);
+            open.push(new_state.first.operator->());
+
         }
     }
     // insert the init state vector to the state
@@ -169,6 +174,7 @@ const PathState* BFSCheck::expand_neighbors(MacroState& macroState){
     while (current_transition < automaton.from_to_connections[macroState.automaton_state].size()) {
         auto &transition_edge = automaton.from_to_connections[macroState.automaton_state][current_transition];
         while (iter->next()) {
+            std::cout << "the edge_trans is " << transition_edge.from << " " << transition_edge.to << " " << transition_edge.type << " " << transition_edge.property_checks <<std::endl;
             // get the edge of edge and target
             uint64_t edge_id = iter->get_edge();
             uint64_t target_id = iter->get_reached_node();
@@ -179,39 +185,46 @@ const PathState* BFSCheck::expand_neighbors(MacroState& macroState){
                 continue;
             }
 
-            // the odd states and the even states should be disjoint
 
-            macroState.automaton_state = transition_edge.to;
+
 
 
             // else we explore a successor transition as a node transition
-            for (auto &transition_node: automaton.from_to_connections[macroState.automaton_state]) {
+            for (auto &transition_node: automaton.from_to_connections[transition_edge.to]) {
+                std::cout << "the node_trans is " << transition_node.from << " " << transition_node.to << " " << transition_node.type << " " << transition_node.property_checks <<std::endl;
+
                 auto label_id = QuadObjectId::get_string(transition_node.type);
                 bool matched_label = match_label(target_id, label_id.id);
                 bool check_value = eval_check(target_id, macroState, transition_node.property_checks);
-                const PathState *new_visited_ptr = visited.add(
-                        ObjectId(target_id),
-                        transition_edge.type_id,
-                        ObjectId(edge_id),
-                        transition_edge.inverse,
-                        macroState.path_state
-                );
-                if (matched_label && check_value) {
-                    macroState.automaton_state = transition_node.to;
 
-                    if (automaton.decide_accept(macroState.automaton_state)) {
-                        return new_visited_ptr;
-                    } else {
-                        open.emplace(
-                                new_visited_ptr,
-                                transition_edge.to,
-                                macroState.upper_bounds,
-                                macroState.lower_bounds,
-                                macroState.eq_vals,
-                                macroState.collected_expr
-                        );
+                if (matched_label && check_value) {
+
+                    PathState* new_ptr  = visited.add(
+                            ObjectId(target_id),
+                            transition_edge.type_id,
+                            ObjectId(edge_id),
+                            transition_edge.inverse,
+                            macroState.path_state
+                    );
+
+
+
+                    auto new_state = visited_product_graph.emplace(
+                            new_ptr,
+                            transition_node.to,
+                            macroState.upper_bounds,
+                            macroState.lower_bounds,
+                            macroState.eq_vals,
+                            macroState.collected_expr
+                            );
+                    if (new_state.second){
+                        open.emplace(new_state.first.operator->());
+                    }
+                    if (automaton.decide_accept(transition_node.to) && target_id == end_object_id.id) {
+                        return new_ptr;
                     }
                 }
+
             }
 
         }
@@ -232,19 +245,19 @@ bool BFSCheck::_next() {
 
 
 
-        auto node_iter = provider ->node_exists(current_state.path_state->node_id.id);
+        auto node_iter = provider ->node_exists(current_state->path_state->node_id.id);
         if (!node_iter){
                 open.pop();
                 return false;
             }
         // start state is the solution
-        if (current_state. path_state->node_id == end_object_id && automaton.decide_accept(current_state. automaton_state)) {
-                auto path_id = path_manager.set_path(current_state.path_state, path_var);
+        if (current_state-> path_state->node_id == end_object_id && automaton.decide_accept(current_state-> automaton_state)) {
+                auto path_id = path_manager.set_path(current_state-> path_state, path_var);
                 parent_binding->add(path_var, path_id);
                 for (const auto& ele: vars){
                 parent_binding->add(ele.first, QuadObjectId::get_value(to_string(ele.second)));
             }
-                queue<MacroState> empty;
+                queue<MacroState *> empty;
                 open.swap(empty);
                 return true;
 
@@ -259,7 +272,7 @@ bool BFSCheck::_next() {
     while (!open.empty()) {
         // get a new state vector
         auto &current_state = open.front();
-        auto reached_final_state = expand_neighbors(current_state);
+        auto reached_final_state = expand_neighbors(*current_state);
 
         // Enumerate reached solutions
         if (reached_final_state != nullptr) {
@@ -283,9 +296,10 @@ bool BFSCheck::_next() {
 
 void BFSCheck::_reset() {
     // Empty open and visited
-    queue<MacroState> empty;
+    queue<MacroState*> empty;
     open.swap(empty);
     visited.clear();
+    visited_product_graph.clear();
     first_next = true;
     iter = make_unique<NullIndexIterator>();
 
@@ -304,12 +318,12 @@ void BFSCheck::_reset() {
         bool label_matched = match_label(start_object_id.id, label_id);
         if (check_succeeded&&label_matched){
             // the next transition should be an edge transition
-            open.emplace(start_macro_state->path_state,
-                         t.to,
-                         start_macro_state->upper_bounds,
-                         start_macro_state->lower_bounds,
-                         start_macro_state->eq_vals,
-                         start_macro_state->collected_expr);
+            start_macro_state->automaton_state = t.to;
+            auto state = visited_product_graph.insert(*start_macro_state);
+            if (state.second){
+                open.emplace(state.first.operator->());
+            }
+
         }
     }
     // insert the init state vector to the state

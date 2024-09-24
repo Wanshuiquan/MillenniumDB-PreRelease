@@ -20,7 +20,7 @@ public:
         return std::make_unique<ExprSubtraction>(lhs->clone(), rhs->clone());
     }
     std::string to_smt_lib()const{
-        return "( -"  + lhs -> to_smt_lib() + "  "+ rhs -> to_smt_lib() + " ) ";
+        return "( - "  + lhs -> to_smt_lib() + "  "+ rhs -> to_smt_lib() + " ) ";
     }
 
     void accept_visitor(ExprVisitor& visitor) override {

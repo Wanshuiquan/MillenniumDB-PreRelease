@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import http.client
 import socket
 import subprocess
 import sys
@@ -87,26 +88,24 @@ def kill_server(server_process: Popen[bytes]):
     log(Level.END, "SERVER KILLED")
 
 
-def execute_query(server: Popen[bytes] | None, query_executable: Path, test: Test, stats: ExecutionStats) -> str | int:
+def execute_query(server: Popen[bytes] | None, test: Test, stats: ExecutionStats) -> str | int:
     with test.query.open(encoding="utf-8") as file:
         query_str = file.read()
 
     log(Level.DEBUG, f"query_string: {query_str}")
 
-    result = subprocess.run(
-        str(query_executable),
-        input=query_str,
-        capture_output=True,
-        encoding="utf-8",
-        check=False,
-    )
+    conn = http.client.HTTPConnection(f"{HOST}:{PORT}")
+
+    conn.request("POST", "/", headers={"Accept": "text/csv"}, body=query_str)
+
+    response = conn.getresponse()
+
+    if response.getcode() != 200:
+        return 1
 
     if server and server.poll() is not None:
         stats.error += 1
         log(Level.ERROR, str(test), "Server crashed")
         raise ServerCrashedException
 
-    if result.returncode != 0:
-        return result.returncode
-
-    return result.stdout
+    return response.read().decode("utf-8")

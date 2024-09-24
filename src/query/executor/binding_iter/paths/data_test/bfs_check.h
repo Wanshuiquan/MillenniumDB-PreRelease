@@ -13,7 +13,7 @@
 #include "storage/index/record.h"
 #include "graph_models/quad_model/quad_model.h"
 #include "query_data.h"
-
+#include "third_party/robin_hood/robin_hood.h"
     namespace Paths::DataTest{
 
 
@@ -35,9 +35,10 @@
             ObjectId end_object_id;
             // struct with all simple paths
             Arena<PathState> visited;
+            robin_hood::unordered_set<MacroState> visited_product_graph;
 
             // Queue for BFS
-            std::queue<MacroState> open;
+            std::queue<MacroState *> open;
 
             // Iterator for current node expansion
             std::unique_ptr<EdgeIter> iter;

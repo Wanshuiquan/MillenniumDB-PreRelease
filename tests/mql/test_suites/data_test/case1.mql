@@ -1,2 +1,0 @@
-MATCH (P1) =[DATA_TEST(person {true}/(:owns {true})/(vehicle {true)]=> (?n)
-RETURN ?n

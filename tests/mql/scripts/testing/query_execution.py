@@ -82,14 +82,11 @@ def skip_tests(tests: list[Test], stats: ExecutionStats) -> list[Test]:
     return ret
 
 
-def execute_query_test(
-    server: Popen[bytes] | None, query_executable: Path, test: QueryTest, stats: ExecutionStats
-) -> None:
+def execute_query_test(server: Popen[bytes] | None, test: QueryTest, stats: ExecutionStats) -> None:
     log(Level.DEBUG, str(test))
 
     csv_result = execute_query(
         server,
-        query_executable,
         test,
         stats,
     )
@@ -118,12 +115,11 @@ def execute_query_test(
     stats.error += 1
 
 
-def execute_bad_test(server: Popen[bytes] | None, query_executable: Path, test: BadTest, stats: ExecutionStats) -> None:
+def execute_bad_test(server: Popen[bytes] | None, test: BadTest, stats: ExecutionStats) -> None:
     log(Level.DEBUG, str(test))
 
     csv_result = execute_query(
         server,
-        query_executable,
         test,
         stats,
     )
@@ -143,7 +139,6 @@ def execute_tests(
     *,
     server_executable: Path,
     create_db_executable: Path,
-    query_executable: Path,
     test_suite: TestSuite,
     client_only: bool = False,
     progress_bar: tqdm | None = None,  # type:ignore
@@ -175,9 +170,9 @@ def execute_tests(
         for test in tests_:
             try:
                 if isinstance(test, QueryTest):
-                    execute_query_test(server, query_executable, test, stats)
+                    execute_query_test(server, test, stats)
                 elif isinstance(test, BadTest):
-                    execute_bad_test(server, query_executable, test, stats)
+                    execute_bad_test(server, test, stats)
             except ServerCrashedException:
                 if not client_only:
                     assert server is not None  # server has been started

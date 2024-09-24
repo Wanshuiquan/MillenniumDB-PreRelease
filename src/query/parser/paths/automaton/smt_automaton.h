@@ -17,6 +17,7 @@
 
 #include "query/var_id.h"
 #include "query/parser/smt/smt_exprs.h"
+#include "rpq_automaton.h"
 /*
 This automaton also supports RDPQs (Data RPQs), where each node or edge
 can evaluate it's properties (key: value) as a part of the path.
@@ -146,30 +147,6 @@ public:
 };
 
 
-/*
-RDPQAutomaton represents a special Non-Deterministic Finite Automaton (NFA).
-This class builds the automaton and transforms it into an optimal one.
-
-This automaton will be referred to as a DE automaton (Data-Edge automaton), where each state can be of
-type D (only has data check 'out' transitions) or type E (only has edge 'out' transitions). After a data check transition there
-will always be an E-State. After an edge transition there will always be a D-State.
-
-The following rules will allow the DE properties to be maintained properly (as well as the shortest paths property with BFS):
-
-- There is only one START state, of type D, and it can't be an END state.
-- The START state does NOT have any 'in' transitions (Ex: x -> START).
-- All END states are of type E.
-- An END state does NOT have any 'out' transitions (Ex: END -> x).
-
-After the initial construction, the automaton is then transformed into a final automaton by using set_final_state.
-
-The states of the automaton are not emulated by a specific class. A state is only represented
-by an integer i, that indicates that the transitions of the current state are stored in the i-th
-position of the from_to_connections, to_from_connections and transition vectors.
-
-The distance to the final state results in a metric that can be used as a heuristic
-by a path finder algorithm to select the state which is nearest to the final state.
-*/
 class SMTAutomaton {
 private:
     // Start state, is always 0
@@ -188,26 +165,9 @@ private:
     std::set<VarId> parameter; 
 
     // ----- Methods to handle automaton transformations -----
-
-    // Collapse end states to generate a unique final state
-    void set_final_state();
-
-    // ----- Auxiliary methods -----
-
-    // Compute the minimum distance between the final_state and a state of the automaton
-    void calculate_distance_to_final_state();
-
-    // Sort the transitions for each state according to their distance to the final state
-    void sort_state_transition(uint32_t state);
-    void sort_transitions();
+    void transform_by_nfa();
 
 
-    // get all epsilon states
-    std::set<uint32_t> get_epsilon_closure(uint32_t state);
-    std::set<uint32_t> get_reachable_states(uint32_t source, bool inverse);
-    //remove epsilon transitions
-    void delete_epsilon_transitions();
-    void delete_unreachable_states();
 public:
     // Transitions that start from the i-th state (stored in the i-th position)
     std::vector<std::vector<SMTTransition>> from_to_connections;
@@ -249,6 +209,7 @@ public:
     // Returns the inverse automaton (invalidating this one)
     // RDPQAutomaton invert_automaton();
 
+    //remove epsilon transitions
 
     // only for test
     void set_start(uint32_t x){
