@@ -197,7 +197,6 @@ public:
 
     z3::expr subsitute_string(const std::string& name, const std::string& val, const z3::expr& formula){
         int ind = vars[name];
-        std::cout << var_vec.size() << std::endl;
         auto v = var_vec[ind];
         Z3_ast var[] = {v};
         Z3_ast value[] = {context.string_val(val)};

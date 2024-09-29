@@ -174,7 +174,6 @@ const PathState* BFSCheck::expand_neighbors(MacroState& macroState){
     while (current_transition < automaton.from_to_connections[macroState.automaton_state].size()) {
         auto &transition_edge = automaton.from_to_connections[macroState.automaton_state][current_transition];
         while (iter->next()) {
-            std::cout << "the edge_trans is " << transition_edge.from << " " << transition_edge.to << " " << transition_edge.type << " " << transition_edge.property_checks <<std::endl;
             // get the edge of edge and target
             uint64_t edge_id = iter->get_edge();
             uint64_t target_id = iter->get_reached_node();
@@ -191,7 +190,6 @@ const PathState* BFSCheck::expand_neighbors(MacroState& macroState){
 
             // else we explore a successor transition as a node transition
             for (auto &transition_node: automaton.from_to_connections[transition_edge.to]) {
-                std::cout << "the node_trans is " << transition_node.from << " " << transition_node.to << " " << transition_node.type << " " << transition_node.property_checks <<std::endl;
 
                 auto label_id = QuadObjectId::get_string(transition_node.type);
                 bool matched_label = match_label(target_id, label_id.id);
