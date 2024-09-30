@@ -19,13 +19,8 @@ void BFSCheck::update_value(uint64_t obj) {
 
         if (res.has_value()){
             uint64_t value_id = res.value();
-            Result new_value = decode_mask(ObjectId(value_id));
-            if (std::holds_alternative<std::string>(new_value)){
-                string_attributes[key] = std::get<std::string>(new_value);
-            }
-            else {
-                real_attributes[key] = std::get<std::double_t>(new_value);
-            }
+            double_t new_value = decoding_mask(ObjectId(value_id));
+            real_attributes[key] = new_value;
         }
     }
 }

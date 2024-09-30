@@ -34,6 +34,8 @@ inline std::optional<uint64_t> query_property(uint64_t obj_id, uint64_t key_id) 
     }
 }
 
+
+
 inline BptIter<2> query_label(uint64_t obj_id) {
     std::array<uint64_t ,2> min_prop_ids{};
     std::array<uint64_t, 2> max_prop_ids{};

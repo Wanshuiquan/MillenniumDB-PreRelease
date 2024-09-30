@@ -31,15 +31,18 @@ public:
             return "false";
         }
         else {
-            std::variant<double, std::string, bool> obj = decode_mask(value);
-            auto str_val = std::get_if<std::string>(&obj);
-            if (str_val != nullptr) {
-                return "\"" + *str_val + "\"";
-            }
-            else{
-                return std::to_string(*std::get_if<double>(&obj));
-            }
+            double_t obj = decoding_mask(value);
+            return std::to_string(obj);
         }
+//            std::variant<double, std::string, bool> obj = decode_mask(value);
+//            auto str_val = std::get_if<std::string>(&obj);
+//            if (str_val != nullptr) {
+//                return "\"" + *str_val + "\"";
+//            }
+//            else{
+//                return std::to_string(*std::get_if<double>(&obj));
+//            }
+//        }
     }
     bool has_aggregation() const override { return false; }
 
