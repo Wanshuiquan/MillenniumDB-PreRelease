@@ -30,11 +30,11 @@ bool BFSEnum::eval_check(uint64_t obj, MacroState& macroState, std::string formu
     // update_value
     update_value(obj);
     // Initialize context
-    for (const auto& ele: string_attributes){
-        auto attr =  ele.first;
-        std::string name = std::get<0>(attr);
-        get_smt_ctx().add_string_var(name);
-    }
+//    for (const auto& ele: string_attributes){
+//        auto attr =  ele.first;
+//        std::string name = std::get<0>(attr);
+//        get_smt_ctx().add_string_var(name);
+//    }
     for (const auto& ele: real_attributes){
         auto attr =  ele.first;
         std::string name = std::get<0>(attr);
@@ -48,12 +48,12 @@ bool BFSEnum::eval_check(uint64_t obj, MacroState& macroState, std::string formu
 
     auto property = get_smt_ctx().parse(formula);
     //subsitution
-    for (const auto& ele: string_attributes) {
-        auto attr = ele.first;
-        std::string name = std::get<0>(attr);
-        std::string value = ele.second;
-        property = get_smt_ctx().subsitute_string(name, value, property);
-    }
+//    for (const auto& ele: string_attributes) {
+//        auto attr = ele.first;
+//        std::string name = std::get<0>(attr);
+//        std::string value = ele.second;
+//        property = get_smt_ctx().subsitute_string(name, value, property);
+//    }
 
     for (const auto& ele: real_attributes) {
         auto attr = ele.first;
