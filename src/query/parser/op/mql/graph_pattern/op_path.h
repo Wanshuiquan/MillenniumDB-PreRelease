@@ -104,6 +104,11 @@ public:
             res.insert(to.get_var());
         }
         res.insert(var);
+
+        auto parameters = path ->get_var();
+        for (auto& para: parameters){
+            res.insert(para);
+        }
         return res;
     }
 

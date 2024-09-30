@@ -28,7 +28,6 @@ def facebook_graph_query():
     query_res_dating = []
     for index in candidate:
         id = id + 1
-        sys.stdout.write("\rDATE FOR FB" + str(id))
         query = create_query_command(str(index), DATING_QUERY_FB)
         start_time = time.time_ns()
         query_result = send_query(query)
@@ -44,7 +43,6 @@ def facebook_graph_query():
     id = 0
     for index in candidate:
         id = id + 1
-        sys.stdout.write("\rDATE FOR FB" + str(id))
         query = create_query_command(str(index), MONEY_QUERY)
         start_time = time.time_ns()
         query_result = send_query(query)
@@ -59,7 +57,6 @@ def facebook_graph_query():
 
     id = 0
     for index in candidate:
-        sys.stdout.write("\rCENTRAL FOR FB" + str(id))
         id = id + 1
 
         query = create_query_command(str(index), CENTRAL_PATH_QUERY)
@@ -108,7 +105,6 @@ def youtube_graph_query():
 
     id = 0
     for index in candidate:
-        sys.stdout.write("MONEY FOR YT " + str(id))
         id = id + 1
 
         query = create_query_command(str(index), MONEY_QUERY)
@@ -125,7 +121,6 @@ def youtube_graph_query():
 
     id = 0
     for index in candidate:
-        sys.stdout.write("CENTRAL FOR YT " + str(id))
         id = id + 1
 
         query = create_query_command(str(index), CENTRAL_PATH_QUERY_BIG)
