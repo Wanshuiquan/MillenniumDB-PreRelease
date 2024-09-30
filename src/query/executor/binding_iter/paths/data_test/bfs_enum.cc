@@ -52,7 +52,7 @@ bool BFSEnum::eval_check(uint64_t obj, MacroState& macroState, std::string formu
     //Parse Formula
 
     auto property = get_smt_ctx().parse(formula);
-    //subsitution
+    //substitution
     for (const auto& ele: string_attributes) {
         auto attr = ele.first;
         std::string name = std::get<0>(attr);
