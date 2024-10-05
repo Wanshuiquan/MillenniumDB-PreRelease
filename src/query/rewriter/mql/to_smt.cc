@@ -70,7 +70,7 @@ void ToSMT::visit(ExprEquals& expr) {
   auto r = std::move(current_smt_expr);
   lhs ->accept_visitor(*this);
   auto l = std::move(current_smt_expr);
-  current_smt_expr = std::make_unique<SMT::ExprEquals>(std::move(l), std::move(r));
+  current_smt_expr = std::make_unique<SMT::ExprComparasion>(Operator::OP_EQ, std::move(l), std::move(r));
 }
 void ToSMT::visit(ExprGreaterOrEquals& expr) {
   auto lhs =  expr.lhs.get();
@@ -79,7 +79,7 @@ void ToSMT::visit(ExprGreaterOrEquals& expr) {
   auto r = std::move(current_smt_expr);
   lhs ->accept_visitor(*this);
   auto l = std::move(current_smt_expr);
-  current_smt_expr = std::make_unique<SMT::ExprGreaterOrEquals>(std::move(l), std::move(r));
+  current_smt_expr = std::make_unique<SMT::ExprComparasion>(Operator::OP_GE, std::move(l), std::move(r));
 }
 void ToSMT::visit(ExprGreater& expr) {
   auto lhs =  expr.lhs.get();
@@ -87,8 +87,8 @@ void ToSMT::visit(ExprGreater& expr) {
   rhs ->accept_visitor(*this);
   auto r = std::move(current_smt_expr);
   lhs ->accept_visitor(*this);
-  auto l = std::move(current_smt_expr);
-  current_smt_expr = std::make_unique<SMT::ExprGreater>(std::move(l), std::move(r));
+  auto l = std::make_unique<SMT::ExprAddition>( std::make_unique<SMT::ExprVar>(get_query_ctx().get_or_create_var("epsilon")), std::move(current_smt_expr));
+  current_smt_expr = std::make_unique<SMT::ExprComparasion>(Operator::OP_GE, std::move(l), std::move(r));
 }
 void ToSMT::visit(ExprIs&) {
   throw std::runtime_error("not implemented");
@@ -100,7 +100,7 @@ void ToSMT::visit(ExprLessOrEquals& expr) {
   auto r = std::move(current_smt_expr);
   lhs ->accept_visitor(*this);
   auto l = std::move(current_smt_expr);
-  current_smt_expr = std::make_unique<SMT::ExprLessOrEquals>(std::move(l), std::move(r));
+  current_smt_expr = std::make_unique<SMT::ExprComparasion>(Operator::OP_LE, std::move(l), std::move(r));
 }
 void ToSMT::visit(ExprLess& expr) {
   auto lhs =  expr.lhs.get();
@@ -108,8 +108,8 @@ void ToSMT::visit(ExprLess& expr) {
   rhs ->accept_visitor(*this);
   auto r = std::move(current_smt_expr);
   lhs ->accept_visitor(*this);
-  auto l = std::move(current_smt_expr);
-  current_smt_expr = std::make_unique<SMT::ExprLess>(std::move(l), std::move(r));
+  auto l = std::make_unique<SMT::ExprSubtraction>( std::move(current_smt_expr),std::make_unique<SMT::ExprVar>(get_query_ctx().get_or_create_var("epsilon")));
+  current_smt_expr = std::make_unique<SMT::ExprComparasion>(Operator::OP_LE, std::move(l), std::move(r));
 }
 void ToSMT::visit(ExprNotEquals& expr) {
   auto lhs =  expr.lhs.get();
@@ -118,7 +118,7 @@ void ToSMT::visit(ExprNotEquals& expr) {
   auto r = std::move(current_smt_expr);
   lhs ->accept_visitor(*this);
   auto l = std::move(current_smt_expr);
-  current_smt_expr = std::make_unique<SMT::ExprNotEquals>(std::move(l), std::move(r));
+  current_smt_expr = std::make_unique<SMT::ExprComparasion>(Operator::OP_NEQ, std::move(l), std::move(r));
 }
 void ToSMT::visit(ExprAnd& expr) {
   auto and_list = std::move(expr.and_list);

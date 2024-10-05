@@ -24,7 +24,7 @@ class ExprLess;
 class ExprNotEquals;
     class ExprAttr;
 class ExprAnd;
-
+class ExprComparasion;
 
 
 
@@ -32,7 +32,7 @@ class ExprAnd;
 class ExprVisitor {
 public:
     virtual ~ExprVisitor() = default;
-
+    virtual void visit(SMT::ExprComparasion&)             { throw LogicException("visit SMT::ExprVar not implemented"); }
     virtual void visit(SMT::ExprVar&)             { throw LogicException("visit SMT::ExprVar not implemented"); }
     virtual void visit(SMT::ExprVarProperty&)     { throw LogicException("visit SMT::ExprVarProperty not implemented"); }
     virtual void visit(SMT::ExprConstant&)        { throw LogicException("visit SMT::ExprConstant not implemented"); }

@@ -127,8 +127,10 @@ public:
 
     }
     void add_real_var(const std::string& name) {
-        auto var = context.real_const(name.c_str());
+        if (name == "epsilon") return;
         if (vars.find(name) == vars.end()) {
+            auto var = context.real_const(name.c_str());
+
             dels.push_back(var.decl());
             var_vec.push_back(var);
 
@@ -141,8 +143,9 @@ public:
     }
 
     void add_string_var(const std::string& name){
-        auto var = context.string_const(name.c_str());
         if (vars.find(name) == vars.end()) {
+            auto var = context.string_const(name.c_str());
+
             dels.push_back(var.decl());
             var_vec.push_back(var);
 

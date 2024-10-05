@@ -14,6 +14,7 @@ namespace SMT{
         std::ostream& os;
         SmtPrinter(std::ostream& os) : os(os) {}
         ~SmtPrinter() {}
+        virtual void visit(SMT::ExprComparasion&) override;
         virtual void visit(SMT::ExprVar&)             override;
         virtual void visit(SMT::ExprVarProperty&)     override;
         virtual void visit(SMT::ExprConstant&)        override;

@@ -3,6 +3,8 @@
 //
 #pragma once
 #include "query/parser/smt/expr/expr_var.h"
+#include "query/parser/smt/expr/expr_compare.h"
+
 #include "query/parser/smt/expr/expr_var_property.h"
 #include "query/parser/smt/expr/expr_and.h"
 #include "query/parser/smt/expr/expr_addition.h"

@@ -13,6 +13,8 @@ void SmtPrinter::visit(ExprVar& expr) {
     os << '?' << get_query_ctx().get_var_name(expr.var);
 }
 
+
+
 void SmtPrinter::visit(SMT::ExprAttr& expr)
 {
     os << expr.name;
@@ -132,6 +134,14 @@ void SmtPrinter::visit(ExprNotEquals& expr) {
     os << '(';
     expr.lhs->accept_visitor(*this);
     os << " != ";
+    expr.rhs->accept_visitor(*this);
+    os << ')' ;
+}
+
+void SmtPrinter::visit(ExprComparasion& expr) {
+    os << '(';
+    expr.lhs->accept_visitor(*this);
+    os << get_op_str(expr.op);
     expr.rhs->accept_visitor(*this);
     os << ')' ;
 }
