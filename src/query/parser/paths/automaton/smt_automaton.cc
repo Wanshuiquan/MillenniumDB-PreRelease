@@ -134,6 +134,7 @@ void SMTAutomaton::add_epsilon_transition(uint32_t from, uint32_t to){
 
 
 void SMTAutomaton::transform_by_nfa() {
+    std::vector<std::string *> pointer_container;
     RPQ_NFA nfa;
     // smt-aut -> dfa
     for (const auto& vec: from_to_connections){
@@ -142,7 +143,8 @@ void SMTAutomaton::transform_by_nfa() {
                 nfa.add_epsilon_transition(trans.from, trans.to);
             }
             else{
-                 std::string* t = new std::string(trans.type + "," + trans.property_checks);
+                 auto t = new std::string(trans.type + "," + trans.property_checks);
+                 pointer_container.push_back(t);
                  nfa.add_transition(RPQ_NFA::Transition(trans.from, trans.to, t, trans.inverse));
             }
         }
@@ -172,5 +174,9 @@ void SMTAutomaton::transform_by_nfa() {
         if (dfa.is_final_state[i]){
             end_states.insert(i);
         }
+    }
+
+    for (const auto& ele: pointer_container){
+        delete ele;
     }
 }

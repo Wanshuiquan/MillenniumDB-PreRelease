@@ -2,8 +2,8 @@
 // Created by lhy on 10/2/24.
 //
 
-#ifndef MILLENNIUMDB_EXPR_COMPARE_H
-#define MILLENNIUMDB_EXPR_COMPARE_H
+#ifndef MILLENNIUMDB_EXPR_APP_H
+#define MILLENNIUMDB_EXPR_APP_H
 #pragma once
 
 #include <memory>
@@ -16,7 +16,11 @@ enum Operator {
     OP_LE,
     OP_L,
     OP_EQ,
-    OP_NEQ
+    OP_NEQ,
+    OP_ADD,
+    OP_MUL,
+    OP_SUB,
+    OP_AND
 };
 
 inline std::string get_op_smt(Operator op){
@@ -27,6 +31,12 @@ inline std::string get_op_smt(Operator op){
         case Operator::OP_G: return ">";
         case Operator::OP_LE: return "<=";
         case Operator::OP_L: return  "<";
+        case Operator::OP_ADD: return "+";
+        case Operator::OP_MUL: return "*";
+        case Operator::OP_SUB: return "-";
+        case Operator::OP_AND: return "and";
+
+
     }
 }
 
@@ -38,21 +48,33 @@ inline std::string get_op_str(Operator op){
         case Operator::OP_G: return ">";
         case Operator::OP_LE: return "<=";
         case Operator::OP_L: return  "<";
+        case Operator::OP_ADD: return "+";
+        case Operator::OP_MUL: return "*";
+        case Operator::OP_SUB: return "-";
+        case Operator::OP_AND: return "and";
+
     }
 }
 namespace SMT {
-    class ExprComparasion : public Expr {
+    class ExprApp : public Expr {
     public:
         std::unique_ptr<Expr> lhs;
         std::unique_ptr<Expr> rhs;
+
         Operator op;
 
-        ExprComparasion(Operator op, std::unique_ptr<Expr> lhs, std::unique_ptr<Expr> rhs) :
-                lhs (std::move(lhs)),
-                rhs (std::move(rhs)),
-                op (op) { }
-        ExprComparasion( const ExprComparasion& expr):
-                lhs (expr.lhs.get()), rhs (expr.rhs.get()) , op (expr.op)
+        ExprApp(Operator op, std::unique_ptr<Expr> lhs, std::unique_ptr<Expr> rhs) :
+                lhs(std::move(lhs)),
+                rhs(std::move(rhs)),
+                op (op){
+
+
+        }
+
+        ExprApp( const ExprApp& expr):
+                 lhs(expr.lhs -> clone()),
+                 rhs(expr.rhs -> clone()),
+                 op (expr.op)
         {
 
         }
@@ -61,7 +83,7 @@ namespace SMT {
 
         }
         std::unique_ptr<Expr> clone() const override {
-            return std::make_unique<ExprComparasion>(op, lhs->clone(), rhs->clone());
+            return std::make_unique<ExprApp>(op, lhs->clone(), rhs->clone());
         }
 
         void accept_visitor(ExprVisitor& visitor) override {
@@ -97,4 +119,4 @@ namespace SMT {
 } // namespace MQL
 
 
-#endif //MILLENNIUMDB_EXPR_COMPARE_H
+#endif //MILLENNIUMDB_EXPR_APP_H

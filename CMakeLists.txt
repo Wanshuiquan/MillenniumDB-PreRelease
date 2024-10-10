@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Enable export of compile commands output
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
+#set(PROFILE true)
 # Use all cores but one for compilation
 include(ProcessorCount)
 ProcessorCount(NUM_CORES)
@@ -45,8 +45,8 @@ endif(APPLE)
 
 # Define the compiler flags
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic -pthread -march=native -funroll-loops -fno-operator-names")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g3 -fsanitize=undefined,address -fno-omit-frame-pointer")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -g0")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g3 -fsanitize=undefined,address -fno-omit-frame-pointer -pg")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -g0 -pg")
 
 if(PROFILE)
     add_definitions(-DBOOST_STACKTRACE_USE_ADDR2LINE)
@@ -180,6 +180,7 @@ if(PROFILE)
             -Wl,-no-as-needed
             -no-pie
             -fno-pie
+                z3
             tcmalloc
             profiler
         )

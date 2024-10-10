@@ -24,8 +24,8 @@ namespace MQL{
         void visit(ExprModulo&) override{throw std::runtime_error("not implemented");}
         void visit(ExprMultiplication&) override;
         void visit(ExprSubtraction&) override;
-        void visit(ExprUnaryMinus&) override;
-        void visit(ExprUnaryPlus&) override;
+        void visit(ExprUnaryMinus&) override{throw std::runtime_error("not implemented");};
+        void visit(ExprUnaryPlus&) override{throw std::runtime_error("not implemented");};
         void visit(ExprEquals&) override;
         void visit(ExprGreaterOrEquals&) override;
         void visit(ExprGreater&) override;
