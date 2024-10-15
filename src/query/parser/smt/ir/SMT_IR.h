@@ -5,8 +5,8 @@
 #ifndef MILLENNIUMDB_SMT_IR_H
 #define MILLENNIUMDB_SMT_IR_H
 #pragma once
+#include <optional>
 #include "query/parser/smt/smt_exprs.h"
-#
 #include "boost/algorithm/string.hpp"
 enum SMTOp{
     SMT_ADD,
@@ -17,44 +17,57 @@ enum SMTOp{
     SMT_AND,
     SMT_EQ,
     SMT_NEQ,
+    SMT_PARA,
+    SMT_ATTR,
+    SMT_VAL,
 };
 
-class Var{
-     VarId id;
-public:
-     std::string to_string() const {
-         return get_query_ctx().get_var_name(id);
-     }
-};
-
-class Value{
-    std::string value;
-public:
-    std::string to_string() const {
-        return value;
-    }
-};
-
-class Attribute  {
-    ObjectId var;
-    std::string name;
-public:
-    std::string to_string() const {
-        return name;
-    }
-};
+//class Var{
+//     VarId id;
+//public:
+//     Var(VarId id): id(id){}
+//     std::string to_string() const {
+//         return get_query_ctx().get_var_name(id);
+//     }
+//};
+//
+//class Value{
+//    std::string value;
+//public:
+//    Value(std::string val): value(val){}
+//
+//    std::string to_string() const {
+//        return value;
+//    }
+//};
+//
+//class Attribute  {
+//    ObjectId var;
+//    std::string name;
+//public:
+//    Attribute(ObjectId var, std::string name):var(var), name(name){}
+//    std::string to_string() const {
+//        return name;
+//    }
+//};
 
 
 class App{
-private:
-    SMTOp op;
-    std::vector<std::variant<Value, Var, App>> param;
 public:
+    SMTOp op;
+    std::vector<App> param;
+    App(SMTOp op, std::vector<App>& p ): op(op), param(std::move(p)){}
+    App(SMTOp op, VarId v): op(op), var(v){}
+    App(SMTOp op, std::string v): op(op), val(v){}
+    App(SMTOp op, std::tuple<ObjectId, std::string> attr): op(op), attr(attr){}
 
+    std::optional<VarId> var = std::nullopt;
+    std::optional<std::string> val = std::nullopt;
+    std::optional<std::tuple<ObjectId, std::string>> attr = std::nullopt;
     std::string to_string() const;
 
     bool is_add() const{
-             return op == SMTOp::SMT_ADD;
+        return op == SMTOp::SMT_ADD;
          }
     bool is_sub() const{
         return op == SMTOp::SMT_SUB;
@@ -77,28 +90,47 @@ public:
     bool is_and() const{
         return op == SMTOp::SMT_SUB;
     }
-
-    std::vector<std::variant<Value, Var, App>> get_parameters(){
+    bool is_attr() const{
+        return op == SMTOp::SMT_ATTR;
+    }
+    bool is_var() const{
+        return op == SMTOp::SMT_PARA;
+    }
+    bool is_val() const{
+        return op == SMTOp::SMT_VAL;
+    }
+    std::vector<App> get_parameters(){
         return std::move(param);
     }
 
+    std::set<VarId> get_all_vars(){
+        if (var.has_value()){
+            return {var.value()};
+        }
+        else{
+            auto res = std::set<VarId>();
+            for (auto& para: param){
+                auto v = para.get_all_vars();
+                std::for_each(v.begin(), v.end(), [&res](VarId const & a){res.insert(a);});
+            }
+            return  res;
+        }
+    }
+    std::set<std::string> get_all_attributes(){
+        if (attr.has_value()){
+            return {std::get<1>(attr.value())};
+        }
+        else{
+            auto res = std::set<std::string>();
+            for (auto& para: param){
+                auto v = para.get_all_attributes();
+                std::for_each(v.begin(), v.end(), [&res](std::string const & a){res.insert(a);});
+            }
+            return  res;
+        }
+    }
 
-    static bool flat_add(App& app);
-    static bool push_mul(App& app);
 
 };
-using SMT_AST = std::variant<Value, Attribute, App, Var>;
-struct ToStr {
-    std::string operator()(const Value& val) { return val.to_string();}
-    std::string operator()(const Var& var) {return var.to_string();  }
-    std::string operator()(const Attribute& attr) {return attr.to_string();  }
-    std::string operator()(const App& app) {return app.to_string();}
-};
 
-struct GetMember {
-    SMT_AST operator()(const Value& val) { return val;}
-    SMT_AST operator()(const Var& var) {return var; }
-    SMT_AST  operator()(const App& app) {return app;}
-    SMT_AST  operator()(const Attribute&attr){return attr; }
-};
 #endif //MILLENNIUMDB_SMT_IR_H

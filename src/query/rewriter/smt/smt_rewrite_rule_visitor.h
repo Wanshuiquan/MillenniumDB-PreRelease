@@ -3,11 +3,20 @@
 #include <set>
 #include <memory>
 #include "query/query_context.h"
-#include "query/parser/smt/smt_expr_visitor.h"
-#include "query/parser/smt/smt_exprs.h"
+#include "query/parser/smt/ir/SMT_IR.h"
 #include "query/rewriter/smt/rewrite_rules/smt_rewrite_rule.h"
+#include "rewrite_rules/distribute_plus_mult.h"
+#include "rewrite_rules/flat_mul.h"
+#include "rewrite_rules/flat_plus.h"
+#include "rewrite_rules/simplify_add.h"
+#include "rewrite_rules/simplify_mul.h"
+#include "rewrite_rules/normalize.h"
+
+
+
 
 namespace SMT {
+
     /**
      * This visitor uses a rewrite rule that implements
      * is_possible_to_regroup and regroup and uses these
@@ -19,9 +28,10 @@ namespace SMT {
      * to pass multiple times the bool value has_rewritten
      * is checked with reset_and_check_if_has_rewritten_a_rule
      */
-    class ExprRewriteRuleVisitor : public ExprVisitor {
+    class ExprRewriteRuleVisitor {
 
     private:
+
         std::vector<std::unique_ptr<ExprRewriteRule>> rules;
         bool has_rewritten = false;
         // bool has_rewritten_father = false;
@@ -47,71 +57,49 @@ namespace SMT {
          * that way the first expr container is modified.\ Not is used because  *
          * it only contains an expr, it is removed after this visitation.       *
          ************************************************************************/
-        void start_visit(std::unique_ptr<Expr>& expr) {
-            std::vector<std::unique_ptr<Expr>> tmp_vec;
-            tmp_vec.push_back(std::move(expr));
-            auto temp_expr_container = std::make_unique<ExprAnd>(std::move(tmp_vec));
-            temp_expr_container->accept_visitor(*this);
-            expr = std::move(temp_expr_container->and_list[0]);
+        void start_visit(App& expr){
+            std::vector<App> temp_vec;
+            temp_vec.push_back(expr);
+            auto temp_expr_container = App(SMT_AND, temp_vec );
+            visit(temp_expr_container);
+            expr = temp_expr_container.param[0];
         }
 
-        void visit(SMT::ExprVar&)             {}
-        void visit(SMT::ExprVarProperty&)     {}
-        void visit(SMT::ExprConstant&)        {}
-        void visit(SMT::ExprAttr&)            {}
 
-        void visit(SMT::ExprApp& expr)             {
-            visit_expr_with_lhs_and_rhs(expr);
-        }
-        void visit(SMT::ExprAnd& expr)             {
+        void visit(App& expr)             {
             for (auto& rule : rules) {
-                for (auto& child : expr.and_list) {
+                for (auto& child : expr.param) {
                     if (rule->is_possible_to_regroup(child)) {
-                        child = rule->regroup(std::move(child));
+                        child = rule->regroup(child);
                         has_rewritten = true;
                     }
                 }
             }
-            for (auto& child : expr.and_list) {
-                if (child != nullptr) {
-                    child->accept_visitor(*this);
-                }
-            }}
-
-
-    private:
-        template <typename T>
-        void visit_lhs(T& expr) {
-            for (auto& rule : rules) {
-                if (rule->is_possible_to_regroup(expr.lhs)) {
-                    expr.lhs = rule->regroup(std::move(expr.lhs));
-                    has_rewritten = true;
-                }
+            for (auto& child : expr.param) {
+                visit(child);
             }
-            if (expr.lhs != nullptr)
-                expr.lhs->accept_visitor(*this);
         }
-
-        template <typename T>
-        void visit_rhs(T& expr) {
-            for (auto& rule : rules) {
-                if (rule->is_possible_to_regroup(expr.rhs)) {
-                    expr.rhs = rule->regroup(std::move(expr.rhs));
-                    has_rewritten = true;
-                }
-            }
-            if (expr.rhs != nullptr)
-                expr.rhs->accept_visitor(*this);
-        }
-
-        template <typename T>
-        void visit_expr_with_lhs_and_rhs(T& expr) {
-            visit_lhs<T>(expr);
-            visit_rhs<T>(expr);
-        }
-
-
-
-
     };
+
+    inline void normalize( App & expr){
+        ExprRewriteRuleVisitor simplifier;
+        std::cout << expr.to_string() << std::endl;
+
+        simplifier.add_rule<DistributeMulIntoPlusLeft>();
+        simplifier.add_rule<DistributeMulIntoPlusRight>();
+        simplifier.add_rule<FlatPlus>();
+        simplifier.add_rule<FlatMul>();
+        simplifier.add_rule<SimplifyMUL>();
+        simplifier.add_rule<SimplifyPlus>();
+        simplifier.start_visit(expr);
+        std::cout << expr.to_string() << std::endl;
+
+        ExprRewriteRuleVisitor normalizer;
+        normalizer.add_rule<Normalize>();
+        normalizer.add_rule<SimplifyMUL>();
+        normalizer.add_rule<SimplifyPlus>();
+        normalizer.start_visit(expr);
+
+    }
+
 } // namespace SPARQL

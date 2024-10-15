@@ -16,6 +16,9 @@
 #include "query/parser/expr/sparql/binary/expr_and.h"
 #include "query/parser/expr/mql_expr_printer.h"
 #include "query/parser/smt/smt_exprs.h"
+#include "query/rewriter/smt/to_ir.h"
+#include "query/rewriter/smt/smt_rewrite_rule_visitor.h"
+
 #include "query/parser/smt/smt_expr_printer.h"
 
 // using object_atom = std::variant<std::monostate,std::string, ObjectId>;
@@ -95,7 +98,11 @@ public:
         // cast Expr to ExprAnd
 
         // Connect states with (atom, smtexpr) as label
-        auto formula = property_checks ->to_smt_lib();
+        auto rewriter = SMT::ToIR();
+        property_checks->accept_visitor(rewriter);
+        auto ir = rewriter.to_ir();
+        SMT::normalize(ir);
+        auto formula = ir.to_string();
         automaton.add_transition(SMTTransition::make_transition(0, 1, inverse, atom,  formula ));
         return automaton;
     }

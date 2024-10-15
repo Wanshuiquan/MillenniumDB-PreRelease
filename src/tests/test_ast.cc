@@ -6,11 +6,10 @@
 #include "query/parser/grammar/error_listener.h"
 #include "query/query_context.h"
 #include "graph_models/common/conversions.h"
-
 #include <cassert>
 #include <iostream>
 #include <string>
-#include<vector>
+#include <vector>
 #include "z3++.h"
 
 std::vector<std::string> query = {
@@ -19,7 +18,7 @@ std::vector<std::string> query = {
         // An example of query objects
         "Match (?x :human {age: 0})  Return ?x",
         // Para Regex
-        "Match (?x) =[DATA_TEST(:T2 {age > ?p AND age < ?p + 114154})/(:N1 {name == ?c})]=> (?y)  Return ?x",
+        "Match (?x) =[DATA_TEST(:T2 {age > ?p AND age < ?p - 114154})/(:N1 {name == ?c})]=> (?y)  Return ?x",
         "Match (?x) =[DATA_TEST(:N1 {age == ?p})/ (:T1 {true})/ (:T2 {?q == name})/ (:N2 {?p < age + 20})]=> (?y) Return ?x",
     "Match (?x) =[DATA_TEST(:N1 {name == \"Wang\" })|(:N1 {?p > 0})]=>(?y) Return ?y",
     "Match (?x) =[DATA_TEST(:N1 {name == \"Wang\" })|(:N1 {?p > 0})+]=>(?y) Return ?p",
@@ -79,7 +78,7 @@ int try_parser()
     {
         auto plan = MQL::QueryParser::get_query_plan(q, &error_listener);
     
-//        std::cout<<*plan<< std::endl;
+        std::cout<<*plan<< std::endl;
     }
 
     return 0;

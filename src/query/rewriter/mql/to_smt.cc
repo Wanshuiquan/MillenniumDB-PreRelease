@@ -3,7 +3,6 @@
 //
 #include "to_smt.h"
 #include "query/parser/expr/mql_exprs.h"
-#include "query/rewriter/"
 using namespace MQL;
 void ToSMT::visit(ExprConstant& expr) {
   current_smt_expr =  std::make_unique<SMT::ExprConstant>(expr.value);
@@ -23,7 +22,7 @@ void ToSMT::visit(ExprVar& expr){
   }
 }
 void ToSMT::visit(ExprVarProperty& expr){
-  current_smt_expr = std::make_unique<SMT::ExprVarProperty>(expr.var_without_property, expr.key, expr.var_with_property);
+    throw  std::runtime_error("Not Support Var with Property");
 }
 void ToSMT::visit(ExprAddition& expr) {
   auto lhs =  expr.lhs.get();
@@ -48,10 +47,10 @@ void ToSMT::visit(ExprSubtraction& expr) {
   auto lhs =  expr.lhs.get();
   auto rhs =  expr.rhs.get();
   rhs ->accept_visitor(*this);
-  auto r = std::move(current_smt_expr);
+  auto r = std::make_unique<SMT::ExprApp>(Operator::OP_MUL, std::move(current_smt_expr), std::make_unique<SMT::ExprConstant>(QuadObjectId::get_value("-1")));
   lhs ->accept_visitor(*this);
   auto l = std::move(current_smt_expr);
-  current_smt_expr = std::make_unique<SMT::ExprApp>(Operator::OP_SUB, std::move(l), std::move(r));
+  current_smt_expr = std::make_unique<SMT::ExprApp>(Operator::OP_ADD, std::move(l), std::move(r));
 }
 
 void ToSMT::visit(ExprEquals& expr) {
@@ -97,9 +96,9 @@ void ToSMT::visit(ExprLess& expr) {
   auto lhs =  expr.lhs.get();
   auto rhs =  expr.rhs.get();
   rhs ->accept_visitor(*this);
-  auto r = std::move(current_smt_expr);
+  auto r = std::make_unique<SMT::ExprApp>(Operator::OP_ADD, std::move(current_smt_expr),std::make_unique<SMT::ExprVar>(get_query_ctx().get_or_create_var("epsilon")));
   lhs ->accept_visitor(*this);
-  auto l = std::make_unique<SMT::ExprApp>(Operator::OP_SUB, std::move(current_smt_expr),std::make_unique<SMT::ExprVar>(get_query_ctx().get_or_create_var("epsilon")));
+  auto l = std::move(current_smt_expr);
   current_smt_expr = std::make_unique<SMT::ExprApp>(Operator::OP_LE, std::move(l), std::move(r));
 }
 void ToSMT::visit(ExprNotEquals& expr) {

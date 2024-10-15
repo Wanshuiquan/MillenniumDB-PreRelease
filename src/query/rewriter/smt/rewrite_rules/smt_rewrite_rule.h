@@ -9,7 +9,7 @@
 #include <set>
 #include <memory>
 
-#include "query/parser/smt/smt_exprs.h"
+#include "query/parser/smt/ir/SMT_IR.h"
 #include "query/rewriter/smt/rewrite_basic.h"
 namespace SMT {
     /**
@@ -21,8 +21,8 @@ namespace SMT {
     public:
         virtual ~ExprRewriteRule() = default;
 
-        virtual bool is_possible_to_regroup(std::unique_ptr<Expr>&) = 0;
-        virtual std::unique_ptr<Expr> regroup(std::unique_ptr<Expr>) = 0;
+        virtual bool is_possible_to_regroup(App &) = 0;
+        virtual App& regroup(App&) = 0;
 
 
     };

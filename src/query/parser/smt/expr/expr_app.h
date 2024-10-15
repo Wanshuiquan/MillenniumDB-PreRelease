@@ -60,7 +60,6 @@ namespace SMT {
     public:
         std::unique_ptr<Expr> lhs;
         std::unique_ptr<Expr> rhs;
-
         Operator op;
 
         ExprApp(Operator op, std::unique_ptr<Expr> lhs, std::unique_ptr<Expr> rhs) :
