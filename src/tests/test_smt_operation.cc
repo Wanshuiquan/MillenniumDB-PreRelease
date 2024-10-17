@@ -30,12 +30,18 @@ int main(){
 //                                      std::make_unique<ExprVar>(get_query_ctx().get_or_create_var("x"))));
     auto expr3 = std::make_unique<ExprApp>(
             Operator::OP_LE,
-            std::make_unique<ExprConstant>(QuadObjectId::get_value("2")),
             std::make_unique<ExprApp>(Operator::OP_MUL,
                                       std::make_unique<ExprConstant>(QuadObjectId::get_value("2")),
                                       std::make_unique<ExprApp>(Operator::OP_ADD,
                                                                 std::make_unique<ExprConstant>(QuadObjectId::get_value("1")),
-                                                                std::make_unique<ExprVar>(get_query_ctx().get_or_create_var("x")))));
+                                                                std::make_unique<ExprAttr>(QuadObjectId::get_string("age"), "age"))),
+            std::make_unique<ExprApp>(Operator::OP_MUL,
+                                      std::make_unique<ExprConstant>(QuadObjectId::get_value("2")),
+                                      std::make_unique<ExprApp>(Operator::OP_ADD,
+                                                                std::make_unique<ExprConstant>(QuadObjectId::get_value("1")),
+                                                                std::make_unique<ExprVar>(get_query_ctx().get_or_create_var("x"))))
+
+                                                                );
     auto rewriter = ToIR();
     expr3->accept_visitor(rewriter);
     auto ir = rewriter.to_ir();

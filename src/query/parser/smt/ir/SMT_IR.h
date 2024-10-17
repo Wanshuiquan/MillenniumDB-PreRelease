@@ -22,34 +22,7 @@ enum SMTOp{
     SMT_VAL,
 };
 
-//class Var{
-//     VarId id;
-//public:
-//     Var(VarId id): id(id){}
-//     std::string to_string() const {
-//         return get_query_ctx().get_var_name(id);
-//     }
-//};
-//
-//class Value{
-//    std::string value;
-//public:
-//    Value(std::string val): value(val){}
-//
-//    std::string to_string() const {
-//        return value;
-//    }
-//};
-//
-//class Attribute  {
-//    ObjectId var;
-//    std::string name;
-//public:
-//    Attribute(ObjectId var, std::string name):var(var), name(name){}
-//    std::string to_string() const {
-//        return name;
-//    }
-//};
+
 
 
 class App{

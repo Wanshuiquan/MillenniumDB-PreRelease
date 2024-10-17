@@ -30,14 +30,13 @@ namespace SMT {
             if  (! (unknown_expr.is_eq() || unknown_expr.is_neq() || unknown_expr.is_ge() || unknown_expr.is_le()) ){
                 return false;
             }
-            else if (unknown_expr.get_all_vars().empty() ){
+            else if (unknown_expr.to_string().find('\"') != std::string::npos ){
                 return false;
             }
             else{
-                return unknown_expr.param[0].get_all_vars().empty() && unknown_expr.param[1].get_all_attributes().empty();
+                return (! unknown_expr.param[1].get_all_vars().empty()) || (!unknown_expr.param[0].get_all_attributes().empty());
             }
 
-            return false;
         }
 
         App& regroup(App& expr) override {
@@ -80,7 +79,7 @@ namespace SMT {
             // reshuffle ths rhs
             auto rhs = expr.param[1];
             if (rhs.is_val()) {
-                new_rhs.push_back(lhs);
+                new_rhs.push_back(rhs);
             }
             else if (rhs.is_var()) {
                 invert(rhs);
@@ -132,18 +131,16 @@ namespace SMT {
                 expr.param[0].param.swap(new_lhs);
                 expr.param[0].op = SMTOp::SMT_ADD;
             }
-            std::cout << "lhs is" << expr.param[0].to_string() << std::endl;
 
             // new rhs
             expr.param[1].param.clear();
 
             if (new_rhs.size() == 1){
-                std::cout << "rhs is "<<new_rhs[0].to_string()<<std::endl;
                 if (new_rhs[0].is_val()) {
                     expr.param[1].val.swap(new_rhs[0].val);
                     expr.param[1].op = SMTOp::SMT_VAL;
                 }else if (new_rhs[0].is_var()){
-                    expr.param[1].var.swap(new_lhs[0].var);
+                    expr.param[1].var.swap(new_rhs[0].var);
                     expr.param[1].op = SMTOp::SMT_PARA;
                 } else if (new_rhs[0].is_mul()){
                     // flat the multiplication

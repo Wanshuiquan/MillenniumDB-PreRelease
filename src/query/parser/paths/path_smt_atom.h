@@ -103,6 +103,7 @@ public:
         auto ir = rewriter.to_ir();
         SMT::normalize(ir);
         auto formula = ir.to_string();
+        automaton.set_term_table(ir);
         automaton.add_transition(SMTTransition::make_transition(0, 1, inverse, atom,  formula ));
         return automaton;
     }
