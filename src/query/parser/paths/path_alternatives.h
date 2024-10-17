@@ -122,6 +122,8 @@ public:
         for (const auto& alternative : alternatives) {
             auto child_automaton = alternative->get_smt_base_automaton();
             alternative_automaton.rename_and_merge(child_automaton);
+            alternative_automaton.str_terms.merge(child_automaton.str_terms);
+            alternative_automaton.bounded_terms.merge(child_automaton.bounded_terms);
             auto start_state = alternative_automaton.get_start();
             // Connects start state with child start
             alternative_automaton.add_epsilon_transition(start_state, child_automaton.get_start());

@@ -119,6 +119,9 @@ public:
         for (size_t i = 1; i < sequence.size(); i++) {
             auto child_automaton = sequence[i]->get_smt_base_automaton();
             sequence_automaton.rename_and_merge(child_automaton);
+            sequence_automaton.str_terms.merge(child_automaton.str_terms);
+            sequence_automaton.bounded_terms.merge(child_automaton.bounded_terms);
+
             // Connect end state of sequence automaton to start of child
             for (const auto& end_state : sequence_automaton.end_states) {
                 sequence_automaton.add_epsilon_transition(end_state, child_automaton.get_start());

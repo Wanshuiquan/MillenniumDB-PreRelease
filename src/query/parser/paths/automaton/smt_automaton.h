@@ -17,6 +17,8 @@
 
 #include "query/var_id.h"
 #include "query/parser/smt/smt_exprs.h"
+#include "query/parser/smt/ir/SMT_IR.h"
+
 #include "rpq_automaton.h"
 /*
 This automaton also supports RDPQs (Data RPQs), where each node or edge
@@ -49,6 +51,8 @@ public:
 
     // List of property checks for the transition
     std::string property_checks;
+
+
 
     // constructor
     SMTTransition(uint_fast32_t from, uint_fast32_t to, bool inverse, std::string type, std::string property):
@@ -169,6 +173,8 @@ private:
 
 
 public:
+    std::map<std::string, std::tuple<SMTOp, App&, App&>> bounded_terms;
+    std::map<std::string, std::tuple<SMTOp, App&, App&>> str_terms;
     // Transitions that start from the i-th state (stored in the i-th position)
     std::vector<std::vector<SMTTransition>> from_to_connections;
 
@@ -239,6 +245,37 @@ public:
 
     void set_para(std::set<VarId> para){
         parameter = std::move(para); 
+    }
+
+    void set_simple_term(App&ele){
+        if (ele.is_neq() || ele.is_eq() || ele.is_ge() || ele.is_le() ){
+            if (ele.to_string().find('\"') == std::string::npos) {
+                bounded_terms.emplace(ele.to_string(),
+                                      std::tuple<SMTOp, App &, App &>(ele.op, ele.param[0], ele.param[1]));
+            }
+            else {
+                str_terms.emplace(ele.to_string(),
+                                  std::tuple<SMTOp, App &, App &>(ele.op, ele.param[0], ele.param[1])
+                );
+            }
+        }
+    }
+
+    void set_term_table(App& expr){
+        if (expr.is_and()){
+            for (auto& ele: expr.param){
+                set_simple_term(ele);
+            }
+        }
+        else if (expr.is_val()){
+            return;
+        }
+        else{
+            set_simple_term(expr);
+        }
+
+
+
     }
 };
 

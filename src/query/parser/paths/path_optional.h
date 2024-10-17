@@ -58,6 +58,7 @@ public:
 
     SMTAutomaton get_smt_base_automaton() const override{
         auto automaton = path->get_smt_base_automaton();
+
         // Make start state a end state
         automaton.end_states.insert(automaton.get_start());
         return automaton;
