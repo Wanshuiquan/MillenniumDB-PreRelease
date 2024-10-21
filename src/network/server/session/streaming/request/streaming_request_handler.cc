@@ -4,6 +4,8 @@
 #include "network/exceptions.h"
 #include "network/server/protocol.h"
 #include "query/query_context.h"
+#include "query/parser/smt/ir/SMT_IR.h"
+
 #include "storage/tmp_manager.h"
 
 
@@ -109,6 +111,8 @@ void StreamingRequestHandler::handle_discard() {
 void StreamingRequestHandler::handle_run(const std::string& query) {
     tmp_manager.reset();
     get_query_ctx().reset();
+    get_ir_ctx().reset();
+    get_smt_ctx().reset();
 
     try {
         const auto query_start = std::chrono::system_clock::now();

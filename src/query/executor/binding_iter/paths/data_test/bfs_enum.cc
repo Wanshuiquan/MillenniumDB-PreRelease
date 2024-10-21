@@ -82,6 +82,7 @@ bool BFSEnum::eval_check(uint64_t obj, MacroState& macroState,  const std::strin
         } else {
             auto constraint = get_ir_ctx().bounded_terms.find(f.to_string())->second;
             try {
+
                 auto key = std::get<0>(constraint);
                 auto lhs = std::get<1>(constraint);
                 auto rhs = std::get<2>(constraint);

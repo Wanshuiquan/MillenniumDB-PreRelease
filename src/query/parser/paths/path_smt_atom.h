@@ -101,7 +101,13 @@ public:
         auto rewriter = SMT::ToIR();
         property_checks->accept_visitor(rewriter);
         auto ir = rewriter.to_ir();
-        if (ir.to_string().find('\"') == std::string::npos) SMT::normalize(ir) ;
+        if(ir.is_and()) {
+            for (auto &ele: ir.param) {
+                if (ele.to_string().find('\"') == std::string::npos) {
+                    SMT::normalize(ir);
+                }
+            }
+        }
         auto formula = ir.to_string();
         automaton.set_term_table(ir);
         automaton.add_transition(SMTTransition::make_transition(0, 1, inverse, atom,  formula ));

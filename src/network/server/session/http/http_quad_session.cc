@@ -11,6 +11,8 @@
 #include "query/optimizer/quad_model/executor_constructor.h"
 #include "query/parser/grammar/error_listener.h"
 #include "query/parser/mql_query_parser.h"
+#include "query/parser/smt/ir/SMT_IR.h"
+
 #include "query/query_context.h"
 #include "storage/tmp_manager.h"
 #include "misc/logger.h"
@@ -58,6 +60,7 @@ void HttpQuadSession::handle_request() {
 
     tmp_manager.reset();
     get_query_ctx().reset();
+    get_ir_ctx().reset();
 
     std::unique_ptr<QueryExecutor> current_physical_plan;
     try {

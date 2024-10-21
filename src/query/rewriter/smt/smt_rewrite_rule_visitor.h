@@ -9,11 +9,11 @@
 #include "rewrite_rules/distribute_plus_mult.h"
 #include "rewrite_rules/flat_mul.h"
 #include "rewrite_rules/flat_plus.h"
+#include "rewrite_rules/flat_and.h"
+
 #include "rewrite_rules/simplify_add.h"
 #include "rewrite_rules/simplify_mul.h"
 #include "rewrite_rules/normalize.h"
-
-
 
 
 namespace SMT {
@@ -59,11 +59,7 @@ namespace SMT {
          * it only contains an expr, it is removed after this visitation.       *
          ************************************************************************/
         void start_visit(App& expr){
-            std::vector<App> temp_vec;
-            temp_vec.push_back(expr);
-            auto temp_expr_container = App(SMT_AND, temp_vec );
-            visit(temp_expr_container);
-            expr = temp_expr_container.param[0];
+            visit(expr);
         }
 
 
@@ -83,6 +79,10 @@ namespace SMT {
     };
 
     inline void normalize( App & expr){
+        ExprRewriteRuleVisitor andflater;
+        andflater.add_rule<FlatAnd>();
+        andflater.start_visit(expr);
+
         ExprRewriteRuleVisitor distributer;
 
         distributer.add_rule<DistributeMulIntoPlusLeft>();
@@ -99,6 +99,8 @@ namespace SMT {
         flater.start_visit(expr);
 
         ExprRewriteRuleVisitor normalizer;
+        flater.add_rule<FlatPlus>();
+        flater.add_rule<FlatMul>();
         normalizer.add_rule<Normalize>();
         normalizer.add_rule<SimplifyMUL>();
         normalizer.add_rule<SimplifyPlus>();
@@ -170,14 +172,7 @@ namespace SMT {
             return val;
     }
 
-     inline std::string to_value(App & expr){
-        std::vector<App> ele(expr.param);
-        App * temp = new App(expr.op, ele);
-        normalize(*temp);
-        std::string val = temp->val.value();
-        delete temp;
-        return val;
-    }
+
 
      inline std::string evaluate(App& expr, std::map<std::tuple<std::string, ObjectId> , double_t> attribute){
 
