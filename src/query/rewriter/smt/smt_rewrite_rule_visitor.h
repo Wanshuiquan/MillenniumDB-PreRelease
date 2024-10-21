@@ -172,6 +172,21 @@ namespace SMT {
             return val;
     }
 
+    inline std::string eval( App & expr){
+        if(expr.is_val()){
+            return expr.val.value();
+        }else if (expr.is_mul()){
+            double res = 1;
+            std::for_each(expr.param.begin(), expr.param.end(), [&res](App& a){res = res * std::stod(eval(a));});
+            return std::to_string(res);
+        }else if (expr.is_add()){
+            double res = 0;
+            std::for_each(expr.param.begin(), expr.param.end(), [&res](App& a){res = res + std::stod(eval(a));});
+            return std::to_string(res);
+        }else{
+            return "";
+        }
+    }
 
 
      inline std::string evaluate(App& expr, std::map<std::tuple<std::string, ObjectId> , double_t> attribute){
@@ -179,8 +194,9 @@ namespace SMT {
          std::vector<App> ele(expr.param);
          App * temp = new App(expr.op, ele, expr.var, expr.val, expr.attr);
          subsitute(*temp, std::move(attribute));
-         normalize(*temp);
-         std::string val = temp->val.value();
+
+         std::string val = eval(*temp);
+
          delete temp;
          return val;
     }

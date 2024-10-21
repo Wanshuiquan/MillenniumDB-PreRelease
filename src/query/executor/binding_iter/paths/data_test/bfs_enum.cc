@@ -131,7 +131,7 @@ bool BFSEnum::eval_check(uint64_t obj, MacroState& macroState,  const std::strin
 //        }
 //    }
 
-    return true;
+    return check_sat(macroState, vars, get_ir_ctx().lhs_terms);
 }
 
 

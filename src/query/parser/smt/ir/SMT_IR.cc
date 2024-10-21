@@ -34,16 +34,18 @@ z3::expr App::to_z3_ast() const {
 
     switch (op) {
         case SMT_ADD: {
-            z3::expr res  = get_smt_ctx().add_real_val(1);
+            z3::expr res  = get_smt_ctx().add_real_val(0);
             for (const auto & ele:param){
-                res = res + ele.to_z3_ast();
+                auto partial  = ele.to_z3_ast();
+                res = res + partial;
             }
             return res;
         };
         case SMT_MUL: {
             z3::expr res  = get_smt_ctx().add_real_val(1);
             for (const auto & ele:param){
-                res = res * ele.to_z3_ast();
+                auto partial  = ele.to_z3_ast();
+                res = res * partial;
             }
             return res;
         };
@@ -54,7 +56,8 @@ z3::expr App::to_z3_ast() const {
             else {
                     z3::expr res  = get_smt_ctx().add_bool_val(true);
                     for (const auto & ele:param){
-                        res = res && ele.to_z3_ast();
+                        auto partial = ele.to_z3_ast();
+                        res = res && partial;
                     }
                     return res;
 
