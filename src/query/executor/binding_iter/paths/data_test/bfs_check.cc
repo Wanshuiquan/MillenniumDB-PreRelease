@@ -8,6 +8,8 @@
 #include "query/var_id.h"
 #include "query/executor/binding_iter/paths/path_manager.h"
 #include "z3++.h"
+#include "query/rewriter/smt/smt_rewrite_rule_visitor.h"
+
 using namespace std;
 using namespace Paths::DataTest;
 
@@ -16,105 +18,125 @@ void BFSCheck::update_value(uint64_t obj) {
     for (const auto& key: attributes){
         ObjectId key_id = get<1>(key);
         auto res = query_property(obj, key_id.id);
-
         if (res.has_value()){
             uint64_t value_id = res.value();
-            double_t new_value = decoding_mask(ObjectId(value_id));
-            real_attributes[key] = new_value;
+            Result new_value = decode_mask(ObjectId(value_id));
+            if (holds_alternative<std::string>(new_value)){
+                string_attributes[key] = std::get<std::string>(new_value);
+            }
+            else {
+                real_attributes[key] = std::get<double_t>(new_value);
+            }
         }
     }
 }
 
 bool BFSCheck::eval_check(uint64_t obj, MacroState& macroState, std::string formula) {
+    if (formula.find("true") != std::string::npos){
+        return true;
+    }
     // update_value
     update_value(obj);
-    // Initialize context
-    for (const auto& ele: string_attributes){
-        auto attr =  ele.first;
-        std::string name = std::get<0>(attr);
-        get_smt_ctx().add_string_var(name);
+//    // Initialize context
+//    for (const auto& ele: string_attributes){
+//        auto attr =  ele.first;
+//        std::string name = std::get<0>(attr);
+//        get_smt_ctx().add_string_var(name);
+//    }
+//    for (const auto& ele: real_attributes){
+//        auto attr =  ele.first;
+//        std::string name = std::get<0>(attr);
+//        get_smt_ctx().add_real_var(name);
+//    }
+//    for (const auto& ele: vars){
+//        auto var =  ele.first;
+//        get_smt_ctx().add_real_var(get_query_ctx().get_var_name(var));
+//    }
+//    //Parse Formula
+//    auto property = get_ir_ctx().parse(formula);
+//    //subsitution
+//    for (const auto& ele: string_attributes) {
+//            auto attr = ele.first;
+//            std::string name = std::get<0>(attr);
+//            std::string value = ele.second;
+//            property = get_smt_ctx().subsitute_string(name, value, property);
+//        }
+//
+//    for (const auto& ele: real_attributes) {
+//        auto attr = ele.first;
+//        std::string name = std::get<0>(attr);
+//        double_t value = ele.second;
+//        property = get_ir_ctx().subsitute_real(name, value, property);
+//    }
+    // del with string constint
+    std::vector<App> paras;
+    auto ast = get_ir_ctx().formula_map.find(formula)->second;
+    if (ast.is_and()){
+        paras = std::move(ast.param);
+    }else{
+        paras.push_back(ast);
     }
-    for (const auto& ele: real_attributes){
-        auto attr =  ele.first;
-        std::string name = std::get<0>(attr);
-        get_smt_ctx().add_real_var(name);
-    }
-    for (const auto& ele: vars){
-        auto var =  ele.first;
-        get_smt_ctx().add_real_var(get_query_ctx().get_var_name(var));
-    }
-    //Parse Formula
-    auto property = get_smt_ctx().parse(formula);
-    //subsitution
-    for (const auto& ele: string_attributes) {
-            auto attr = ele.first;
-            std::string name = std::get<0>(attr);
-            std::string value = ele.second;
-            property = get_smt_ctx().subsitute_string(name, value, property);
+    for (const auto & f: paras) {
+        if (f.to_string().find('\"') != std::string::npos){
+            auto constraint = get_ir_ctx().str_terms.find(f.to_string())->second;
+            auto lhs = std::get<1>(constraint);
+            auto rhs = std::get<2>(constraint);
+            auto lhs_val = SMT::eval_str(lhs, string_attributes);
+            auto rhs_val = SMT::eval_str(rhs, string_attributes);
+            if (lhs_val != rhs_val) {
+                return false;
+            }
         }
-
-    for (const auto& ele: real_attributes) {
-        auto attr = ele.first;
-        std::string name = std::get<0>(attr);
-        double_t value = ele.second;
-        property = get_smt_ctx().subsitute_real(name, value, property);
-    }
-    // decompose
-    auto vector = get_smt_ctx().decompose(property);
-    z3::ast_vector_tpl<z3::expr> new_vec = z3::ast_vector_tpl<z3::expr>(get_smt_ctx().context);
-    z3::solver s(get_smt_ctx().context);
-    s.add(get_smt_ctx().bound_epsilon);
-    for (const auto& f: vector) {
-        // normalize formula into t ~ constant
-        auto normal_form = get_smt_ctx().normalizition(f);
-        // if the formula is normalized as constant
-        if (f.is_true()) {
-            continue;
-        } else if (f.is_false()) {
-            return false;
-        }
-        // get and update the bound
-        auto bound = get_smt_ctx().get_bound(normal_form);
-        auto update_flag = macroState.update_bound(bound);
-        // update the wrong value
-        if (update_flag == 0) {
-            return false;
+        else if (get_ir_ctx().terms_without_vars.find(f.to_string()) != get_ir_ctx().terms_without_vars.end()) {
+            auto constraint = get_ir_ctx().terms_without_vars.find(f.to_string())->second;
+            auto lhs = std::get<1>(constraint);
+            auto rhs = std::get<2>(constraint);
+            auto lhs_val = SMT::evaluate(lhs, real_attributes);
+            auto rhs_val = SMT::evaluate(rhs, real_attributes);
+            if (lhs_val != rhs_val) {
+                return false;
+            }
+        } else {
+            auto constraint = get_ir_ctx().bounded_terms.find(f.to_string())->second;
+            try {
+                auto key = std::get<0>(constraint);
+                auto lhs = std::get<1>(constraint);
+                auto rhs = std::get<2>(constraint);
+                auto val = SMT::evaluate(rhs, real_attributes);
+                bool update = macroState.update_bound_from_ir(key, lhs.to_string(), val);
+                if (!update) {
+                    return false;
+                }
+            } catch (std::out_of_range &e ){
+                std::terminate();
+            }
         }
     }
+//    // decompose
+//    auto vector = get_ir_ctx().decompose(property);
+//    z3::ast_vector_tpl<z3::expr> new_vec = z3::ast_vector_tpl<z3::expr>(get_ir_ctx().context);
+//    z3::solver s(get_ir_ctx().context);
+//    s.add(get_ir_ctx().bound_epsilon);
+//    for (const auto& f: vector) {
+//        // normalize formula into t ~ constant
+//        auto normal_form = get_ir_ctx().normalizition(f);
+//        // if the formula is normalized as constant
+//        if (f.is_true()) {
+//            continue;
+//        } else if (f.is_false()) {
+//            return false;
+//        }
+//        // get and update the bound
+//        auto bound = get_ir_ctx().get_bound(normal_form);
+//        auto update_flag = macroState.update_bound(bound);
+//        // update the wrong value
+//        if (update_flag == 0) {
+//            return false;
+//        }
+//    }
         //check the sat for the current bound
 
-        for (const auto& para: macroState.collected_expr){
-            const std::string& key_str = para.to_string();
-            auto parameter = para;
-            if (macroState.upper_bounds.find(key_str) != macroState.upper_bounds.end()){
-                double val = macroState.upper_bounds[key_str];
-                s.add(parameter <= get_smt_ctx().add_real_val(val));
-            }
-             if (macroState.lower_bounds.find(key_str) != macroState.lower_bounds.end()){
-                double val = macroState.lower_bounds[key_str];
-                s.add(parameter >= get_smt_ctx().add_real_val(val));
-            }  if (macroState.eq_vals.find(key_str) != macroState.eq_vals.end()){
-                double val = macroState.eq_vals[key_str];
-                s.add(parameter == get_smt_ctx().add_real_val(val));
-            }
-        }
-
-
-
-    switch (s.check()) {
-        case z3::sat: {
-            auto model = s.get_model();
-            for (const auto &ele:vars){
-                std::string name = get_query_ctx().get_var_name(ele.first);
-                z3::expr v = get_smt_ctx().get_var(name);
-                auto val = model.eval(v).as_double();
-                vars[ele.first] = val;
-            }
-            return true;
-        }
-        case z3::unsat: return false;
-        case z3::unknown: return false;
-    }
+       return true;
 }
 
 
@@ -213,7 +235,7 @@ const PathState* BFSCheck::expand_neighbors(MacroState& macroState){
                     if (new_state.second){
                         open.emplace(new_state.first.operator->());
                     }
-                    if (automaton.decide_accept(transition_node.to) && target_id == end_object_id.id) {
+                    if (automaton.decide_accept(transition_node.to) && target_id == end_object_id.id && check_sat(macroState, vars, get_ir_ctx().lhs_terms)) {
                         return new_ptr;
                     }
                 }
@@ -244,7 +266,8 @@ bool BFSCheck::_next() {
                 return false;
             }
         // start state is the solution
-        if (current_state-> path_state->node_id == end_object_id && automaton.decide_accept(current_state-> automaton_state)) {
+        if (current_state-> path_state->node_id == end_object_id && automaton.decide_accept(current_state-> automaton_state) &&
+                                                                    check_sat(*current_state, vars, get_ir_ctx().lhs_terms)) {
                 auto path_id = path_manager.set_path(current_state-> path_state, path_var);
                 parent_binding->add(path_var, path_id);
                 for (const auto& ele: vars){

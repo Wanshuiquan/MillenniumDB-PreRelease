@@ -10,7 +10,7 @@
 #pragma once
 #include <variant>
 #include <iostream>
-
+#include "ir/SMT_IR.h"
 #include "graph_models/inliner.h"
 #include "graph_models/quad_model/conversions.h"
 #include "graph_models/quad_model/quad_object_id.h"
@@ -115,7 +115,9 @@ public:
     std::map<std::string, int> vars;
     std::map<std::string, Ty> type;
 
+
     int index = 0;
+
     SMTContext(){
         dels.push_back(epsilon.decl());
     }
@@ -244,8 +246,17 @@ public:
             case Bound::Ge: os << "Ge" << " " << lhs << " "<< rhs << std::endl; break;
         }
     }
+   void reset(){
+       vars.clear();
+       type.clear();
+
+    }
+
 
   z3::expr get_var(const std::string & name){
+        if (name == "epsilon"){
+            return epsilon;
+        }
         int ind = vars[name];
         return var_vec[ind];
     }

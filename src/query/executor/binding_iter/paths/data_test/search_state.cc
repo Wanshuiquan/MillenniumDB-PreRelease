@@ -38,6 +38,50 @@ void PathState::print(std::ostream& os,
 
 
 
+bool MacroState::update_bound_from_ir(SMTOp op, std::string key, std::string val) {
+    auto type = op;
+
+    std::string key_str = key;
+    auto value =  std::stod(val);
+
+
+    switch (type) {
+        case SMT_LE:{
+            if (upper_bounds.find(key_str) == upper_bounds.end()){
+                upper_bounds[key_str] = value;
+            }
+            else{
+                double old_bound = upper_bounds[key_str];
+                double new_bound = value;
+                if (new_bound < old_bound) upper_bounds[key_str] = new_bound;
+            }
+            return true;
+        }
+        case SMT_GE:{
+            if (lower_bounds.find(key_str) == lower_bounds.end()){
+                lower_bounds[key_str] = value;
+            }
+            else{
+                double old_bound = lower_bounds[key_str];
+                double new_bound = value;
+                if (new_bound > old_bound) lower_bounds[key_str] = new_bound;
+            }
+            return true;
+        }
+        case SMT_EQ:{
+            if (eq_vals.find(key_str) == eq_vals.end()){
+                eq_vals[key_str] = value;
+                return true;
+            }
+            else{
+                double old_bound = eq_vals[key_str];
+                double new_bound = value;
+                return int(new_bound == old_bound);
+            }
+        }
+        default: return false;
+    }
+}
 
 int MacroState::update_bound(std::tuple<Bound, z3::expr, z3::expr> bound) {
     auto type = std::get<0>(bound);

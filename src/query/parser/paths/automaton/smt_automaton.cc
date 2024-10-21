@@ -110,6 +110,8 @@ void SMTAutomaton::add_transition(SMTTransition transition) {
 // Transform automaton into a final automaton
 void SMTAutomaton::transform_automaton(ObjectId(*f)(const std::string&)) {
     transform_by_nfa();
+    // set amt ast table
+
     // Set transition ids
     for (size_t i = 0; i < from_to_connections.size(); i++) {
         for (auto& t : from_to_connections[i]) {

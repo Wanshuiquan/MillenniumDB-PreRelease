@@ -18,7 +18,7 @@
 #include "query/var_id.h"
 #include "query/parser/smt/smt_exprs.h"
 #include "query/parser/smt/ir/SMT_IR.h"
-
+#include "query/parser/smt/smt_operations.h"
 #include "rpq_automaton.h"
 /*
 This automaton also supports RDPQs (Data RPQs), where each node or edge
@@ -173,8 +173,7 @@ private:
 
 
 public:
-    std::map<std::string, std::tuple<SMTOp, App&, App&>> bounded_terms;
-    std::map<std::string, std::tuple<SMTOp, App&, App&>> str_terms;
+
     // Transitions that start from the i-th state (stored in the i-th position)
     std::vector<std::vector<SMTTransition>> from_to_connections;
 
@@ -249,12 +248,18 @@ public:
 
     void set_simple_term(App&ele){
         if (ele.is_neq() || ele.is_eq() || ele.is_ge() || ele.is_le() ){
-            if (ele.to_string().find('\"') == std::string::npos) {
-                bounded_terms.emplace(ele.to_string(),
+            if (ele.to_string().find('\"') != std::string::npos){
+                get_ir_ctx().str_terms.emplace(ele.to_string(),
+                                               std::tuple<SMTOp, App &, App &>(ele.op, ele.param[0], ele.param[1])
+                );
+            }
+            else if (! ele.get_all_vars().empty()) {
+                get_ir_ctx().bounded_terms.emplace(ele.to_string(),
                                       std::tuple<SMTOp, App &, App &>(ele.op, ele.param[0], ele.param[1]));
+                get_ir_ctx().lhs_terms.emplace( ele.param[0].to_string(), ele.param[0]);
             }
             else {
-                str_terms.emplace(ele.to_string(),
+                get_ir_ctx().terms_without_vars.emplace(ele.to_string(),
                                   std::tuple<SMTOp, App &, App &>(ele.op, ele.param[0], ele.param[1])
                 );
             }
@@ -263,6 +268,7 @@ public:
 
     void set_term_table(App& expr){
         if (expr.is_and()){
+            get_ir_ctx().formula_map.emplace(expr.to_string(), expr);
             for (auto& ele: expr.param){
                 set_simple_term(ele);
             }
@@ -271,6 +277,7 @@ public:
             return;
         }
         else{
+            get_ir_ctx().formula_map.emplace(expr.to_string(),  expr);
             set_simple_term(expr);
         }
 

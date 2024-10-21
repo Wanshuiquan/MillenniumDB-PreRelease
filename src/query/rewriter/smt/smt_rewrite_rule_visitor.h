@@ -2,6 +2,7 @@
 
 #include <set>
 #include <memory>
+#include <utility>
 #include "query/query_context.h"
 #include "query/parser/smt/ir/SMT_IR.h"
 #include "query/rewriter/smt/rewrite_rules/smt_rewrite_rule.h"
@@ -82,24 +83,114 @@ namespace SMT {
     };
 
     inline void normalize( App & expr){
-        ExprRewriteRuleVisitor simplifier;
-        std::cout << expr.to_string() << std::endl;
+        ExprRewriteRuleVisitor distributer;
 
-        simplifier.add_rule<DistributeMulIntoPlusLeft>();
-        simplifier.add_rule<DistributeMulIntoPlusRight>();
-        simplifier.add_rule<FlatPlus>();
-        simplifier.add_rule<FlatMul>();
-        simplifier.add_rule<SimplifyMUL>();
-        simplifier.add_rule<SimplifyPlus>();
-        simplifier.start_visit(expr);
-        std::cout << expr.to_string() << std::endl;
+        distributer.add_rule<DistributeMulIntoPlusLeft>();
+        distributer.add_rule<DistributeMulIntoPlusRight>();
+        distributer.add_rule<SimplifyMUL>();
+        distributer.add_rule<SimplifyPlus>();
+        distributer.start_visit(expr);
+
+        ExprRewriteRuleVisitor flater;
+        flater.add_rule<FlatPlus>();
+        flater.add_rule<FlatMul>();
+        flater.add_rule<SimplifyMUL>();
+        flater.add_rule<SimplifyPlus>();
+        flater.start_visit(expr);
 
         ExprRewriteRuleVisitor normalizer;
         normalizer.add_rule<Normalize>();
         normalizer.add_rule<SimplifyMUL>();
         normalizer.add_rule<SimplifyPlus>();
         normalizer.start_visit(expr);
-
     }
+
+    inline void substitute_one_attr(App& expr, std::tuple<std::string, ObjectId> attribute , double_t value ){
+        auto is_op =  [](App & expr){return expr.is_le() || expr.is_ge() || expr.is_eq() || expr.is_neq() || expr.is_and() || expr.is_mul() || expr.is_add();};
+        if (expr.is_attr()){
+            std::string curr_attr = std::get<1>(expr.attr.value());
+            std::string val_attr = std::get<0>(attribute);
+            if (val_attr == curr_attr){
+                expr.attr = std::nullopt;
+                expr.op = SMTOp::SMT_VAL;
+                expr.val = std::to_string(value);
+                return;
+            }
+            else {
+                return;
+            }
+        } else if (is_op(expr)){
+            for (auto& ele: expr.param){
+                substitute_one_attr(ele, attribute, value);
+            }
+        } else{
+            return;
+        }
+    }
+
+    inline void subsitute(App & expr, std::map<std::tuple<std::string, ObjectId> , double_t>  attribute){
+        for (auto& ele: attribute){
+            substitute_one_attr(expr,std::get<0>(ele), std::get<1>(ele));
+        }
+    }
+
+    inline void subsitute_str(App & expr, std::map<std::tuple<std::string, ObjectId> , std::string>  attribute){
+        if (! expr.is_attr()) return;
+        for (auto& ele: attribute){
+                        std::string curr_attr = std::get<1>(expr.attr.value());
+                        std::string val_attr =   std::get<0>(ele.first);
+                        if (val_attr == curr_attr){
+                            expr.attr = std::nullopt;
+                            expr.op = SMTOp::SMT_VAL;
+                            expr.val = ele.second;
+                            return;
+                        }
+
+                 }
+        }
+
+    inline void replace_first(
+            std::string& s,
+            std::string const& toReplace,
+            std::string const& replaceWith
+    ) {
+        std::size_t pos = s.find(toReplace);
+        if (pos == std::string::npos) return;
+        s.replace(pos, toReplace.length(), replaceWith);
+    }
+
+    inline std::string eval_str(App& expr, std::map<std::tuple<std::string, ObjectId> , std::string> attribute){
+            std::vector<App> ele(expr.param);
+            App * temp = new App(expr.op, ele, expr.var, expr.val, expr.attr);
+            subsitute_str(*temp, std::move(attribute));
+            std::string val = temp->val.value();
+            replace_first(val, "\"", "");
+            replace_first(val, "\"", "");
+            delete temp;
+            return val;
+    }
+
+     inline std::string to_value(App & expr){
+        std::vector<App> ele(expr.param);
+        App * temp = new App(expr.op, ele);
+        normalize(*temp);
+        std::string val = temp->val.value();
+        delete temp;
+        return val;
+    }
+
+     inline std::string evaluate(App& expr, std::map<std::tuple<std::string, ObjectId> , double_t> attribute){
+
+         std::vector<App> ele(expr.param);
+         App * temp = new App(expr.op, ele, expr.var, expr.val, expr.attr);
+         subsitute(*temp, std::move(attribute));
+         normalize(*temp);
+         std::string val = temp->val.value();
+         delete temp;
+         return val;
+    }
+
+
+
 
 } // namespace SPARQL

@@ -20,11 +20,8 @@ namespace SMT {
 
     public:
         virtual ~ExprRewriteRule() = default;
-
         virtual bool is_possible_to_regroup(App &) = 0;
         virtual App& regroup(App&) = 0;
-
-
     };
 } // namespace SPARQL
 

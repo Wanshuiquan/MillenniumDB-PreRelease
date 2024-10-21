@@ -1747,6 +1747,7 @@ void CLI::ProcessMQLQuery(std::ostream& os, const std::string& query) {
         tmp_manager.reset();
         get_query_ctx().reset();
 
+
         antlr4::MyErrorListener error_listener;
 
         std::unique_ptr<Op> logical_plan;

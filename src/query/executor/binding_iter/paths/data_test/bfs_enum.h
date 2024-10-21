@@ -94,7 +94,7 @@
             void _reset() override;
 
             bool _next() override;
-            bool eval_check(uint64_t obj, MacroState&, std::string );
+            bool eval_check(uint64_t obj, MacroState&, const std::string& );
             void update_value(uint64_t);
 
             void assign_nulls() override {

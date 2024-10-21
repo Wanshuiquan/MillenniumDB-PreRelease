@@ -9,7 +9,8 @@
 #include "graph_models/object_id.h"
 #include "query/executor/binding_iter/paths/index_provider/path_index.h"
 #include "query/parser/smt/smt_exprs.h"
-
+#include "query/parser/smt/smt_operations.h"
+#include "query/parser/smt/ir/SMT_IR.h"
     namespace Paths::DataTest {
 
         // Represents a path in a recursive manner (prev_state points to previous path state)
@@ -93,6 +94,7 @@
                 }
 
                 int update_bound(std::tuple<Bound, z3::expr, z3::expr>);
+                bool update_bound_from_ir(SMTOp op, std::string key, std::string val);
                 // For ordered set
                 bool operator<(const MacroState& other) const {
                     if (automaton_state < other.automaton_state) {

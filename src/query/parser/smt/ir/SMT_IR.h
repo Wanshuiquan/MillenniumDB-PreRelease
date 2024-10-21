@@ -6,8 +6,10 @@
 #define MILLENNIUMDB_SMT_IR_H
 #pragma once
 #include <optional>
+#include <utility>
 #include "query/parser/smt/smt_exprs.h"
 #include "boost/algorithm/string.hpp"
+#include "z3++.h"
 enum SMTOp{
     SMT_ADD,
     SMT_MUL,
@@ -30,6 +32,13 @@ public:
     SMTOp op;
     std::vector<App> param;
     App(SMTOp op, std::vector<App>& p ): op(op), param(std::move(p)){}
+    App(SMTOp op,
+        std::vector<App>& p,
+        std::optional<VarId> var,
+        std::optional<std::string> val,
+        std::optional<std::tuple<ObjectId, std::string>> attr
+        ): op(op), param(std::move(p)), var(var), val(std::move(val)), attr(std::move(attr)){}
+
     App(SMTOp op, VarId v): op(op), var(v){}
     App(SMTOp op, std::string v): op(op), val(v){}
     App(SMTOp op, std::tuple<ObjectId, std::string> attr): op(op), attr(attr){}
@@ -38,6 +47,21 @@ public:
     std::optional<std::string> val = std::nullopt;
     std::optional<std::tuple<ObjectId, std::string>> attr = std::nullopt;
     std::string to_string() const;
+    z3::expr to_z3_ast() const;
+
+    App* copy(){
+        return new App(op, param);
+    }
+
+    std::unique_ptr<App> clone(){
+        return std::make_unique<App>(
+                op,
+                param,
+                var,
+                val,
+                attr
+                );
+    }
 
     bool is_add() const{
         return op == SMTOp::SMT_ADD;
@@ -61,7 +85,7 @@ public:
         return op == SMTOp::SMT_LE;
     }
     bool is_and() const{
-        return op == SMTOp::SMT_SUB;
+        return op == SMTOp::SMT_AND;
     }
     bool is_attr() const{
         return op == SMTOp::SMT_ATTR;
@@ -106,4 +130,26 @@ public:
 
 };
 
+
+class IR_CTX{
+public:
+    std::map<std::string, App> lhs_terms;
+    std::map<std::string, std::tuple<SMTOp, App, App>> bounded_terms;
+    std::map<std::string, std::tuple<SMTOp, App, App>> str_terms;
+    std::map<std::string, std::tuple<SMTOp, App, App>> terms_without_vars;
+    std::map<std::string, App> formula_map;
+
+    void reset(){
+        lhs_terms.clear();
+        bounded_terms.clear();
+        str_terms.clear();
+        formula_map.clear();
+    }
+};
+
+inline IR_CTX* ctx_ir = new IR_CTX();
+
+inline  IR_CTX& get_ir_ctx(){
+    return *ctx_ir;
+}
 #endif //MILLENNIUMDB_SMT_IR_H
