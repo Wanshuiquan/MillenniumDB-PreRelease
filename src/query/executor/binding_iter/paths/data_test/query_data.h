@@ -15,9 +15,7 @@ using namespace Paths::DataTest;
 
 inline bool check_sat(MacroState& macroState,  std::map<VarId, double_t>& vars, const std::map<std::string, App>& lhs_terms ){
     get_smt_ctx().sol.add(get_smt_ctx().bound_epsilon);
-    for (const auto& ele:lhs_terms){
-        macroState.collected_expr.push_back(ele.second.to_z3_ast());
-    }
+
     for (const auto& ele:lhs_terms) {
         const std::string &key_str = ele.first;
         auto parameter = ele.second.to_z3_ast();

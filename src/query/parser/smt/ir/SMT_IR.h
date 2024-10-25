@@ -7,10 +7,17 @@
 #pragma once
 #include <optional>
 #include <utility>
-#include  <functional>
-#include "query/parser/smt/smt_exprs.h"
+#include <map>
+#include <set>
+
+#include <functional>
 #include "boost/algorithm/string.hpp"
 #include "z3++.h"
+#include "query/var_id.h"
+
+#include "query/parser/smt/smt_operations.h"
+#include "graph_models/quad_model/quad_object_id.h"
+
 enum SMTOp{
     SMT_ADD,
     SMT_MUL,
@@ -25,16 +32,22 @@ enum SMTOp{
     SMT_VAL,
 };
 
+struct PreCTX{
+    std::hash<std::string> str_hash;
+    std::map<size_t, std::string> str_map;
+    // store terms
+    z3::ast_vector_tpl<z3::expr> term_vec = z3::ast_vector_tpl<z3::expr>(get_smt_ctx().context);
+    std::map<size_t , int> term_pos;
+    int term_index = 0;
+};
 
-inline std::hash<std::string> str_hash;
-inline std::map<size_t, std::string> str_map;
-
+inline PreCTX * pre = new PreCTX();
 class App{
 public:
     SMTOp op;
     std::vector<App> param;
 
-    App(SMTOp op, std::vector<App>& p): op(op), param(std::move(p)), hash(str_hash(to_smt_lib())){}
+    App(SMTOp op, std::vector<App>& p): op(op), param(std::move(p)), hash(pre -> str_hash(to_smt_lib())){}
     App(SMTOp op,
         std::vector<App>& p,
         std::optional<VarId> var,
@@ -43,9 +56,9 @@ public:
         size_t hash
         ): op(op), param(std::move(p)), var(var), val(std::move(val)), attr(std::move(attr)), hash(hash){}
 
-    App(SMTOp op, VarId v): op(op), var(v),hash(str_hash(to_smt_lib())){}
-    App(SMTOp op, std::string v): op(op), val(v), hash(str_hash(to_smt_lib())){}
-    App(SMTOp op, std::tuple<ObjectId, std::string> attr): op(op), attr(attr), hash(str_hash(to_string())){}
+    App(SMTOp op, VarId v): op(op), var(v),hash(pre -> str_hash(to_smt_lib())){}
+    App(SMTOp op, std::string v): op(op), val(v), hash(pre ->str_hash(to_smt_lib())){}
+    App(SMTOp op, std::tuple<ObjectId, std::string> attr): op(op), attr(attr), hash(pre -> str_hash(to_string())){}
 
     std::optional<VarId> var = std::nullopt;
     std::optional<std::string> val = std::nullopt;
@@ -53,17 +66,30 @@ public:
     size_t hash;
 
     std::string to_string() const{
-        auto res = str_map.find(hash);
-        if (res == str_map.end()){
-            str_map[hash] = to_smt_lib();
-            return str_map[hash];
+        auto res = pre ->str_map.find(hash);
+        if (res == pre ->str_map.end()){
+            pre ->str_map[hash] = to_smt_lib();
+            return pre ->str_map[hash];
         } else{
             return res->second;
         }
     };
 
     std::string to_smt_lib() const;
-    z3::expr to_z3_ast() const;
+    z3::expr to_ast() const;
+    z3::expr to_z3_ast() const{
+        auto pos = pre -> term_pos.find(hash);
+        if (pos == pre -> term_pos.end()){
+            auto ast = to_ast();
+            pre -> term_vec.push_back(ast);
+            pre -> term_pos[hash] = pre -> term_index;
+            pre -> term_index =  pre -> term_index + 1;
+            return ast;
+        }
+        else {
+            return pre -> term_vec[pos -> second];
+        }
+    };
 
     App* copy(){
         return new App(op, param);
@@ -161,6 +187,9 @@ public:
         bounded_terms.clear();
         str_terms.clear();
         formula_map.clear();
+        pre ->str_map.clear();
+        for (size_t i = 0; i < pre ->term_vec.size(); i++) pre -> term_vec.pop_back();
+        pre ->term_index = 0;
     }
 };
 

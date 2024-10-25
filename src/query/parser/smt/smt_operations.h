@@ -10,7 +10,6 @@
 #pragma once
 #include <variant>
 #include <iostream>
-#include "ir/SMT_IR.h"
 #include "graph_models/inliner.h"
 #include "graph_models/quad_model/conversions.h"
 #include "graph_models/quad_model/quad_object_id.h"
@@ -114,9 +113,10 @@ public:
     z3::ast_vector_tpl<z3::expr> var_vec = z3::ast_vector_tpl<z3::expr>(context);
     std::map<std::string, int> vars;
     std::map<std::string, Ty> type;
-
-
     int index = 0;
+
+
+
 
     SMTContext(){
         dels.push_back(epsilon.decl());
@@ -251,6 +251,8 @@ public:
        vars.clear();
        type.clear();
        sol.reset();
+       for (size_t i = 0; i < var_vec.size(); i++) var_vec.pop_back();
+       index = 0;
     }
 
 

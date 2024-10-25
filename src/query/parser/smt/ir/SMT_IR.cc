@@ -29,14 +29,14 @@ std::string App::to_smt_lib() const {
     }
 }
 
-z3::expr App::to_z3_ast() const {
+z3::expr App::to_ast() const {
     std::string expr_operator;
 
     switch (op) {
         case SMT_ADD: {
             z3::expr res  = get_smt_ctx().add_real_val(0);
             for (const auto & ele:param){
-                auto partial  = ele.to_z3_ast();
+                auto partial  = ele.to_ast();
                 res = res + partial;
             }
             return res;
@@ -44,19 +44,19 @@ z3::expr App::to_z3_ast() const {
         case SMT_MUL: {
             z3::expr res  = get_smt_ctx().add_real_val(1);
             for (const auto & ele:param){
-                auto partial  = ele.to_z3_ast();
+                auto partial  = ele.to_ast();
                 res = res * partial;
             }
             return res;
         };
         case SMT_AND: {
             if (param.size() == 1){
-                return param[0].to_z3_ast();
+                return param[0].to_ast();
             }
             else {
                     z3::expr res  = get_smt_ctx().add_bool_val(true);
                     for (const auto & ele:param){
-                        auto partial = ele.to_z3_ast();
+                        auto partial = ele.to_ast();
                         res = res && partial;
                     }
                     return res;
