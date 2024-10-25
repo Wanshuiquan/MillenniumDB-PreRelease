@@ -12,4 +12,3 @@ void VarToLeft::visit(SMT::ExprAnd & expr) {
     }
 }
 
-void VarToLeft
