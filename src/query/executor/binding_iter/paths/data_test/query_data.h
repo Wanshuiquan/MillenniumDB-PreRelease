@@ -14,8 +14,7 @@
 using namespace Paths::DataTest;
 
 inline bool check_sat(MacroState& macroState,  std::map<VarId, double_t>& vars, const std::map<std::string, App>& lhs_terms ){
-    z3::solver s(get_smt_ctx().context);
-    s.add(get_smt_ctx().bound_epsilon);
+    get_smt_ctx().sol.add(get_smt_ctx().bound_epsilon);
     for (const auto& ele:lhs_terms){
         macroState.collected_expr.push_back(ele.second.to_z3_ast());
     }
@@ -24,35 +23,37 @@ inline bool check_sat(MacroState& macroState,  std::map<VarId, double_t>& vars, 
         auto parameter = ele.second.to_z3_ast();
         if (macroState.upper_bounds.find(key_str) != macroState.upper_bounds.end()) {
             double val = macroState.upper_bounds[key_str];
-            s.add(parameter <= get_smt_ctx().add_real_val(val));
+            get_smt_ctx().sol.add(parameter <= get_smt_ctx().add_real_val(val));
         }
 
         if (macroState.lower_bounds.find(key_str) != macroState.lower_bounds.end()) {
             double val = macroState.lower_bounds[key_str];
-            s.add(parameter >= get_smt_ctx().add_real_val(val));
+            get_smt_ctx().sol.add(parameter >= get_smt_ctx().add_real_val(val));
         }
 
         if (macroState.eq_vals.find(key_str) != macroState.eq_vals.end()) {
             double val = macroState.eq_vals[key_str];
-            s.add(parameter == get_smt_ctx().add_real_val(val));
+            get_smt_ctx().sol.add(parameter == get_smt_ctx().add_real_val(val));
         }
     }
 
+    get_smt_ctx().sol.push();
 
-
-    switch (s.check()) {
+    switch (get_smt_ctx().sol.check()) {
         case z3::sat: {
-                    auto model = s.get_model();
+                    auto model = get_smt_ctx().sol.get_model();
                     for (const auto &ele:vars){
                         std::string name = get_query_ctx().get_var_name(ele.first);
                         z3::expr v = get_smt_ctx().get_var(name);
                         auto val = model.eval(v).as_double();
                         vars[ele.first] = val;
                     }
-                    return true;
+            get_smt_ctx().sol.pop(1);
+
+            return true;
             };
-        case z3::unsat: return false;
-        case z3::unknown: return false;
+        case z3::unsat:     get_smt_ctx().sol.pop(1); return false;
+        case z3::unknown:   get_smt_ctx().sol.pop(1); return false;
     }
 }
 inline std::optional<uint64_t> query_property(uint64_t obj_id, uint64_t key_id)  {

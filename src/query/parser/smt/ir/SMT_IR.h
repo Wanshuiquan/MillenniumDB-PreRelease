@@ -7,6 +7,7 @@
 #pragma once
 #include <optional>
 #include <utility>
+#include  <functional>
 #include "query/parser/smt/smt_exprs.h"
 #include "boost/algorithm/string.hpp"
 #include "z3++.h"
@@ -25,28 +26,43 @@ enum SMTOp{
 };
 
 
-
+inline std::hash<std::string> str_hash;
+inline std::map<size_t, std::string> str_map;
 
 class App{
 public:
     SMTOp op;
     std::vector<App> param;
-    App(SMTOp op, std::vector<App>& p ): op(op), param(std::move(p)){}
+
+    App(SMTOp op, std::vector<App>& p): op(op), param(std::move(p)), hash(str_hash(to_smt_lib())){}
     App(SMTOp op,
         std::vector<App>& p,
         std::optional<VarId> var,
         std::optional<std::string> val,
-        std::optional<std::tuple<ObjectId, std::string>> attr
-        ): op(op), param(std::move(p)), var(var), val(std::move(val)), attr(std::move(attr)){}
+        std::optional<std::tuple<ObjectId, std::string>> attr,
+        size_t hash
+        ): op(op), param(std::move(p)), var(var), val(std::move(val)), attr(std::move(attr)), hash(hash){}
 
-    App(SMTOp op, VarId v): op(op), var(v){}
-    App(SMTOp op, std::string v): op(op), val(v){}
-    App(SMTOp op, std::tuple<ObjectId, std::string> attr): op(op), attr(attr){}
+    App(SMTOp op, VarId v): op(op), var(v),hash(str_hash(to_smt_lib())){}
+    App(SMTOp op, std::string v): op(op), val(v), hash(str_hash(to_smt_lib())){}
+    App(SMTOp op, std::tuple<ObjectId, std::string> attr): op(op), attr(attr), hash(str_hash(to_string())){}
 
     std::optional<VarId> var = std::nullopt;
     std::optional<std::string> val = std::nullopt;
     std::optional<std::tuple<ObjectId, std::string>> attr = std::nullopt;
-    std::string to_string() const;
+    size_t hash;
+
+    std::string to_string() const{
+        auto res = str_map.find(hash);
+        if (res == str_map.end()){
+            str_map[hash] = to_smt_lib();
+            return str_map[hash];
+        } else{
+            return res->second;
+        }
+    };
+
+    std::string to_smt_lib() const;
     z3::expr to_z3_ast() const;
 
     App* copy(){
@@ -59,7 +75,8 @@ public:
                 param,
                 var,
                 val,
-                attr
+                attr,
+                hash
                 );
     }
 

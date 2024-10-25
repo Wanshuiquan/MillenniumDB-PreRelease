@@ -44,7 +44,9 @@ namespace MQL{
         void visit(ExprAggMin&)override {throw std::runtime_error("not implemented");}
         void visit(ExprAggSum&) override{throw std::runtime_error("not implemented");}
 
-        std::unique_ptr<SMT::Expr> get_smt_expr() {return std::unique_ptr<SMT::Expr>(current_smt_expr -> clone());}
+        std::unique_ptr<SMT::Expr> get_smt_expr() {
+            return std::unique_ptr<SMT::Expr>(current_smt_expr -> clone());
+        }
 
     };
 }

@@ -163,7 +163,7 @@ namespace SMT {
 
     inline std::string eval_str(App& expr, std::map<std::tuple<std::string, ObjectId> , std::string> attribute){
             std::vector<App> ele(expr.param);
-            App * temp = new App(expr.op, ele, expr.var, expr.val, expr.attr);
+            App * temp = new App(expr.op, ele, expr.var, expr.val, expr.attr, expr.hash);
             subsitute_str(*temp, std::move(attribute));
             std::string val = temp->val.value();
             replace_first(val, "\"", "");
@@ -192,7 +192,7 @@ namespace SMT {
      inline std::string evaluate(App& expr, std::map<std::tuple<std::string, ObjectId> , double_t> attribute){
 
          std::vector<App> ele(expr.param);
-         App * temp = new App(expr.op, ele, expr.var, expr.val, expr.attr);
+         App * temp = new App(expr.op, ele, expr.var, expr.val, expr.attr, expr.hash);
          subsitute(*temp, std::move(attribute));
 
          std::string val = eval(*temp);

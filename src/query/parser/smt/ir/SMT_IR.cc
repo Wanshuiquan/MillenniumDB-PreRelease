@@ -1,10 +1,10 @@
 #include "SMT_IR.h"
-std::string App::to_string() const {
+std::string App::to_smt_lib() const {
     std::string expr_operator;
     std::vector<std::string> para;
 
     for (const auto& expr: param){
-        para.push_back(expr.to_string());
+        para.push_back(expr.to_smt_lib());
     }
     std::string parameters = boost::algorithm::join(para, " ");
     switch (op) {

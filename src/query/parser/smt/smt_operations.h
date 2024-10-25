@@ -97,8 +97,8 @@ Result inline decode_mask(ObjectId oid) {
 
 class SMTContext{
 public:
-
     z3::context context = z3::context();
+    z3::solver sol = z3::solver(context);
     // The definition of Sorts
     z3::sort_vector sort = z3::sort_vector(context);
     z3::sort STRING = context.string_sort();
@@ -246,10 +246,11 @@ public:
             case Bound::Ge: os << "Ge" << " " << lhs << " "<< rhs << std::endl; break;
         }
     }
+
    void reset(){
        vars.clear();
        type.clear();
-
+       sol.reset();
     }
 
 
