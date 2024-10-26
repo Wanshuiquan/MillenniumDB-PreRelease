@@ -70,8 +70,6 @@ bool BFSEnum::eval_check(uint64_t obj, MacroState& macroState, std::string formu
     auto vector = get_smt_ctx().decompose(property);
     z3::ast_vector_tpl<z3::expr> new_vec = z3::ast_vector_tpl<z3::expr>(get_smt_ctx().context);
 
-    z3::solver s(get_smt_ctx().context);
-    s.add(get_smt_ctx().bound_epsilon);
     for (const auto& f: vector) {
         // normalize formula into t ~ constant
         auto normal_form = get_smt_ctx().normalizition(f);
@@ -91,40 +89,42 @@ bool BFSEnum::eval_check(uint64_t obj, MacroState& macroState, std::string formu
         }
     }
         //check the sat for the current bound
+//        solver.reset();
+    solver.push();
+        solver.add(get_smt_ctx().bound_epsilon);
 
         for (const auto &para: macroState.collected_expr) {
             const std::string &key_str = para.to_string();
             auto parameter = para;
             if (macroState.upper_bounds.find(key_str) != macroState.upper_bounds.end()) {
                 double val = macroState.upper_bounds[key_str];
-                s.add(parameter <= get_smt_ctx().add_real_val(val));
+                solver.add(parameter <= get_smt_ctx().add_real_val(val));
             }
 
             if (macroState.lower_bounds.find(key_str) != macroState.lower_bounds.end()) {
                 double val = macroState.lower_bounds[key_str];
-                s.add(parameter >= get_smt_ctx().add_real_val(val));
+                solver.add(parameter >= get_smt_ctx().add_real_val(val));
             }
 
             if (macroState.eq_vals.find(key_str) != macroState.eq_vals.end()) {
                 double val = macroState.eq_vals[key_str];
-                s.add(parameter == get_smt_ctx().add_real_val(val));
+                solver.add(parameter == get_smt_ctx().add_real_val(val));
             }
         }
 
 
-
-    switch (s.check()) {
+    switch (solver.check()) {
         case z3::sat: {
-            auto model = s.get_model();
-            for (const auto &ele:vars){
-                std::string name = get_query_ctx().get_var_name(ele.first);
-                z3::expr v = get_smt_ctx().get_var(name);
-                auto val = model.eval(v).as_double();
-                vars[ele.first] = val;
-            }
+            auto model = solver.get_model();
+            solver.pop();
+            assert(solver.assertions().empty());
             return true;
         }
-        case z3::unsat: return false;
+        case z3::unsat: {
+            solver.pop();
+
+            return false;
+        }
         case z3::unknown: return false;
     }
 }
@@ -304,7 +304,7 @@ void BFSEnum::_reset() {
 
     first_next = true;
     iter = make_unique<NullIndexIterator>();
-
+    solver.reset();
     // Add starting states to open and visited
     ObjectId start_object_id = start.is_var() ? (*parent_binding)[start.get_var()] : start.get_OID();
     auto start_path_state = visited.add(start_object_id, ObjectId::get_null(), ObjectId::get_null() , false, nullptr);

@@ -57,7 +57,7 @@
             std::map<std::tuple<std::string, ObjectId>, std::string> string_attributes;
             // odd progress is relate to an edge and even progress is relate to a node
             bool even= true;
-
+            z3::solver solver = z3::solver(get_smt_ctx().context);
 
         public:
             // Statistics
@@ -80,6 +80,7 @@
                 for (auto& ele: automaton.get_parameters()){
                     vars.emplace(ele, 0);
                 }
+
             }
 
             void accept_visitor(BindingIterVisitor& visitor) override;
