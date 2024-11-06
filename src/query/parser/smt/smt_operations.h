@@ -116,6 +116,11 @@ public:
     std::map<std::string, Ty> type;
 
     int index = 0;
+
+    // storage exprs
+    z3::ast_vector_tpl<z3::expr> expr_vec = z3::ast_vector_tpl<z3::expr>(context);
+    std::map<std::string, int> expr_map;
+    int index_expr = 0;
     SMTContext(){
         dels.push_back(epsilon.decl());
     }
@@ -163,8 +168,18 @@ public:
     }
 
     z3::expr parse (const std::string& formula){
-        auto f = context.parse_string(formula.c_str(), sort, dels)[0];
-        return f;
+        auto res = expr_map.find(formula);
+        if (res == expr_map.end()){
+            auto f = context.parse_string(formula.c_str(), sort, dels)[0];
+            expr_vec.push_back(f);
+            expr_map[formula] = index_expr;
+            index_expr = index_expr + 1;
+            return f;
+        }else{
+            auto id = expr_map[formula];
+            return expr_vec[id];
+        }
+
     }
 
     z3::ast_vector_tpl<z3::expr> decompose(const z3::expr& f){
@@ -247,11 +262,34 @@ public:
         return var_vec[ind];
     }
 
+
+
 };
 
-inline SMTContext* ctx = new SMTContext();
+class SMTCtx {
+private:
+    SMTContext* ctx = new SMTContext();
+public:
+    void reset(){
+        auto temp = ctx;
+        ctx = new SMTContext();
+        delete temp;
+    }
+
+    SMTContext& get_ctx(){
+        return  *ctx;
+    }
+};
+
+
+inline SMTCtx* ctx = new SMTCtx();
+
 
 inline SMTContext& get_smt_ctx(){
-    return *ctx;
+    return ctx->get_ctx();
+}
+
+inline void reset_smt(){
+    ctx -> reset();
 }
 #endif //MILLENNIUMDB_SMT_OPERATIONS_H

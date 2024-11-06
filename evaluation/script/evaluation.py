@@ -6,14 +6,14 @@ from evaluating import option as op
 from evaluating import util as util
 
 if __name__ == "__main__":
-    subprocess.run(["rm", "-r", "$evaluation/data/facebook"])
-    subprocess.run(["rm", "-r", "$evaluation/data/youtube"])
+    # subprocess.run(["rm", "-r", "$evaluation/data/facebook"])
+    # subprocess.run(["rm", "-r", "$evaluation/data/youtube"])
 
-    print("manipulate .qm files")
-    manipulate.initialize_youtube_graph()
-    print("create data bases")
-    util.create_db(op.DATA_DIR / "youtube.qm")
-    util.create_db(op.DATA_DIR / "facebook.qm")
+    # print("manipulate .qm files")
+    # manipulate.initialize_youtube_graph()
+    # print("create data bases")
+    # util.create_db(op.DATA_DIR / "youtube.qm")
+    # util.create_db(op.DATA_DIR / "facebook.qm")
     print("query")
     case.facebook_graph_query()
     case.youtube_graph_query()

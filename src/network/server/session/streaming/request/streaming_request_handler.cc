@@ -5,7 +5,7 @@
 #include "network/server/protocol.h"
 #include "query/query_context.h"
 #include "storage/tmp_manager.h"
-
+#include "query/parser/smt/smt_operations.h"
 
 using namespace MDBServer;
 
@@ -109,6 +109,8 @@ void StreamingRequestHandler::handle_discard() {
 void StreamingRequestHandler::handle_run(const std::string& query) {
     tmp_manager.reset();
     get_query_ctx().reset();
+    reset_smt();
+
 
     try {
         const auto query_start = std::chrono::system_clock::now();

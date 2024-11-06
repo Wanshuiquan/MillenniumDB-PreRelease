@@ -73,7 +73,6 @@ bool BFSEnum::eval_check(uint64_t obj, MacroState& macroState, std::string formu
     for (const auto& f: vector) {
         // normalize formula into t ~ constant
         auto normal_form = get_smt_ctx().normalizition(f);
-        auto _debug_normal_form = normal_form.to_string();
         // if the formula is normalized as constant
         if (normal_form.is_true()) {
             continue;
@@ -94,8 +93,9 @@ bool BFSEnum::eval_check(uint64_t obj, MacroState& macroState, std::string formu
         solver.add(get_smt_ctx().bound_epsilon);
 
         for (const auto &para: macroState.collected_expr) {
-            const std::string &key_str = para.to_string();
+            const std::string &key_str = std::to_string(para.hash());
             auto parameter = para;
+
             if (macroState.upper_bounds.find(key_str) != macroState.upper_bounds.end()) {
                 double val = macroState.upper_bounds[key_str];
                 solver.add(parameter <= get_smt_ctx().add_real_val(val));
@@ -116,6 +116,12 @@ bool BFSEnum::eval_check(uint64_t obj, MacroState& macroState, std::string formu
     switch (solver.check()) {
         case z3::sat: {
             auto model = solver.get_model();
+            for (const auto &ele:vars){
+                std::string name = get_query_ctx().get_var_name(ele.first);
+                z3::expr v = get_smt_ctx().get_var(name);
+                auto val = model.eval(v).as_double();
+                vars[ele.first] = val;
+            }
             solver.pop();
             assert(solver.assertions().empty());
             return true;
@@ -332,7 +338,6 @@ void BFSEnum::_reset() {
 
 void BFSEnum::accept_visitor(BindingIterVisitor &visitor) {
     visitor.visit(*this);
-
 }
 
 

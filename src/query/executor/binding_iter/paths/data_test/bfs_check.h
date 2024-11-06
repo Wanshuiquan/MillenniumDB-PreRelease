@@ -60,6 +60,7 @@
 
             // odd progress is relate to an edge and even progress is relate to a node
             bool even= true;
+            z3::solver s= z3::solver(get_smt_ctx().context);
 
 
         public:

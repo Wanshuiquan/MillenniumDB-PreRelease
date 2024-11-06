@@ -58,6 +58,7 @@ void HttpQuadSession::handle_request() {
 
     tmp_manager.reset();
     get_query_ctx().reset();
+    reset_smt();
 
     std::unique_ptr<QueryExecutor> current_physical_plan;
     try {

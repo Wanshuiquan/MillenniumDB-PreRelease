@@ -67,8 +67,6 @@ bool BFSCheck::eval_check(uint64_t obj, MacroState& macroState, std::string form
     // decompose
     auto vector = get_smt_ctx().decompose(property);
     z3::ast_vector_tpl<z3::expr> new_vec = z3::ast_vector_tpl<z3::expr>(get_smt_ctx().context);
-    z3::solver s(get_smt_ctx().context);
-    s.add(get_smt_ctx().bound_epsilon);
     for (const auto& f: vector) {
         // normalize formula into t ~ constant
         auto normal_form = get_smt_ctx().normalizition(f);
@@ -86,10 +84,12 @@ bool BFSCheck::eval_check(uint64_t obj, MacroState& macroState, std::string form
             return false;
         }
     }
+       s.push();
         //check the sat for the current bound
+        s.add(get_smt_ctx().bound_epsilon);
 
         for (const auto& para: macroState.collected_expr){
-            const std::string& key_str = para.to_string();
+            const std::string& key_str = std::to_string(para.hash());
             auto parameter = para;
             if (macroState.upper_bounds.find(key_str) != macroState.upper_bounds.end()){
                 double val = macroState.upper_bounds[key_str];
@@ -115,10 +115,11 @@ bool BFSCheck::eval_check(uint64_t obj, MacroState& macroState, std::string form
                 auto val = model.eval(v).as_double();
                 vars[ele.first] = val;
             }
+            s.pop();
             return true;
         }
-        case z3::unsat: return false;
-        case z3::unknown: return false;
+        case z3::unsat: s.pop();return false;
+        case z3::unknown: s.pop(); return false;
     }
 }
 
