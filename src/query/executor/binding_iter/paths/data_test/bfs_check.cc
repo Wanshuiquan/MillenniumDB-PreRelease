@@ -70,9 +70,9 @@ bool BFSCheck::eval_check(uint64_t obj, MacroState& macroState, std::string form
         // normalize formula into t ~ constant
         auto normal_form = get_smt_ctx().normalizition(f);
         // if the formula is normalized as constant
-        if (normal_form.is_true()) {
+        if (f.is_true()) {
             continue;
-        } else if (normal_form.is_false()) {
+        } else if (f.is_false()) {
             return false;
         }
         // get and update the bound
