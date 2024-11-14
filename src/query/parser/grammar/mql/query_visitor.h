@@ -8,7 +8,7 @@
 #include "query/parser/op/mql/ops.h"
 #include "query/parser/paths/regular_path_expr.h"
 #include "query/var_id.h"
-
+#include "query/smt/smt_expr/smt_exprs.h"
 class Expr;
 
 namespace LSH {
@@ -70,7 +70,8 @@ private:
     std::vector<VarId> group_by_vars;
 
     std::unique_ptr<Expr> current_expr;
-
+    // for parameterized regular expression
+    std::unique_ptr<SMT::Expr> current_smt_expr;
     std::vector<std::unique_ptr<Expr>> property_expr;
 
     // Properties info in queries with operators (==, !=, >, <, >=, <=)
@@ -162,6 +163,7 @@ public:
     virtual std::any visitPathSequence(MQL_Parser::PathSequenceContext* ctx) override;
     virtual std::any visitPathAtomSimple(MQL_Parser::PathAtomSimpleContext* ctx) override;
     virtual std::any visitPathAtomAlternatives(MQL_Parser::PathAtomAlternativesContext* ctx) override;
+    virtual std::any visitPathAtomSmt(MQL_Parser::PathAtomSmtContext* context) override;
 
     virtual std::any visitWhereStatement(MQL_Parser::WhereStatementContext* ctx) override;
 
@@ -177,11 +179,19 @@ public:
     virtual std::any visitUnaryExpr(MQL_Parser::UnaryExprContext* ctx) override;
     virtual std::any visitFunction(MQL_Parser::FunctionContext* ctx) override;
 
+    virtual std::any visitSmtCompare(MQL_Parser::SmtCompareContext* ctx) override;
+    virtual std::any visitAddExpr(MQL_Parser::AddExprContext* ctx) override;
+    virtual std::any visitMulExpr(MQL_Parser::MulExprContext* ctx) override;
+    virtual std::any visitSmtVar(MQL_Parser::SmtVarContext * ctx) override;
+    virtual std::any visitSmtVal(MQL_Parser::SmtValContext* ctx) override;
+    virtual std::any visitSmtAttr(MQL_Parser::SmtAttrContext* ctx) override;
+
     virtual std::any visitRegex(MQL_Parser::RegexContext* ctx) override;
 
     virtual std::any visitSimilaritySearch(MQL_Parser::SimilaritySearchContext* ctx) override;
     virtual std::any visitBruteSimilaritySearch(MQL_Parser::BruteSimilaritySearchContext* ctx) override;
     virtual std::any visitProjectSimilarity(MQL_Parser::ProjectSimilarityContext* ctx) override;
     virtual std::any visitTensor(MQL_Parser::TensorContext* ctx) override;
+
 };
 } // namespace MQL

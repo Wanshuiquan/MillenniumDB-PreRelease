@@ -8,15 +8,9 @@
 
 #pragma  once
 #include <boost/algorithm/string/join.hpp>
-#include <sstream>
-#include <algorithm>
-#include <variant>
-#include <vector>
+
 #include "query/parser/paths/regular_path_expr.h"
-#include "query/parser/expr/sparql/binary/expr_and.h"
-#include "query/parser/expr/mql_expr_printer.h"
-#include "query/smt/smt_expr/smt_exprs.h"
-#include "query/smt/smt_expr/smt_expr_printer.h"
+
 
 // using object_atom = std::variant<std::monostate,std::string, ObjectId>;
 // using formula = std::variant<std::monostate, std::unique_ptr<MQL::ExprAnd>, std::unique_ptr<SPARQL::ExprAnd>>;
