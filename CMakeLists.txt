@@ -36,7 +36,7 @@ else()
 endif(APPLE)
 
 # Define the compiler flags
-set(CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic -pthread -march=native -funroll-loops -fno-operator-names")
+set(CMAKE_CXX_FLAGS "-Wall -pg -Wextra -pedantic -pthread -march=native -funroll-loops -fno-operator-names")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g3 -fsanitize=undefined,address -fno-omit-frame-pointer")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -g0")
 
@@ -86,21 +86,21 @@ set(BUILD_TARGETS
     mdb-import
     mdb-cli
 )
-#set(TEST_TARGETS
-#        compare_datetime
-#        compare_decimal_both_ext
-#        compare_decimal_both_inl
-#        compare_decimal_inl_ext
-#        decimal_operations
-#        iri_prefixes-test
-#        normalize_decimal
-#        regular_path_expr_to_rpq_dfa
-#        scsu-test
-#        variable_set
-#        try_ast
-##        test_smt_aut
-##        test_smt_operation
-#)
+set(TEST_TARGETS
+        compare_datetime
+        compare_decimal_both_ext
+        compare_decimal_both_inl
+        compare_decimal_inl_ext
+        decimal_operations
+        iri_prefixes-test
+        normalize_decimal
+        regular_path_expr_to_rpq_dfa
+        scsu-test
+        variable_set
+        try_ast
+#        test_smt_aut
+#        test_smt_operation
+)
 # Build targets
 foreach(target ${BUILD_TARGETS})
     add_executable(${target} ${CMAKE_SOURCE_DIR}/src/bin/${target}.cc)
@@ -116,21 +116,21 @@ foreach(target ${BUILD_TARGETS})
 endforeach(target)
 # Test targets
 enable_testing()
-#foreach(target ${TEST_TARGETS})
-#    add_executable(${target} ${CMAKE_SOURCE_DIR}/src/tests/${target}.cc)
-#    set_target_properties(${target} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests")
-#    target_link_libraries(${target}
-#            millenniumdb
-#            antlr4_cpp_runtime
-#            ${FS}
-#            ssl
-#            z3
-#            crypto
-#    )
-#    add_test(
-#            NAME ${target}
-#            COMMAND $<TARGET_FILE:${target}>
-#            WORKING_DIRECTORY tests
-#    )
-#endforeach(target)
+foreach(target ${TEST_TARGETS})
+    add_executable(${target} ${CMAKE_SOURCE_DIR}/src/tests/${target}.cc)
+    set_target_properties(${target} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests")
+    target_link_libraries(${target}
+            millenniumdb
+            antlr4_cpp_runtime
+            ${FS}
+            ssl
+            z3
+            crypto
+    )
+    add_test(
+            NAME ${target}
+            COMMAND $<TARGET_FILE:${target}>
+            WORKING_DIRECTORY tests
+    )
+endforeach(target)
 install(TARGETS ${BUILD_TARGETS} RUNTIME DESTINATION bin)
