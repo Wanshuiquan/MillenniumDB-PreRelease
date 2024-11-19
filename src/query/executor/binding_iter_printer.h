@@ -81,6 +81,8 @@ public:
     virtual void visit(HashJoin::MaterializeIter&)             override;
 
     virtual void visit(Paths::UnfixedComposite&)                   override;
+    virtual void visit(Paths::SMTUnfixedComposite&)                   override;
+
     virtual void visit(Paths::AllShortest::BFSCheck&)              override;
     virtual void visit(Paths::AllShortest::BFSEnum<false>&)        override;
     virtual void visit(Paths::AllShortest::BFSEnum<true>&)         override;
@@ -127,7 +129,8 @@ public:
     virtual void visit(Paths::AnyTrails::BFSEnum&)                 override;
     virtual void visit(Paths::AnyTrails::DFSCheck&)                override;
     virtual void visit(Paths::AnyTrails::DFSEnum&)                 override;
-
+    virtual void visit(Paths::DataTest::BFSCheck&)                override;
+    virtual void visit(Paths::DataTest::BFSEnum&)                 override;
     virtual void visit(LSH::ForestIndexTopK&)         override;
     virtual void visit(LSH::ForestIndexTopAll&)       override;
     virtual void visit(LSH::ProjectTensorSimilarity&) override;

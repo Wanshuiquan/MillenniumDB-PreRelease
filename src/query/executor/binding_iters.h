@@ -71,3 +71,6 @@
 #include "query/executor/binding_iter/paths/experimental/dijkstra_check.h"
 #include "query/executor/binding_iter/paths/experimental/dijkstra_enum.h"
 #include "query/executor/binding_iter/paths/unfixed_composite.h"
+
+#include "query/executor/binding_iter/paths/data_test/bfs_check.h"
+#include "query/executor/binding_iter/paths/data_test/bfs_enum.h"

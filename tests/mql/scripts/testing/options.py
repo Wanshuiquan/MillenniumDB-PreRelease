@@ -48,6 +48,7 @@ TEST_SUITES: list[str] = [
     "paths",
     "bad_queries",
     "escape-unicode",
+    "data_test"
 ]
 
 # Tests with the following query files fill be ignored
